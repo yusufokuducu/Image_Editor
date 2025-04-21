@@ -12,10 +12,10 @@ import customtkinter as ctk
 from PIL import Image, ImageTk
 import tkinter.ttk as ttk
 
-from photoforge_pro.tools.move_tool import MoveTool
-from photoforge_pro.tools.crop_tool import CropTool
+from image_editor.tools.move_tool import MoveTool
+from image_editor.tools.crop_tool import CropTool
 
-logger = logging.getLogger("PhotoForge.Toolbar")
+logger = logging.getLogger("Image_Editor.Toolbar")
 
 class ToolButton(ctk.CTkButton):
     """Custom button for tools in the toolbar."""
@@ -39,9 +39,12 @@ class ToolButton(ctk.CTkButton):
         self.icon_image = None
         
         # Configure default button appearance
-        width = kwargs.pop('width', 40)
-        height = kwargs.pop('height', 40)
-        corner_radius = kwargs.pop('corner_radius', 6)
+        width = kwargs.pop('width', 50)
+        height = kwargs.pop('height', 50)
+        corner_radius = kwargs.pop('corner_radius', 10)
+        fg_color = kwargs.pop('fg_color', ("gray80", "gray28"))
+        hover_color = kwargs.pop('hover_color', ("gray70", "gray38"))
+        border_width = kwargs.pop('border_width', 0)
         
         # Load icon if provided
         if icon_path and os.path.exists(icon_path):
@@ -65,6 +68,9 @@ class ToolButton(ctk.CTkButton):
             width=width,
             height=height,
             corner_radius=corner_radius,
+            fg_color=fg_color,
+            hover_color=hover_color,
+            border_width=border_width,
             command=command,
             **kwargs
         )
@@ -87,13 +93,19 @@ class ToolButton(ctk.CTkButton):
             self.tooltip_window.wm_overrideredirect(True)
             self.tooltip_window.wm_geometry(f"+{x}+{y}")
             
-            # Create tooltip label
+            # Create modern tooltip label with dark theme
             label = tk.Label(
-                self.tooltip_window, text=self.tooltip, 
-                background="#ffffe0", relief="solid", borderwidth=1,
-                font=("TkDefaultFont", 10)
+                self.tooltip_window, 
+                text=self.tooltip, 
+                background="#2d2d2d", 
+                foreground="#ffffff",
+                relief="flat", 
+                borderwidth=0,
+                font=("Inter", 11),
+                padx=8,
+                pady=5
             )
-            label.pack(ipadx=3, ipady=1)
+            label.pack()
     
     def _hide_tooltip(self, event):
         """Hide tooltip when mouse leaves the button."""
@@ -113,7 +125,7 @@ class Toolbar(ctk.CTkFrame):
             parent: Parent widget
             main_window: Reference to the main window
         """
-        super().__init__(parent)
+        super().__init__(parent, corner_radius=12)
         
         self.main_window = main_window
         self.app_state = main_window.app_state
@@ -124,6 +136,9 @@ class Toolbar(ctk.CTkFrame):
         
         # Create tools
         self._initialize_tools()
+        
+        # Create modern toolbar UI
+        self._create_toolbar_buttons()
         
         logger.info("Toolbar initialized")
     
@@ -137,34 +152,93 @@ class Toolbar(ctk.CTkFrame):
         }
         
         # Set the initially active tool
-        self.active_tool = self.tools["move"]
+        self.active_tool = "move"
+        self.app_state.current_tool = "move"
     
     def _create_toolbar_buttons(self):
         """Create buttons for the toolbar."""
-        # Create tool buttons frame
-        self.tool_buttons_frame = ttk.Frame(self)
-        self.tool_buttons_frame.pack(side=tk.TOP, fill=tk.X)
+        # Create main container with padding
+        self.tools_container = ctk.CTkFrame(self, fg_color="transparent")
+        self.tools_container.pack(fill=tk.BOTH, expand=True, padx=5, pady=10)
+        
+        # Section label
+        self.tools_label = ctk.CTkLabel(
+            self.tools_container, 
+            text="TOOLS", 
+            font=("Inter", 12, "bold"),
+            text_color=("gray50", "gray70")
+        )
+        self.tools_label.pack(pady=(0, 10))
 
         # Create buttons for each tool
-        self.tool_buttons = {}
-        
         # Move tool
-        self.tool_buttons["move"] = ttk.Button(
-            self.tool_buttons_frame,
-            text="Move",
+        self.tool_buttons["move"] = ToolButton(
+            self.tools_container,
+            name="Move",
+            tooltip="Move Tool (V)",
+            text="⥮",
+            font=("Arial", 18),
             command=lambda: self.set_active_tool("move")
         )
-        self.tool_buttons["move"].pack(side=tk.LEFT, padx=2, pady=2)
+        self.tool_buttons["move"].pack(pady=5, fill=tk.X)
+        
+        # Selection tool
+        self.tool_buttons["select"] = ToolButton(
+            self.tools_container,
+            name="Select",
+            tooltip="Selection Tool (M)",
+            text="◫",
+            font=("Arial", 18),
+            command=lambda: self.set_active_tool("select")
+        )
+        self.tool_buttons["select"].pack(pady=5, fill=tk.X)
         
         # Crop tool
-        self.tool_buttons["crop"] = ttk.Button(
-            self.tool_buttons_frame,
-            text="Crop",
+        self.tool_buttons["crop"] = ToolButton(
+            self.tools_container,
+            name="Crop",
+            tooltip="Crop Tool (C)",
+            text="⟗",
+            font=("Arial", 18),
             command=lambda: self.set_active_tool("crop")
         )
-        self.tool_buttons["crop"].pack(side=tk.LEFT, padx=2, pady=2)
+        self.tool_buttons["crop"].pack(pady=5, fill=tk.X)
         
-        # Add more tool buttons here
+        # Brush tool
+        self.tool_buttons["brush"] = ToolButton(
+            self.tools_container,
+            name="Brush",
+            tooltip="Brush Tool (B)",
+            text="⦿",
+            font=("Arial", 18),
+            command=lambda: self.set_active_tool("brush")
+        )
+        self.tool_buttons["brush"].pack(pady=5, fill=tk.X)
+        
+        # Eraser tool
+        self.tool_buttons["eraser"] = ToolButton(
+            self.tools_container,
+            name="Eraser",
+            tooltip="Eraser Tool (E)",
+            text="⌫",
+            font=("Arial", 18),
+            command=lambda: self.set_active_tool("eraser")
+        )
+        self.tool_buttons["eraser"].pack(pady=5, fill=tk.X)
+        
+        # Text tool
+        self.tool_buttons["text"] = ToolButton(
+            self.tools_container,
+            name="Text",
+            tooltip="Text Tool (T)",
+            text="T",
+            font=("Arial", 18),
+            command=lambda: self.set_active_tool("text")
+        )
+        self.tool_buttons["text"].pack(pady=5, fill=tk.X)
+        
+        # Set initial active tool
+        self.set_active_tool("move")
     
     def set_active_tool(self, tool_name: str):
         """
@@ -180,13 +254,13 @@ class Toolbar(ctk.CTkFrame):
         # Deactivate current tool button
         if self.active_tool and self.active_tool in self.tool_buttons:
             self.tool_buttons[self.active_tool].configure(
-                fg_color=("gray75", "gray25")
+                fg_color=("gray80", "gray28")
             )
         
         # Activate new tool button
         if tool_name in self.tool_buttons:
             self.tool_buttons[tool_name].configure(
-                fg_color=("gray85", "gray35")
+                fg_color=("#3a7ebf", "#1f538d")
             )
         
         # Update active tool
@@ -197,13 +271,8 @@ class Toolbar(ctk.CTkFrame):
         logger.info(f"Selected tool: {tool_name}")
         
         # Notify main window to update active tool
-        try:
-            if hasattr(self.main_window, 'set_status'):
-                self.main_window.set_status(f"Tool: {tool_name}")
-        except AttributeError:
-            # Status label might not be initialized yet
-            pass
+        # TODO: Implement callback
     
     def get_active_tool(self) -> Optional[str]:
-        """Get the name of the active tool."""
+        """Get the currently active tool name."""
         return self.active_tool 

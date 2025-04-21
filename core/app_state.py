@@ -13,7 +13,7 @@ import logging
 from pathlib import Path
 from typing import Dict, List, Optional, Any, Tuple
 
-logger = logging.getLogger("PhotoForge.AppState")
+logger = logging.getLogger("Image_Editor.AppState")
 
 class AppState:
     """
@@ -105,7 +105,7 @@ class AppState:
         default_settings = {
             "appearance": {
                 "theme": "dark",
-                "accent_color": "blue",
+                "accent_color": "dark-blue",
                 "interface_scaling": 1.0
             },
             "performance": {

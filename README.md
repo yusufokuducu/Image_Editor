@@ -4,164 +4,164 @@
 ![Python](https://img.shields.io/badge/python-3.8%2B-brightgreen.svg)
 ![Status](https://img.shields.io/badge/status-active-success.svg)
 
-## 📋 İçerik
+## 📋 Contents
 
-- [Genel Bakış](#genel-bakış)
-- [Özellikler](#özellikler)
-- [Ekran Görüntüleri](#ekran-görüntüleri)
-- [Kurulum](#kurulum)
-- [Kullanım](#kullanım)
-- [Araçlar](#araçlar)
-- [Proje Yapısı](#proje-yapısı)
-- [Yol Haritası](#yol-haritası)
-- [Katkı Sağlama](#katkı-sağlama)
-- [Lisans](#lisans)
-- [İletişim](#iletişim)
+- [Overview](#overview)
+- [Features](#features)
+- [Screenshots](#screenshots)
+- [Installation](#installation)
+- [Usage](#usage)
+- [Tools](#tools)
+- [Project Structure](#project-structure)
+- [Roadmap](#roadmap)
+- [Contributing](#contributing)
+- [License](#license)
+- [Contact](#contact)
 
-## 🔭 Genel Bakış
+## 🔭 Overview
 
-Image_Editor, Python ile geliştirilmiş, profesyonel kalitede bir görüntü düzenleme uygulamasıdır. CustomTkinter, PIL (Pillow), NumPy ve OpenCV gibi güçlü kütüphaneleri temel alan bu uygulama, gelişmiş görüntü işleme özellikleri ve kullanıcı dostu arayüzüyle öne çıkar.
+Image_Editor is a professional-grade image editing application developed in Python. Built on powerful libraries like CustomTkinter, PIL (Pillow), NumPy, and OpenCV, this application stands out with its advanced image processing capabilities and user-friendly interface.
 
-Bu proje, hem profesyonel fotoğrafçılar hem de hobi olarak fotoğrafçılıkla ilgilenenler için kapsamlı bir görüntü düzenleme çözümü sunmayı amaçlamaktadır.
+This project aims to provide a comprehensive image editing solution for both professional photographers and hobbyists.
 
-## ✨ Özellikler
+## ✨ Features
 
-### Görüntü İşleme
-- **Temel Düzenlemeler**: Kırpma, döndürme, çevirme, yeniden boyutlandırma
-- **Renk Ayarlamaları**: Parlaklık, kontrast, doygunluk, renk tonu
-- **Katmanlar**: Çoklu katman desteği, karıştırma modları, opaklık ayarları
-- **Filtreler**: Bulanıklaştırma, keskinleştirme, kenar algılama, gürültü azaltma
-- **Seçim Araçları**: Dikdörtgen, elips, serbest el ve renk tabanlı seçiciler
+### Image Processing
+- **Basic Edits**: Cropping, rotation, flipping, resizing
+- **Color Adjustments**: Brightness, contrast, saturation, hue
+- **Layers**: Multi-layer support, blending modes, opacity settings
+- **Filters**: Blur, sharpen, edge detection, noise reduction
+- **Selection Tools**: Rectangle, ellipse, freehand, and color-based selectors
 
-### Kullanıcı Arayüzü
-- **Modern Tasarım**: CustomTkinter ile oluşturulmuş çağdaş arayüz
-- **Özelleştirilebilir Çalışma Alanı**: Panel yerleşimlerini özelleştirme
-- **Karanlık/Açık Mod**: Sistem ayarlarına uyumlu tema seçenekleri
-- **Araç Çubukları**: Sezgisel olarak organize edilmiş araçlar
+### User Interface
+- **Modern Design**: Contemporary interface created with CustomTkinter
+- **Customizable Workspace**: Customize panel layouts
+- **Dark/Light Mode**: Theme options compatible with system settings
+- **Toolbars**: Intuitively organized tools
 
-### Dosya İşlemleri
-- **Birden Çok Format Desteği**: JPG, PNG, TIFF, BMP, GIF, WebP
-- **Proje Dosyaları**: Katmanlar ve düzenleme geçmişini içeren kaydetme/yükleme
-- **Toplu İşleme**: Birden çok dosya üzerinde aynı işlemleri uygulama
+### File Operations
+- **Multiple Format Support**: JPG, PNG, TIFF, BMP, GIF, WebP
+- **Project Files**: Save/load including layers and editing history
+- **Batch Processing**: Apply the same operations across multiple files
 
-## 📸 Ekran Görüntüleri
+## 📸 Screenshots
 
-*Ekran görüntüleri ekleme yeri*
+*Screenshots to be added here*
 
-## 🚀 Kurulum
+## 🚀 Installation
 
-### Gereksinimler
-- Python 3.8 veya üstü
-- pip (Python paket yöneticisi)
+### Requirements
+- Python 3.8 or above
+- pip (Python package manager)
 
-### Kurulum Adımları
+### Installation Steps
 
-1. Repo'yu klonlayın:
+1. Clone the repository:
    ```bash
-   git clone https://github.com/kullanıcıadı/Image_Editor.git
+   git clone https://github.com/faust-lvii/Image_Editor.git
    cd Image_Editor
    ```
 
-2. Sanal ortam oluşturun (isteğe bağlı):
+2. Create a virtual environment (optional):
    ```bash
    python -m venv venv
-   # Windows'ta
+   # On Windows
    venv\Scripts\activate
-   # macOS/Linux'ta
+   # On macOS/Linux
    source venv/bin/activate
    ```
 
-3. Gerekli paketleri yükleyin:
+3. Install required packages:
    ```bash
    pip install -r requirements.txt
    ```
 
-4. Uygulamayı başlatın:
+4. Start the application:
    ```bash
    python main.py
    ```
 
-## 📖 Kullanım
+## 📖 Usage
 
-### Temel Kullanım
-1. Yeni bir görüntü oluşturun veya mevcut bir dosyayı açın
-2. Araç çubuğundan istediğiniz düzenleme aracını seçin
-3. Görüntü üzerinde seçilen aracı kullanın
-4. Değişiklikleri uygulayın ve kaydedin
+### Basic Usage
+1. Create a new image or open an existing file
+2. Select the desired editing tool from the toolbar
+3. Use the selected tool on the image
+4. Apply changes and save
 
-### Katmanlarla Çalışma
-1. Yeni katman eklemek için katmanlar panelinden "+" düğmesine tıklayın
-2. Katmanlar arasında gezinmek için katman listesinden seçim yapın
-3. Karıştırma modlarını ve opaklığı ayarlamak için katman özelliklerini kullanın
+### Working with Layers
+1. Click the "+" button in the layers panel to add a new layer
+2. Navigate between layers using the layer list
+3. Use layer properties to adjust blending modes and opacity
 
-### Filtre ve Efektler
-1. Filtreler menüsünden istediğiniz efekti seçin
-2. Ayarları özelleştirin ve önizlemeyi kontrol edin
-3. Değişiklikleri uygulamak için "Uygula" düğmesine tıklayın
+### Filters and Effects
+1. Select the desired effect from the filters menu
+2. Customize settings and check the preview
+3. Click "Apply" to apply the changes
 
-## 🧰 Araçlar
+## 🧰 Tools
 
-- **Seçim Araçları**: Dikdörtgen, elips, kement, sihirli değnek
-- **Düzenleme Araçları**: Fırça, silgi, dolgu, metin, kırpma, taşıma
-- **Filtreler**: Bulanıklaştırma, keskinleştirme, gürültü azaltma
-- **Ayarlamalar**: Parlaklık/kontrast, HSL, seviyelendirme, eğriler
+- **Selection Tools**: Rectangle, ellipse, lasso, magic wand
+- **Editing Tools**: Brush, eraser, fill, text, crop, move
+- **Filters**: Blur, sharpen, noise reduction
+- **Adjustments**: Brightness/contrast, HSL, levels, curves
 
-## 📂 Proje Yapısı
+## 📂 Project Structure
 
 ```
 Image_Editor/
-├── core/                  # Çekirdek işlevsellik
-│   ├── app_state.py       # Uygulama durum yönetimi
-│   ├── image_handler.py   # Görüntü işleme işlevleri
-│   └── layer_manager.py   # Katman yönetimi
-├── ui/                    # Kullanıcı arayüzü
-│   ├── canvas.py          # Düzenleme tuvali
-│   ├── main_window.py     # Ana uygulama penceresi
-│   ├── menubar.py         # Uygulama menüsü
-│   ├── toolbar.py         # Araç çubuğu
-│   └── panels/            # UI panelleri
-├── operations/            # Görüntü işleme operasyonları
-│   ├── adjustments/       # Renk ayarlamaları
-│   ├── effects/           # Görsel efektler
-│   ├── filters/           # Filtreler
-│   └── transformations/   # Dönüşümler
-├── tools/                 # Düzenleme araçları
-├── resources/             # Uygulama kaynakları
-├── utils/                 # Yardımcı işlevler
-├── config/                # Yapılandırma dosyaları
-├── main.py                # Ana giriş noktası
-└── requirements.txt       # Bağımlılıklar
+├── core/                  # Core functionality
+│   ├── app_state.py       # Application state management
+│   ├── image_handler.py   # Image processing functions
+│   └── layer_manager.py   # Layer management
+├── ui/                    # User interface
+│   ├── canvas.py          # Editing canvas
+│   ├── main_window.py     # Main application window
+│   ├── menubar.py         # Application menu
+│   ├── toolbar.py         # Toolbar
+│   └── panels/            # UI panels
+├── operations/            # Image processing operations
+│   ├── adjustments/       # Color adjustments
+│   ├── effects/           # Visual effects
+│   ├── filters/           # Filters
+│   └── transformations/   # Transformations
+├── tools/                 # Editing tools
+├── resources/             # Application resources
+├── utils/                 # Helper functions
+├── config/                # Configuration files
+├── main.py                # Main entry point
+└── requirements.txt       # Dependencies
 ```
 
-## 🗺️ Yol Haritası
+## 🗺️ Roadmap
 
-- [ ] Gelişmiş seçim araçları (manyetik kement, kenar algılama)
-- [ ] Ayarlama katmanları ve yıkıcı olmayan düzenleme desteği
-- [ ] Katman maskeleri ve efektleri
-- [ ] Fırça motoru iyileştirmeleri
-- [ ] Makro ve eylem kaydetme
-- [ ] İçerik duyarlı dolgu ve silme
-- [ ] GPU hızlandırma
-- [ ] Renk profilleri desteği
-- [ ] Eklenti sistemi
-- [ ] Komut dosyası otomasyonu
+- [ ] Advanced selection tools (magnetic lasso, edge detection)
+- [ ] Adjustment layers and non-destructive editing support
+- [ ] Layer masks and effects
+- [ ] Brush engine improvements
+- [ ] Macro and action recording
+- [ ] Content-aware fill and erasure
+- [ ] GPU acceleration
+- [ ] Color profile support
+- [ ] Plugin system
+- [ ] Scripting automation
 
-## 👥 Katkı Sağlama
+## 👥 Contributing
 
-Katkıda bulunmak isterseniz:
+If you would like to contribute:
 
-1. Repo'yu forklayın
-2. Özellik dalı oluşturun (`git checkout -b feature/amazing-feature`)
-3. Değişikliklerinizi commitleyin (`git commit -m 'Add some amazing feature'`)
-4. Dalınıza pushlayın (`git push origin feature/amazing-feature`)
-5. Pull Request açın
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to your branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
-## 📄 Lisans
+## 📄 License
 
-Bu proje MIT Lisansı altında lisanslanmıştır - ayrıntılar için [LICENSE](LICENSE) dosyasına bakın.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 📞 İletişim
+## 📞 Contact
 
-Proje Yöneticisi - [@kullanıcıadı](https://github.com/kullanıcıadı)
+Project Manager - [@faust-lvii](https://github.com/faust-lvii)
 
-Proje Linki: [https://github.com/kullanıcıadı/Image_Editor](https://github.com/kullanıcıadı/Image_Editor) 
+Project Link: [https://github.com/faust-lvii/Image_Editor](https://github.com/faust-lvii/Image_Editor) 

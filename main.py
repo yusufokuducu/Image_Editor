@@ -42,8 +42,8 @@ from image_editor.core.app_state import AppState
 
 def setup_appearance():
     """Configure the appearance settings for the application."""
-    ctk.set_appearance_mode("System")  # Options: "System" (default), "Dark", "Light"
-    ctk.set_default_color_theme("blue")  # Themes: "blue" (default), "dark-blue", "green"
+    ctk.set_appearance_mode("Dark")  # Options: "System" (default), "Dark", "Light"
+    ctk.set_default_color_theme("dark-blue")  # Themes: "blue" (default), "dark-blue", "green"
 
 def main():
     """Main application entry point."""

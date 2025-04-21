@@ -1,6 +1,6 @@
 """
 Main Window Module
-Contains the main application window and UI layout for PhotoForge Pro.
+Contains the main application window and UI layout for Image_Editor.
 """
 
 import os
@@ -12,20 +12,20 @@ from typing import Optional, Dict, Any, List
 import customtkinter as ctk
 from PIL import Image, ImageTk
 
-from photoforge_pro.core.app_state import AppState
-from photoforge_pro.core.image_handler import ImageHandler
-from photoforge_pro.core.layer_manager import LayerManager, Layer
-from photoforge_pro.ui.panels.layer_panel import LayerPanel
-from photoforge_pro.ui.panels.tool_options_panel import ToolOptionsPanel
-from photoforge_pro.ui.canvas import EditCanvas
-from photoforge_pro.ui.toolbar import Toolbar
-from photoforge_pro.ui.menubar import create_menubar
-from photoforge_pro.ui.dialogs.new_file_dialog import NewFileDialog
+from image_editor.core.app_state import AppState
+from image_editor.core.image_handler import ImageHandler
+from image_editor.core.layer_manager import LayerManager, Layer
+from image_editor.ui.panels.layer_panel import LayerPanel
+from image_editor.ui.panels.tool_options_panel import ToolOptionsPanel
+from image_editor.ui.canvas import EditCanvas
+from image_editor.ui.toolbar import Toolbar
+from image_editor.ui.menubar import create_menubar
+from image_editor.ui.dialogs.new_file_dialog import NewFileDialog
 
-logger = logging.getLogger("PhotoForge.MainWindow")
+logger = logging.getLogger("Image_Editor.MainWindow")
 
 class MainWindow:
-    """Main application window class for PhotoForge Pro."""
+    """Main application window class for Image_Editor."""
     
     def __init__(self, root: ctk.CTk, app_state: AppState):
         """
@@ -59,8 +59,8 @@ class MainWindow:
         # Set initial window size
         screen_width = self.root.winfo_screenwidth()
         screen_height = self.root.winfo_screenheight()
-        window_width = int(screen_width * 0.8)
-        window_height = int(screen_height * 0.8)
+        window_width = int(screen_width * 0.85)
+        window_height = int(screen_height * 0.85)
         
         # Center the window
         x = (screen_width - window_width) // 2
@@ -73,7 +73,7 @@ class MainWindow:
         self.root.resizable(True, True)
         
         # Set minimum window size
-        self.root.minsize(800, 600)
+        self.root.minsize(900, 700)
         
         # Set the window icon
         # TODO: Add application icon
@@ -83,27 +83,27 @@ class MainWindow:
         # Create menubar
         self.menu = create_menubar(self.root, self)
         
-        # Create main layout frames
-        self.main_frame = ctk.CTkFrame(self.root)
-        self.main_frame.pack(fill=tk.BOTH, expand=True)
+        # Create main layout frames with improved styling
+        self.main_frame = ctk.CTkFrame(self.root, fg_color=("gray90", "gray17"))
+        self.main_frame.pack(fill=tk.BOTH, expand=True, padx=2, pady=2)
         
-        # Left panel for tools
-        self.left_panel = ctk.CTkFrame(self.main_frame, width=60)
-        self.left_panel.pack(side=tk.LEFT, fill=tk.Y, padx=5, pady=5)
+        # Left panel for tools with modern styling
+        self.left_panel = ctk.CTkFrame(self.main_frame, width=70, corner_radius=10)
+        self.left_panel.pack(side=tk.LEFT, fill=tk.Y, padx=8, pady=8)
         
         # Create toolbar
         self.toolbar = Toolbar(self.left_panel, self)
         self.toolbar.pack(fill=tk.BOTH, expand=True)
         
         # Main content area
-        self.content_frame = ctk.CTkFrame(self.main_frame)
-        self.content_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=5, pady=5)
+        self.content_frame = ctk.CTkFrame(self.main_frame, corner_radius=10)
+        self.content_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=8, pady=8)
         
-        # Create canvas area
-        self.canvas_frame = ctk.CTkFrame(self.content_frame)
-        self.canvas_frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+        # Create canvas area with improved styling
+        self.canvas_frame = ctk.CTkFrame(self.content_frame, corner_radius=5)
+        self.canvas_frame.pack(fill=tk.BOTH, expand=True, padx=6, pady=6)
         
-        # Create edit canvas with scroll bars
+        # Create edit canvas with modern scroll bars
         self.h_scrollbar = ctk.CTkScrollbar(self.canvas_frame, orientation="horizontal")
         self.h_scrollbar.pack(side=tk.BOTTOM, fill=tk.X)
         
@@ -123,25 +123,37 @@ class MainWindow:
         self.h_scrollbar.configure(command=self.canvas.xview)
         self.v_scrollbar.configure(command=self.canvas.yview)
         
-        # Status bar
-        self.status_bar = ctk.CTkFrame(self.content_frame, height=25)
-        self.status_bar.pack(side=tk.BOTTOM, fill=tk.X, pady=(0, 5))
+        # Status bar with modern styling
+        self.status_bar = ctk.CTkFrame(self.content_frame, height=30, corner_radius=5)
+        self.status_bar.pack(side=tk.BOTTOM, fill=tk.X, pady=(8, 0))
         
-        self.status_label = ctk.CTkLabel(self.status_bar, text="Ready")
-        self.status_label.pack(side=tk.LEFT, padx=10)
+        self.status_label = ctk.CTkLabel(
+            self.status_bar, 
+            text="Ready", 
+            font=("Inter", 12)
+        )
+        self.status_label.pack(side=tk.LEFT, padx=12)
         
-        self.position_label = ctk.CTkLabel(self.status_bar, text="")
-        self.position_label.pack(side=tk.RIGHT, padx=10)
+        self.position_label = ctk.CTkLabel(
+            self.status_bar, 
+            text="", 
+            font=("Inter", 12)
+        )
+        self.position_label.pack(side=tk.RIGHT, padx=12)
         
-        self.zoom_label = ctk.CTkLabel(self.status_bar, text="Zoom: 100%")
-        self.zoom_label.pack(side=tk.RIGHT, padx=10)
+        self.zoom_label = ctk.CTkLabel(
+            self.status_bar, 
+            text="Zoom: 100%", 
+            font=("Inter", 12)
+        )
+        self.zoom_label.pack(side=tk.RIGHT, padx=12)
         
         # Right panel for layers, history, etc.
-        self.right_panel = ctk.CTkFrame(self.main_frame, width=250)
-        self.right_panel.pack(side=tk.RIGHT, fill=tk.Y, padx=5, pady=5)
+        self.right_panel = ctk.CTkFrame(self.main_frame, width=280, corner_radius=10)
+        self.right_panel.pack(side=tk.RIGHT, fill=tk.Y, padx=8, pady=8)
         
-        # Right panel tabs
-        self.right_panel_tabs = ctk.CTkTabview(self.right_panel)
+        # Right panel tabs with modern styling
+        self.right_panel_tabs = ctk.CTkTabview(self.right_panel, corner_radius=8)
         self.right_panel_tabs.pack(fill=tk.BOTH, expand=True)
         
         # Add tabs
@@ -176,59 +188,94 @@ class MainWindow:
     
     def show_welcome_screen(self):
         """Display the welcome screen with options to open or create a file."""
-        # Create a frame for the welcome screen
-        self.welcome_frame = ctk.CTkFrame(self.canvas_frame)
+        # Create a frame for the welcome screen with modern styling
+        self.welcome_frame = ctk.CTkFrame(self.canvas_frame, corner_radius=15, fg_color=("gray85", "gray20"))
         self.welcome_frame.place(relx=0.5, rely=0.5, anchor=tk.CENTER)
         
-        # Welcome message
+        # Add logo or icon (placeholder)
+        # TODO: Add actual logo
+        logo_frame = ctk.CTkFrame(self.welcome_frame, width=100, height=100, corner_radius=15, fg_color="transparent")
+        logo_frame.pack(pady=(30, 10))
+        
+        logo_placeholder = ctk.CTkLabel(
+            logo_frame,
+            text="IE",
+            font=("Inter", 48, "bold"),
+            text_color=("#1f538d", "#2d7bbf")
+        )
+        logo_placeholder.place(relx=0.5, rely=0.5, anchor=tk.CENTER)
+        
+        # Welcome message with modern typography
         welcome_label = ctk.CTkLabel(
             self.welcome_frame, 
             text=f"Welcome to {self.app_state.app_name}",
-            font=("Helvetica", 24)
+            font=("Inter", 28, "bold")
         )
-        welcome_label.pack(pady=(20, 10))
+        welcome_label.pack(pady=(10, 5))
         
         subtitle_label = ctk.CTkLabel(
             self.welcome_frame,
-            text="Get started by creating a new file or opening an existing one:",
-            font=("Helvetica", 14)
+            text="Professional Image Editing Made Simple",
+            font=("Inter", 16)
         )
-        subtitle_label.pack(pady=(0, 20))
+        subtitle_label.pack(pady=(0, 25))
         
-        # Buttons
+        # Button container for better layout
+        button_container = ctk.CTkFrame(self.welcome_frame, fg_color="transparent")
+        button_container.pack(pady=(0, 30), padx=50)
+        
+        # Buttons with modern styling
         new_file_button = ctk.CTkButton(
-            self.welcome_frame,
-            text="New Image",
-            width=200,
+            button_container,
+            text="Create New Image",
+            font=("Inter", 14),
+            height=38,
+            corner_radius=8,
             command=self.new_file
         )
-        new_file_button.pack(pady=10)
+        new_file_button.pack(fill=tk.X, pady=8)
         
         open_file_button = ctk.CTkButton(
-            self.welcome_frame,
-            text="Open Image",
-            width=200,
+            button_container,
+            text="Open Existing Image",
+            font=("Inter", 14),
+            height=38,
+            corner_radius=8,
             command=self.open_file
         )
-        open_file_button.pack(pady=10)
+        open_file_button.pack(fill=tk.X, pady=8)
         
-        # Recent files (placeholder)
+        # Recent files section with modern styling
         if self.app_state.settings["file_handling"]["recent_files"]:
+            # Separator
+            separator = ctk.CTkFrame(self.welcome_frame, height=1, fg_color=("gray70", "gray40"))
+            separator.pack(fill=tk.X, padx=40, pady=20)
+            
             recent_label = ctk.CTkLabel(
                 self.welcome_frame,
-                text="Recent Files:",
-                font=("Helvetica", 14)
+                text="RECENT FILES",
+                font=("Inter", 14, "bold"),
+                text_color=("gray50", "gray70")
             )
-            recent_label.pack(pady=(20, 10))
+            recent_label.pack(pady=(0, 10))
+            
+            # Container for recent files
+            recent_container = ctk.CTkFrame(self.welcome_frame, fg_color="transparent")
+            recent_container.pack(padx=40, pady=0, fill=tk.X)
             
             for file_path in self.app_state.settings["file_handling"]["recent_files"][:5]:
                 file_button = ctk.CTkButton(
-                    self.welcome_frame,
+                    recent_container,
                     text=os.path.basename(file_path),
-                    width=200,
+                    font=("Inter", 12),
+                    height=32,
+                    corner_radius=6,
+                    fg_color=("gray80", "gray30"),
+                    hover_color=("gray70", "gray40"),
+                    anchor="w",
                     command=lambda p=file_path: self.open_file(p)
                 )
-                file_button.pack(pady=5)
+                file_button.pack(fill=tk.X, pady=4)
     
     def new_file(self):
         """Open the new file dialog."""
