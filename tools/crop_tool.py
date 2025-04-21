@@ -7,7 +7,7 @@ from PIL import Image
 from tools.base_tool import BaseTool
 from core.app_state import AppState
 
-logger = logging.getLogger("PhotoForge.CropTool")
+logger = logging.getLogger("Image_Editor.CropTool")
 
 class CropTool(BaseTool):
     """Tool for cropping images."""

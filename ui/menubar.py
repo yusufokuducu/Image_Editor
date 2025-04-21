@@ -9,7 +9,7 @@ import tkinter as tk
 from tkinter import filedialog, messagebox
 from typing import Dict, List, Any, Optional, Callable
 
-logger = logging.getLogger("PhotoForge.Menubar")
+logger = logging.getLogger("Image_Editor.Menubar")
 
 def create_menubar(root, main_window):
     """
@@ -308,8 +308,8 @@ def _show_about_dialog(main_window):
         main_window: Reference to the main window
     """
     messagebox.showinfo(
-        "About PhotoForge Pro",
-        f"PhotoForge Pro v{main_window.app_state.app_version}\n\n"
+        "About Image_Editor",
+        f"Image_Editor v{main_window.app_state.app_version}\n\n"
         "An advanced image editor built with Python and CustomTkinter.\n\n"
-        "© 2023 PhotoForge Team"
+        "© 2023 Image_Editor Team"
     ) 

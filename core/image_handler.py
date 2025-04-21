@@ -13,7 +13,7 @@ import numpy as np
 from PIL import Image, ImageFilter, ImageEnhance, ImageOps
 import cv2
 
-logger = logging.getLogger("PhotoForge.ImageHandler")
+logger = logging.getLogger("Image_Editor.ImageHandler")
 
 class ImageHandler:
     """

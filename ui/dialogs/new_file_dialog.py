@@ -9,7 +9,7 @@ from typing import Optional, Tuple, List, Dict, Any
 
 import customtkinter as ctk
 
-logger = logging.getLogger("PhotoForge.Dialogs.NewFile")
+logger = logging.getLogger("Image_Editor.Dialogs.NewFile")
 
 class NewFileDialog(ctk.CTkToplevel):
     """Dialog for creating a new image file."""

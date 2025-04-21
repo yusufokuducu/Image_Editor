@@ -9,7 +9,7 @@ from typing import Dict, Any, Optional
 
 import customtkinter as ctk
 
-logger = logging.getLogger("PhotoForge.ToolOptionsPanel")
+logger = logging.getLogger("Image_Editor.ToolOptionsPanel")
 
 class ToolOptionsPanel(ctk.CTkFrame):
     """

@@ -13,7 +13,7 @@ import cv2
 
 from tools.base_tool import BaseTool
 
-logger = logging.getLogger("PhotoForge.Tools.Brush")
+logger = logging.getLogger("Image_Editor.Tools.Brush")
 
 class BrushTool(BaseTool):
     """

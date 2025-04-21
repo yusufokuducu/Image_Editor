@@ -7,10 +7,10 @@ import logging
 from abc import ABC, abstractmethod
 from typing import Optional, Tuple, Any
 
-logger = logging.getLogger("PhotoForge.BaseTool")
+logger = logging.getLogger("Image_Editor.BaseTool")
 
 class BaseTool(ABC):
-    """Base class for all tools in PhotoForge Pro."""
+    """Base class for all tools in Image_Editor."""
     
     def __init__(self, app_state, name):
         """

@@ -11,7 +11,7 @@ import numpy as np
 
 from tools.base_tool import BaseTool
 
-logger = logging.getLogger("PhotoForge.Tools.Move")
+logger = logging.getLogger("Image_Editor.Tools.Move")
 
 class MoveTool(BaseTool):
     """

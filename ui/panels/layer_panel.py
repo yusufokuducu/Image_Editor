@@ -14,7 +14,7 @@ import numpy as np
 from core.layer_manager import Layer
 from core.image_handler import ImageHandler
 
-logger = logging.getLogger("PhotoForge.LayerPanel")
+logger = logging.getLogger("Image_Editor.LayerPanel")
 
 class LayerItem(ctk.CTkFrame):
     """
@@ -404,13 +404,13 @@ class LayerPanel(ctk.CTkFrame):
             return
         
         # Create a new transparent layer
-        from photoforge_pro.core.layer_manager import Layer
+        from core.layer_manager import Layer
         
         # Get image dimensions
         width, height = self.app_state.image_dimensions
         
         # Create transparent image
-        from photoforge_pro.core.image_handler import ImageHandler
+        from core.image_handler import ImageHandler
         transparent_image = ImageHandler.create_blank_image(
             width, height, (0, 0, 0), True
         )

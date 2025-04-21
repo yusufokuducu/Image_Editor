@@ -10,7 +10,7 @@ from typing import Dict, List, Optional, Tuple, Any, Union
 import numpy as np
 import cv2
 
-logger = logging.getLogger("PhotoForge.LayerManager")
+logger = logging.getLogger("Image_Editor.LayerManager")
 
 class Layer:
     """
