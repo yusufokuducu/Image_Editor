@@ -12,15 +12,15 @@ import customtkinter as ctk
 from PIL import Image, ImageTk
 import tkinter.ttk as ttk
 
-from image_editor.tools.move_tool import MoveTool
-from image_editor.tools.crop_tool import CropTool
+from tools.move_tool import MoveTool
+from tools.crop_tool import CropTool
 
 logger = logging.getLogger("Image_Editor.Toolbar")
 
 class ToolButton(ctk.CTkButton):
     """Custom button for tools in the toolbar."""
     
-    def __init__(self, parent, name: str, icon_path: Optional[str] = None, 
+    def __init__(self, parent, tool_name: str, icon_path: Optional[str] = None, 
                 command: Optional[Callable] = None, tooltip: Optional[str] = None,
                 **kwargs):
         """
@@ -28,13 +28,13 @@ class ToolButton(ctk.CTkButton):
         
         Args:
             parent: Parent widget
-            name: Tool name
+            tool_name: Tool name
             icon_path: Path to the icon image
             command: Callback function when the button is clicked
             tooltip: Tooltip text
             **kwargs: Additional arguments for CTkButton
         """
-        self.name = name
+        self.tool_name = tool_name
         self.tooltip = tooltip
         self.icon_image = None
         
@@ -45,6 +45,9 @@ class ToolButton(ctk.CTkButton):
         fg_color = kwargs.pop('fg_color', ("gray80", "gray28"))
         hover_color = kwargs.pop('hover_color', ("gray70", "gray38"))
         border_width = kwargs.pop('border_width', 0)
+        
+        # Get button text - either from kwargs or use tool_name
+        display_text = kwargs.pop('text', tool_name)
         
         # Load icon if provided
         if icon_path and os.path.exists(icon_path):
@@ -63,7 +66,7 @@ class ToolButton(ctk.CTkButton):
         # Create the button
         super().__init__(
             parent,
-            text="" if image else name,
+            text=display_text,
             image=image,
             width=width,
             height=height,
@@ -174,7 +177,7 @@ class Toolbar(ctk.CTkFrame):
         # Move tool
         self.tool_buttons["move"] = ToolButton(
             self.tools_container,
-            name="Move",
+            tool_name="Move",
             tooltip="Move Tool (V)",
             text="⥮",
             font=("Arial", 18),
@@ -185,7 +188,7 @@ class Toolbar(ctk.CTkFrame):
         # Selection tool
         self.tool_buttons["select"] = ToolButton(
             self.tools_container,
-            name="Select",
+            tool_name="Select",
             tooltip="Selection Tool (M)",
             text="◫",
             font=("Arial", 18),
@@ -196,7 +199,7 @@ class Toolbar(ctk.CTkFrame):
         # Crop tool
         self.tool_buttons["crop"] = ToolButton(
             self.tools_container,
-            name="Crop",
+            tool_name="Crop",
             tooltip="Crop Tool (C)",
             text="⟗",
             font=("Arial", 18),
@@ -207,7 +210,7 @@ class Toolbar(ctk.CTkFrame):
         # Brush tool
         self.tool_buttons["brush"] = ToolButton(
             self.tools_container,
-            name="Brush",
+            tool_name="Brush",
             tooltip="Brush Tool (B)",
             text="⦿",
             font=("Arial", 18),
@@ -218,7 +221,7 @@ class Toolbar(ctk.CTkFrame):
         # Eraser tool
         self.tool_buttons["eraser"] = ToolButton(
             self.tools_container,
-            name="Eraser",
+            tool_name="Eraser",
             tooltip="Eraser Tool (E)",
             text="⌫",
             font=("Arial", 18),
@@ -229,7 +232,7 @@ class Toolbar(ctk.CTkFrame):
         # Text tool
         self.tool_buttons["text"] = ToolButton(
             self.tools_container,
-            name="Text",
+            tool_name="Text",
             tooltip="Text Tool (T)",
             text="T",
             font=("Arial", 18),

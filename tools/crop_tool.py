@@ -4,8 +4,8 @@ from typing import Optional, Tuple, Dict, Any
 import numpy as np
 from PIL import Image
 
-from photoforge_pro.tools.base_tool import BaseTool
-from photoforge_pro.core.app_state import AppState
+from tools.base_tool import BaseTool
+from core.app_state import AppState
 
 logger = logging.getLogger("PhotoForge.CropTool")
 

@@ -22,7 +22,7 @@ logging.basicConfig(
 logger = logging.getLogger("Image_Editor")
 
 # Add project directory to path to make imports work properly
-project_root = Path(__file__).parent.parent
+project_root = Path(__file__).parent
 sys.path.insert(0, str(project_root))
 
 try:
@@ -37,8 +37,8 @@ except ImportError as e:
     sys.exit(1)
 
 # Import application components
-from image_editor.ui.main_window import MainWindow
-from image_editor.core.app_state import AppState
+from ui.main_window import MainWindow
+from core.app_state import AppState
 
 def setup_appearance():
     """Configure the appearance settings for the application."""

@@ -11,6 +11,9 @@ import customtkinter as ctk
 from PIL import Image, ImageTk
 import numpy as np
 
+from core.layer_manager import Layer
+from core.image_handler import ImageHandler
+
 logger = logging.getLogger("PhotoForge.LayerPanel")
 
 class LayerItem(ctk.CTkFrame):

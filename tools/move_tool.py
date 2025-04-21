@@ -9,7 +9,7 @@ from typing import Optional, Tuple
 
 import numpy as np
 
-from photoforge_pro.tools.base_tool import BaseTool
+from tools.base_tool import BaseTool
 
 logger = logging.getLogger("PhotoForge.Tools.Move")
 
@@ -25,7 +25,7 @@ class MoveTool(BaseTool):
         Args:
             app_state: Application state object
         """
-        super().__init__(app_state)
+        super().__init__(app_state, "move")
         
         # State for dragging
         self.dragging = False

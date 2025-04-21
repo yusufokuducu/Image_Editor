@@ -11,9 +11,9 @@ import numpy as np
 import customtkinter as ctk
 from PIL import Image, ImageTk
 
-from photoforge_pro.core.app_state import AppState
+from core.app_state import AppState
 
-logger = logging.getLogger("PhotoForge.Canvas")
+logger = logging.getLogger("Image_Editor.Canvas")
 
 class EditCanvas(tk.Canvas):
     """

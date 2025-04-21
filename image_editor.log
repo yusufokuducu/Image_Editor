@@ -1,0 +1,30 @@
+2025-04-22 00:16:00,054 - Image_Editor - INFO - Starting Image_Editor application
+2025-04-22 00:16:00,059 - Image_Editor.AppState - INFO - Settings loaded from file
+2025-04-22 00:16:00,059 - Image_Editor.AppState - INFO - AppState initialized
+2025-04-22 00:16:00,290 - PhotoForge.ImageHandler - INFO - ImageHandler initialized
+2025-04-22 00:16:00,321 - PhotoForge.Menubar - INFO - Menu bar created
+2025-04-22 00:16:48,439 - Image_Editor - INFO - Starting Image_Editor application
+2025-04-22 00:16:48,440 - Image_Editor.AppState - INFO - Settings loaded from file
+2025-04-22 00:16:48,441 - Image_Editor.AppState - INFO - AppState initialized
+2025-04-22 00:16:48,525 - PhotoForge.ImageHandler - INFO - ImageHandler initialized
+2025-04-22 00:16:48,570 - PhotoForge.Menubar - INFO - Menu bar created
+2025-04-22 00:17:24,284 - Image_Editor - INFO - Starting Image_Editor application
+2025-04-22 00:17:24,285 - Image_Editor.AppState - INFO - Settings loaded from file
+2025-04-22 00:17:24,286 - Image_Editor.AppState - INFO - AppState initialized
+2025-04-22 00:17:24,372 - PhotoForge.ImageHandler - INFO - ImageHandler initialized
+2025-04-22 00:17:24,421 - PhotoForge.Menubar - INFO - Menu bar created
+2025-04-22 00:17:24,682 - Image_Editor.Toolbar - INFO - Toolbar initialized
+2025-04-22 00:17:24,735 - Image_Editor.Canvas - INFO - EditCanvas initialized
+2025-04-22 00:17:24,801 - PhotoForge.LayerPanel - INFO - Layer panel initialized
+2025-04-22 00:17:24,818 - PhotoForge.ToolOptionsPanel - INFO - Tool options panel initialized
+2025-04-22 00:17:24,857 - Image_Editor.MainWindow - INFO - Main window initialized
+2025-04-22 00:17:37,713 - PhotoForge.Dialogs.NewFile - INFO - New file dialog opened
+2025-04-22 00:17:42,875 - PhotoForge.LayerManager - INFO - LayerManager initialized with canvas size 800x600
+2025-04-22 00:17:42,875 - PhotoForge.LayerManager - INFO - Added layer 'Background' at position 0
+2025-04-22 00:17:42,875 - Image_Editor.AppState - INFO - Created new 800x600 image
+2025-04-22 00:17:42,893 - Image_Editor.Canvas - INFO - Set image on canvas, shape: (600, 800, 4)
+2025-04-22 00:17:42,943 - Image_Editor.MainWindow - INFO - Created new document 800x600
+2025-04-22 00:17:42,979 - PhotoForge.Dialogs.NewFile - INFO - Created new image (800x600)
+2025-04-22 00:17:49,317 - Image_Editor.Toolbar - INFO - Selected tool: brush
+2025-04-22 00:18:02,976 - Image_Editor.AppState - INFO - Settings saved to file
+2025-04-22 00:18:03,066 - Image_Editor - INFO - Image_Editor application closed

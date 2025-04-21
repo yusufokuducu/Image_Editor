@@ -11,7 +11,7 @@ from typing import Tuple, List, Optional
 import numpy as np
 import cv2
 
-from photoforge_pro.tools.base_tool import BaseTool
+from tools.base_tool import BaseTool
 
 logger = logging.getLogger("PhotoForge.Tools.Brush")
 
@@ -28,7 +28,7 @@ class BrushTool(BaseTool):
         Args:
             app_state: Application state object
         """
-        super().__init__(app_state)
+        super().__init__(app_state, "brush")
         
         # Drawing state
         self.last_x = None

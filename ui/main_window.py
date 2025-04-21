@@ -12,15 +12,15 @@ from typing import Optional, Dict, Any, List
 import customtkinter as ctk
 from PIL import Image, ImageTk
 
-from image_editor.core.app_state import AppState
-from image_editor.core.image_handler import ImageHandler
-from image_editor.core.layer_manager import LayerManager, Layer
-from image_editor.ui.panels.layer_panel import LayerPanel
-from image_editor.ui.panels.tool_options_panel import ToolOptionsPanel
-from image_editor.ui.canvas import EditCanvas
-from image_editor.ui.toolbar import Toolbar
-from image_editor.ui.menubar import create_menubar
-from image_editor.ui.dialogs.new_file_dialog import NewFileDialog
+from core.app_state import AppState
+from core.image_handler import ImageHandler
+from core.layer_manager import LayerManager, Layer
+from ui.panels.layer_panel import LayerPanel
+from ui.panels.tool_options_panel import ToolOptionsPanel
+from ui.canvas import EditCanvas
+from ui.toolbar import Toolbar
+from ui.menubar import create_menubar
+from ui.dialogs.new_file_dialog import NewFileDialog
 
 logger = logging.getLogger("Image_Editor.MainWindow")
 
