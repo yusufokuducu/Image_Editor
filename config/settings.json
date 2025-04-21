@@ -1,0 +1,30 @@
+{
+    "appearance": {
+        "theme": "dark",
+        "accent_color": "blue",
+        "interface_scaling": 1.0
+    },
+    "performance": {
+        "preview_quality": "medium",
+        "undo_levels": 100,
+        "use_gpu_acceleration": false,
+        "background_processing": true
+    },
+    "file_handling": {
+        "autosave_enabled": true,
+        "autosave_interval_minutes": 10,
+        "recent_files": [
+            "C:/Users/kyusu/Desktop/logo192.png"
+        ],
+        "default_save_format": "png",
+        "export_quality_jpeg": 95
+    },
+    "workspace": {
+        "show_rulers": true,
+        "show_grid": false,
+        "grid_size": 32,
+        "snap_to_grid": false,
+        "panels_layout": "default"
+    },
+    "shortcuts": {}
+}
