@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-PhotoForge Pro - Advanced Image Editor
+Image_Editor - Advanced Image Editor
 Main Application Entry Point
 """
 
@@ -14,12 +14,12 @@ logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler("photoforge.log"),
+        logging.FileHandler("image_editor.log"),
         logging.StreamHandler(sys.stdout)
     ]
 )
 
-logger = logging.getLogger("PhotoForge")
+logger = logging.getLogger("Image_Editor")
 
 # Add project directory to path to make imports work properly
 project_root = Path(__file__).parent.parent
@@ -37,8 +37,8 @@ except ImportError as e:
     sys.exit(1)
 
 # Import application components
-from photoforge_pro.ui.main_window import MainWindow
-from photoforge_pro.core.app_state import AppState
+from image_editor.ui.main_window import MainWindow
+from image_editor.core.app_state import AppState
 
 def setup_appearance():
     """Configure the appearance settings for the application."""
@@ -47,7 +47,7 @@ def setup_appearance():
 
 def main():
     """Main application entry point."""
-    logger.info("Starting PhotoForge Pro application")
+    logger.info("Starting Image_Editor application")
     
     # Configure appearance
     setup_appearance()
@@ -62,7 +62,7 @@ def main():
     # Run the application
     root.mainloop()
     
-    logger.info("PhotoForge Pro application closed")
+    logger.info("Image_Editor application closed")
 
 if __name__ == "__main__":
     main() 

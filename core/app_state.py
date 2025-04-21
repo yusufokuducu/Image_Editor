@@ -24,7 +24,7 @@ class AppState:
     def __init__(self):
         """Initialize the application state with default values."""
         # Application information
-        self.app_name = "PhotoForge Pro"
+        self.app_name = "Image_Editor"
         self.app_version = "0.1.0"
         
         # Project state
