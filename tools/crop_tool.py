@@ -34,20 +34,24 @@ class CropTool(BaseTool):
             "guides": [],
             "dimension_text": None
         }
+        
+        # Reference to the canvas
+        self.canvas = None
     
-    def activate(self):
+    def activate(self, canvas=None):
         """Activate the crop tool."""
         logger.info("Crop tool activated")
         self.active = True
-        self.app_state.set_cursor("crosshair")
+        self.canvas = canvas or self.app_state.get_active_canvas()
         
-        # Set up event bindings
-        canvas = self.app_state.get_active_canvas()
-        if canvas:
-            canvas.bind("<Button-1>", self.on_mouse_down)
-            canvas.bind("<ButtonRelease-1>", self.on_mouse_up)
-            canvas.bind("<B1-Motion>", self.on_mouse_drag)
-            canvas.bind("<Motion>", self.on_mouse_move)
+        if self.canvas:
+            self.canvas.config(cursor="crosshair")
+            
+            # Set up event bindings
+            self.canvas.bind("<Button-1>", self.on_mouse_down)
+            self.canvas.bind("<ButtonRelease-1>", self.on_mouse_up)
+            self.canvas.bind("<B1-Motion>", self.on_mouse_drag)
+            self.canvas.bind("<Motion>", self.on_mouse_move)
     
     def deactivate(self):
         """Deactivate the crop tool."""
@@ -58,23 +62,22 @@ class CropTool(BaseTool):
         self._remove_crop_ui()
         
         # Remove event bindings
-        canvas = self.app_state.get_active_canvas()
-        if canvas:
-            canvas.unbind("<Button-1>")
-            canvas.unbind("<ButtonRelease-1>")
-            canvas.unbind("<B1-Motion>")
-            canvas.unbind("<Motion>")
+        if self.canvas:
+            self.canvas.unbind("<Button-1>")
+            self.canvas.unbind("<ButtonRelease-1>")
+            self.canvas.unbind("<B1-Motion>")
+            self.canvas.unbind("<Motion>")
+            self.canvas = None
     
     def on_mouse_down(self, event):
         """Handle mouse button press."""
-        if not self.active:
+        if not self.active or not self.canvas:
             return
         
-        canvas = self.app_state.get_active_canvas()
-        if not canvas:
-            return
+        x, y = self.canvas.canvasx(event.x), self.canvas.canvasy(event.y)
         
-        x, y = canvas.canvasx(event.x), canvas.canvasy(event.y)
+        # Convert canvas coordinates to image coordinates
+        img_x, img_y = self._canvas_to_image_coords(x, y)
         
         # Check if clicking on a handle
         if self.crop_rect:
@@ -105,8 +108,10 @@ class CropTool(BaseTool):
     
     def on_mouse_up(self, event):
         """Handle mouse button release."""
-        if not self.active or not self.is_dragging:
+        if not self.active or not self.is_dragging or not self.canvas:
             return
+        
+        x, y = self.canvas.canvasx(event.x), self.canvas.canvasy(event.y)
         
         self.is_dragging = False
         self.drag_start = None
@@ -126,14 +131,10 @@ class CropTool(BaseTool):
     
     def on_mouse_drag(self, event):
         """Handle mouse drag."""
-        if not self.active or not self.is_dragging or not self.crop_rect:
+        if not self.active or not self.is_dragging or not self.crop_rect or not self.canvas:
             return
         
-        canvas = self.app_state.get_active_canvas()
-        if not canvas:
-            return
-        
-        x, y = canvas.canvasx(event.x), canvas.canvasy(event.y)
+        x, y = self.canvas.canvasx(event.x), self.canvas.canvasy(event.y)
         x1, y1, x2, y2 = self.crop_rect
         
         if self.drag_handle:
@@ -190,26 +191,49 @@ class CropTool(BaseTool):
     
     def on_mouse_move(self, event):
         """Handle mouse movement."""
-        if not self.active or self.is_dragging:
+        if not self.active or self.is_dragging or not self.canvas:
             return
         
-        canvas = self.app_state.get_active_canvas()
-        if not canvas or not self.crop_rect:
+        x, y = self.canvas.canvasx(event.x), self.canvas.canvasy(event.y)
+        
+        if not self.crop_rect:
             return
-        
-        x, y = canvas.canvasx(event.x), canvas.canvasy(event.y)
-        
+            
         # Check if mouse is over a handle and update cursor
         handle = self._get_handle_at_position(x, y)
         if handle:
-            if handle in ["tl", "br"]:
-                canvas.config(cursor="nwse-resize")
-            else:
-                canvas.config(cursor="nesw-resize")
+            if handle == "tl":
+                self.canvas.config(cursor="nw-resize")
+            elif handle == "tr":
+                self.canvas.config(cursor="ne-resize")
+            elif handle == "bl":
+                self.canvas.config(cursor="sw-resize")
+            elif handle == "br":
+                self.canvas.config(cursor="se-resize")
         elif self._point_in_rect(x, y, self.crop_rect):
-            canvas.config(cursor="move")
+            self.canvas.config(cursor="fleur")
         else:
-            canvas.config(cursor="crosshair")
+            self.canvas.config(cursor="crosshair")
+
+    def _canvas_to_image_coords(self, canvas_x, canvas_y):
+        """Convert canvas coordinates to image coordinates."""
+        scale = self.app_state.view_scale
+        offset_x, offset_y = self.app_state.view_offset
+        
+        img_x = int((canvas_x - offset_x) / scale)
+        img_y = int((canvas_y - offset_y) / scale)
+        
+        return img_x, img_y
+    
+    def _image_to_canvas_coords(self, img_x, img_y):
+        """Convert image coordinates to canvas coordinates."""
+        scale = self.app_state.view_scale
+        offset_x, offset_y = self.app_state.view_offset
+        
+        canvas_x = int(img_x * scale + offset_x)
+        canvas_y = int(img_y * scale + offset_y)
+        
+        return canvas_x, canvas_y
     
     def apply_crop(self):
         """Apply the crop to the current image."""
@@ -229,11 +253,6 @@ class CropTool(BaseTool):
             logger.warning("No image data in active layer")
             return
         
-        # Convert canvas coordinates to image coordinates
-        canvas = self.app_state.get_active_canvas()
-        if not canvas:
-            return
-        
         # Get the crop rectangle in screen coordinates
         x1, y1, x2, y2 = self.crop_rect
         
@@ -244,14 +263,8 @@ class CropTool(BaseTool):
             y1, y2 = y2, y1
         
         # Convert canvas coordinates to image coordinates
-        scale = self.app_state.view_scale
-        offset_x, offset_y = self.app_state.view_offset
-        
-        # Convert to image coordinates
-        img_x1 = int((x1 - offset_x) / scale)
-        img_y1 = int((y1 - offset_y) / scale)
-        img_x2 = int((x2 - offset_x) / scale)
-        img_y2 = int((y2 - offset_y) / scale)
+        img_x1, img_y1 = self._canvas_to_image_coords(x1, y1)
+        img_x2, img_y2 = self._canvas_to_image_coords(x2, y2)
         
         # Ensure coordinates are within image bounds
         img_width, img_height = original_image.size
@@ -293,11 +306,7 @@ class CropTool(BaseTool):
     
     def _update_crop_ui(self):
         """Update the crop rectangle and handles on the canvas."""
-        if not self.crop_rect:
-            return
-        
-        canvas = self.app_state.get_active_canvas()
-        if not canvas:
+        if not self.crop_rect or not self.canvas:
             return
         
         x1, y1, x2, y2 = self.crop_rect
@@ -312,7 +321,7 @@ class CropTool(BaseTool):
         self._remove_crop_ui()
         
         # Draw the crop rectangle
-        self.canvas_elements["rectangle"] = canvas.create_rectangle(
+        self.canvas_elements["rectangle"] = self.canvas.create_rectangle(
             x1, y1, x2, y2,
             outline="white",
             width=2,
@@ -329,7 +338,7 @@ class CropTool(BaseTool):
         }
         
         for handle_name, (hx, hy) in handles.items():
-            handle_id = canvas.create_rectangle(
+            handle_id = self.canvas.create_rectangle(
                 hx - handle_size/2, hy - handle_size/2,
                 hx + handle_size/2, hy + handle_size/2,
                 fill="white",
@@ -348,36 +357,31 @@ class CropTool(BaseTool):
             
             # Vertical guides
             self.canvas_elements["guides"].append(
-                canvas.create_line(third_x1, y1, third_x1, y2, fill="white", dash=(2, 2))
+                self.canvas.create_line(third_x1, y1, third_x1, y2, fill="white", dash=(2, 2))
             )
             self.canvas_elements["guides"].append(
-                canvas.create_line(third_x2, y1, third_x2, y2, fill="white", dash=(2, 2))
+                self.canvas.create_line(third_x2, y1, third_x2, y2, fill="white", dash=(2, 2))
             )
             
             # Horizontal guides
             self.canvas_elements["guides"].append(
-                canvas.create_line(x1, third_y1, x2, third_y1, fill="white", dash=(2, 2))
+                self.canvas.create_line(x1, third_y1, x2, third_y1, fill="white", dash=(2, 2))
             )
             self.canvas_elements["guides"].append(
-                canvas.create_line(x1, third_y2, x2, third_y2, fill="white", dash=(2, 2))
+                self.canvas.create_line(x1, third_y2, x2, third_y2, fill="white", dash=(2, 2))
             )
         
         # Show dimensions if enabled
         if self.settings["show_dimensions"]:
             # Convert to image coordinates for accurate dimensions
-            scale = self.app_state.view_scale
-            offset_x, offset_y = self.app_state.view_offset
-            
-            img_x1 = int((x1 - offset_x) / scale)
-            img_y1 = int((y1 - offset_y) / scale)
-            img_x2 = int((x2 - offset_x) / scale)
-            img_y2 = int((y2 - offset_y) / scale)
+            img_x1, img_y1 = self._canvas_to_image_coords(x1, y1)
+            img_x2, img_y2 = self._canvas_to_image_coords(x2, y2)
             
             width = abs(img_x2 - img_x1)
             height = abs(img_y2 - img_y1)
             
             dimension_text = f"{width} x {height}px"
-            self.canvas_elements["dimension_text"] = canvas.create_text(
+            self.canvas_elements["dimension_text"] = self.canvas.create_text(
                 (x1 + x2) / 2, y1 - 10,
                 text=dimension_text,
                 fill="white",
@@ -387,28 +391,27 @@ class CropTool(BaseTool):
     
     def _remove_crop_ui(self):
         """Remove all crop-related UI elements."""
-        canvas = self.app_state.get_active_canvas()
-        if not canvas:
+        if not self.canvas:
             return
         
         # Remove rectangle
         if self.canvas_elements["rectangle"]:
-            canvas.delete(self.canvas_elements["rectangle"])
+            self.canvas.delete(self.canvas_elements["rectangle"])
             self.canvas_elements["rectangle"] = None
         
         # Remove handles
         for handle_id in self.canvas_elements["handles"].values():
-            canvas.delete(handle_id)
+            self.canvas.delete(handle_id)
         self.canvas_elements["handles"] = {}
         
         # Remove guides
         for guide_id in self.canvas_elements["guides"]:
-            canvas.delete(guide_id)
+            self.canvas.delete(guide_id)
         self.canvas_elements["guides"] = []
         
         # Remove dimension text
         if self.canvas_elements["dimension_text"]:
-            canvas.delete(self.canvas_elements["dimension_text"])
+            self.canvas.delete(self.canvas_elements["dimension_text"])
             self.canvas_elements["dimension_text"] = None
     
     def _get_handle_at_position(self, x, y):

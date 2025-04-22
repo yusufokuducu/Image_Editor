@@ -393,15 +393,37 @@ class LayerManager:
         # Start with a transparent canvas
         result = np.zeros((self.height, self.width, 4), dtype=np.uint8)
         
-        # Blend layers from bottom to top
+        # Optimization: Skip invisible layers and collect visible ones
+        visible_layers = []
         for i in range(start_index, end_index + 1):
             layer = self.layers[i]
-            
             if layer.visible and layer.opacity > 0:
-                result = self._blend_images(
-                    result, layer.image_data, 
-                    layer.blend_mode, layer.opacity, layer.mask
-                )
+                visible_layers.append((i, layer))
+        
+        # Skip blending if no visible layers
+        if not visible_layers:
+            return result
+            
+        # Optimization: If only one layer with 100% opacity and normal blend mode, return it directly
+        if len(visible_layers) == 1 and visible_layers[0][1].opacity == 1.0 and visible_layers[0][1].blend_mode == "normal":
+            layer = visible_layers[0][1]
+            # Check if we need to convert RGB to RGBA
+            if layer.image_data.shape[2] == 3:
+                # Convert RGB to RGBA
+                rgba = np.zeros((self.height, self.width, 4), dtype=np.uint8)
+                rgba[:, :, :3] = layer.image_data
+                rgba[:, :, 3] = 255  # Full opacity
+                return rgba
+            else:
+                # Already RGBA
+                return layer.image_data.copy()
+        
+        # Blend visible layers from bottom to top
+        for i, layer in visible_layers:
+            result = self._blend_images(
+                result, layer.image_data, 
+                layer.blend_mode, layer.opacity, layer.mask
+            )
         
         return result
     
@@ -409,47 +431,29 @@ class LayerManager:
                      blend_mode: str, opacity: float, 
                      mask: Optional[np.ndarray] = None) -> np.ndarray:
         """
-        Blend two images using the specified blending mode and opacity.
+        Blend two images according to the specified blend mode.
         
         Args:
-            base: Base image (background)
-            top: Top image (foreground)
-            blend_mode: Blending mode to use
-            opacity: Opacity of the top image
-            mask: Optional layer mask
+            base: Base image (RGBA)
+            top: Top image to blend (RGBA or RGB)
+            blend_mode: Blending mode
+            opacity: Opacity of the top image (0.0-1.0)
+            mask: Optional mask for the top image
             
         Returns:
             Blended image
         """
-        # Ensure compatible shapes
-        if base.shape != top.shape:
-            top = cv2.resize(top, (base.shape[1], base.shape[0]))
+        # Early exit for 0 opacity layers
+        if opacity <= 0.001:
+            return base.copy()
         
-        # Apply mask if present
-        if mask is not None:
-            # Ensure mask is the right shape
-            if mask.shape[:2] != top.shape[:2]:
-                mask = cv2.resize(mask, (top.shape[1], top.shape[0]))
-            
-            # Normalize mask to 0-1 range and expand to match channels
-            if len(mask.shape) == 2:  # Grayscale mask
-                alpha_mask = mask.astype(np.float32) / 255.0
-                
-                # If top has alpha channel, multiply its alpha with the mask
-                if top.shape[2] == 4:
-                    top_alpha = top[:, :, 3].astype(np.float32) / 255.0
-                    alpha_mask = alpha_mask * top_alpha
-                
-                # Create a 3-channel or 4-channel mask as needed
-                if top.shape[2] == 4:
-                    channel_mask = np.dstack([np.ones_like(alpha_mask)] * 3 + [alpha_mask])
-                else:
-                    channel_mask = np.dstack([np.ones_like(alpha_mask)] * 3)
-                
-                # Apply mask to top image
-                top = (top.astype(np.float32) * channel_mask).astype(np.uint8)
+        # Optimization: Skip computations for completely transparent regions
+        if top.shape[2] == 4:
+            # Check if entire top image is transparent
+            if np.max(top[:, :, 3]) == 0:
+                return base.copy()
         
-        # Convert to float for blending
+        # Convert to float for calculations
         base_f = base.astype(np.float32) / 255.0
         top_f = top.astype(np.float32) / 255.0
         
@@ -467,6 +471,27 @@ class LayerManager:
         else:
             top_alpha = np.ones((top.shape[0], top.shape[1]), dtype=np.float32) * opacity
             top_rgb = top_f
+        
+        # Apply mask if provided
+        if mask is not None:
+            mask_f = mask.astype(np.float32) / 255.0
+            top_alpha = top_alpha * mask_f
+        
+        # Optimization: For normal blend mode with full opacity, use faster operations
+        if blend_mode == "normal" and opacity >= 0.999 and mask is None:
+            # Use in-place operations where possible
+            result = base.copy()
+            
+            # Find non-transparent pixels in top image
+            if top.shape[2] == 4:
+                non_transparent = top[:, :, 3] > 0
+                result[non_transparent] = top[non_transparent]
+            else:
+                # Assume fully opaque RGB
+                result[:, :, :3] = top
+                result[:, :, 3] = 255
+                
+            return result
         
         # Initialize result with base image
         result_rgb = base_rgb.copy()
@@ -543,13 +568,10 @@ class LayerManager:
         result_rgb = np.clip(result_rgb, 0, 1)
         result_alpha = np.clip(result_alpha, 0, 1)
         
-        # Combine channels
-        result = np.dstack([
-            result_rgb[:, :, 0],
-            result_rgb[:, :, 1],
-            result_rgb[:, :, 2],
-            result_alpha
-        ])
+        # Create final result
+        result = np.zeros((base.shape[0], base.shape[1], 4), dtype=np.uint8)
+        for c in range(3):
+            result[:, :, c] = (result_rgb[:, :, c] * 255).astype(np.uint8)
+        result[:, :, 3] = (result_alpha * 255).astype(np.uint8)
         
-        # Convert back to uint8
-        return (result * 255).astype(np.uint8) 
+        return result 

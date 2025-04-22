@@ -37,6 +37,10 @@ class AppState:
         self.image_dimensions: Tuple[int, int] = (0, 0)  # (width, height)
         self.zoom_level: float = 1.0
         
+        # View state
+        self.view_scale: float = 1.0  # Scale factor for display
+        self.view_offset: Tuple[int, int] = (0, 0)  # (x, y) offset for display
+        
         # Layers management
         self.layers: List[Dict[str, Any]] = []
         self.active_layer_index: int = -1
@@ -47,8 +51,15 @@ class AppState:
         self.max_history_size: int = 100  # Maximum number of history states to keep
         
         # Tool state
-        self.current_tool: str = "move_tool"  # Default tool
+        self.current_tool: str = "move"  # Default tool
         self.tool_settings: Dict[str, Dict[str, Any]] = self._init_default_tool_settings()
+        
+        # Tools dictionary to store tool instances
+        self.tools: Dict[str, Any] = {}
+        self.active_tool = None
+        
+        # Canvas reference
+        self.active_canvas = None
         
         # Selection state
         self.has_selection: bool = False
@@ -96,8 +107,92 @@ class AppState:
             },
             "move_tool": {
                 "auto_select_layer": True
+            },
+            "effects_tool": {
+                "effect_type": "noise",  # noise, brightness_contrast, hue_saturation, etc.
+                "noise": {
+                    "amount": 25,  # 0-100
+                    "type": "gaussian"  # gaussian, salt_pepper, speckle
+                },
+                "brightness_contrast": {
+                    "brightness": 1.0,  # 0.0-2.0
+                    "contrast": 1.0  # 0.0-2.0
+                },
+                "hue_saturation": {
+                    "hue": 0.0,  # 0.0-1.0
+                    "saturation": 1.0  # 0.0-2.0
+                },
+                "blur": {
+                    "radius": 5,
+                    "type": "gaussian"  # gaussian, box, median
+                },
+                "sharpen": {
+                    "strength": 1.0  # 0.0-3.0
+                },
+                "threshold": {
+                    "value": 127,  # 0-255
+                    "max_value": 255  # 0-255
+                },
+                "grain": {
+                    "amount": 25,  # 0-100
+                    "size": 1.0,   # 0.5-3.0
+                    "color": False # monochrome or color grain
+                }
             }
         }
+
+    def set_active_tool(self, tool_name: str, canvas=None):
+        """
+        Set the active tool.
+        
+        Args:
+            tool_name: Name of the tool to activate
+            canvas: Canvas to activate the tool on
+        """
+        # Store canvas reference if provided
+        if canvas:
+            self.active_canvas = canvas
+            
+        # If no tools are set up yet, just store the current tool name
+        if not self.tools:
+            self.current_tool = tool_name
+            logger.warning(f"Tool '{tool_name}' requested but tools not initialized yet")
+            return
+            
+        # Check if tool exists
+        if tool_name not in self.tools:
+            logger.error(f"Tool '{tool_name}' not found")
+            return
+            
+        # Deactivate current tool if any
+        if self.active_tool:
+            self.active_tool.deactivate()
+            
+        # Activate new tool
+        self.current_tool = tool_name
+        self.active_tool = self.tools[tool_name]
+        self.active_tool.activate(self.active_canvas)
+        
+        logger.info(f"Activated tool: {tool_name}")
+        
+    def get_active_canvas(self):
+        """Get the active canvas."""
+        return self.active_canvas
+        
+    def set_cursor(self, cursor_name: str):
+        """
+        Set the cursor for the active canvas.
+        
+        Args:
+            cursor_name: Name of the cursor to set
+        """
+        if self.active_canvas:
+            self.active_canvas.config(cursor=cursor_name)
+    
+    def refresh_view(self):
+        """Refresh the view to reflect any changes."""
+        if self.active_canvas and hasattr(self.active_canvas, 'main_window'):
+            self.active_canvas.main_window.refresh_view()
 
     def _load_settings(self) -> Dict[str, Any]:
         """Load application settings from config file or use defaults."""
@@ -207,6 +302,23 @@ class AppState:
         
         logger.info(f"Created new {width}x{height} image")
     
+    def resize_document(self, width: int, height: int) -> None:
+        """Resize the document to the specified dimensions."""
+        self.image_dimensions = (width, height)
+        logger.info(f"Resized document to {width}x{height}")
+        
+    def get_active_layer(self):
+        """Get the active layer."""
+        if self.active_layer_index < 0 or self.active_layer_index >= len(self.layers):
+            return None
+            
+        # If layer manager is available, use it
+        if hasattr(self, 'layer_manager') and self.layer_manager:
+            return self.layer_manager.get_active_layer()
+            
+        # Otherwise, return the layer data from layers list
+        return self.layers[self.active_layer_index]
+    
     def add_history_state(self, state_name: str, state_data: Dict[str, Any]) -> None:
         """Add a new state to the history stack for undo/redo functionality."""
         # If we're not at the end of the history, truncate the future states
@@ -263,5 +375,6 @@ class AppState:
 
 # Helper function to avoid circular import
 def import_datetime():
+    """Import datetime module and return it to avoid circular imports."""
     import datetime
-    return datetime 
+    return datetime.datetime 

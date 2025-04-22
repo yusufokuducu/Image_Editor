@@ -10,6 +10,7 @@ from typing import Dict, List, Optional, Any
 import customtkinter as ctk
 from PIL import Image, ImageTk
 import numpy as np
+import cv2
 
 from core.layer_manager import Layer
 from core.image_handler import ImageHandler
@@ -20,6 +21,10 @@ class LayerItem(ctk.CTkFrame):
     """
     Widget representing a single layer in the layer panel.
     """
+    
+    # Cache for thumbnails
+    _thumbnail_cache = {}
+    _max_cache_size = 20  # Maximum number of cached thumbnails
     
     def __init__(self, parent, layer_id: str, layer_name: str, 
                 visible: bool = True, opacity: float = 1.0, 
@@ -153,27 +158,61 @@ class LayerItem(ctk.CTkFrame):
             image: PIL Image or NumPy array
         """
         try:
+            # Check if we have this image cached (using layer_id as key)
+            cache_key = self.layer_id
+            if cache_key in LayerItem._thumbnail_cache:
+                # Use cached thumbnail
+                self.thumbnail_image, self.thumbnail_photo = LayerItem._thumbnail_cache[cache_key]
+                self.thumbnail_label.configure(image=self.thumbnail_photo)
+                return
+                
             # Convert to PIL Image if needed
             if not isinstance(image, Image.Image):
                 if isinstance(image, np.ndarray):
+                    # Fast path: Check if image is small enough already
+                    if len(image.shape) == 3 and image.shape[0] <= 36 and image.shape[1] <= 36:
+                        # Small image, just convert directly
+                        image_data = image
+                    else:
+                        # Performance optimization: For large images, downsample before creating thumbnail
+                        # Calculate scale directly to final thumbnail size to avoid multiple resizes
+                        thumbnail_size = 36  # Final thumbnail size
+                        if len(image.shape) == 3:
+                            h, w = image.shape[0], image.shape[1]
+                            scale_factor = thumbnail_size / max(h, w)
+                            target_width = max(1, int(w * scale_factor))
+                            target_height = max(1, int(h * scale_factor))
+                            
+                            # Use faster resize for this direct downsampling
+                            image_data = cv2.resize(
+                                image, 
+                                (target_width, target_height),
+                                interpolation=cv2.INTER_NEAREST
+                            )
+                        else:
+                            image_data = image
+                    
                     # Convert NumPy array to PIL Image
-                    if len(image.shape) == 3 and image.shape[2] == 4:  # RGBA
-                        pil_image = Image.fromarray(image, 'RGBA')
-                    elif len(image.shape) == 3 and image.shape[2] == 3:  # RGB
-                        pil_image = Image.fromarray(image, 'RGB')
+                    if len(image_data.shape) == 3 and image_data.shape[2] == 4:  # RGBA
+                        pil_image = Image.fromarray(image_data, 'RGBA')
+                    elif len(image_data.shape) == 3 and image_data.shape[2] == 3:  # RGB
+                        pil_image = Image.fromarray(image_data, 'RGB')
                     else:
                         # Handle grayscale or other formats
-                        pil_image = Image.fromarray(image.astype('uint8'))
+                        pil_image = Image.fromarray(image_data.astype('uint8'))
                 else:
                     raise ValueError("Unsupported image format")
             else:
                 pil_image = image
             
-            # Resize to thumbnail size
+            # Only resize if needed (skip if already at target size)
             thumbnail_size = (36, 36)
-            # Create a copy to avoid modifying the original
-            thumb = pil_image.copy()
-            thumb.thumbnail(thumbnail_size, Image.LANCZOS)
+            if pil_image.width > thumbnail_size[0] or pil_image.height > thumbnail_size[1]:
+                # Create a copy to avoid modifying the original
+                thumb = pil_image.copy()
+                thumb.thumbnail(thumbnail_size, Image.NEAREST)  # Use nearest for speed
+            else:
+                thumb = pil_image
             
             # Create a PhotoImage for Tkinter
             self.thumbnail_image = thumb
@@ -181,6 +220,15 @@ class LayerItem(ctk.CTkFrame):
             
             # Update the label
             self.thumbnail_label.configure(image=self.thumbnail_photo)
+            
+            # Cache the thumbnail
+            LayerItem._thumbnail_cache[cache_key] = (self.thumbnail_image, self.thumbnail_photo)
+            
+            # Clean cache if too large
+            if len(LayerItem._thumbnail_cache) > LayerItem._max_cache_size:
+                # Remove oldest item (first key)
+                oldest_key = next(iter(LayerItem._thumbnail_cache))
+                del LayerItem._thumbnail_cache[oldest_key]
             
         except Exception as e:
             logger.error(f"Error setting thumbnail: {str(e)}")
@@ -257,7 +305,7 @@ class LayerItem(ctk.CTkFrame):
 
 class LayerPanel(ctk.CTkFrame):
     """
-    Panel for displaying and managing layers.
+    Panel for managing layers in the image editor.
     """
     
     def __init__(self, parent, main_window):
@@ -412,7 +460,7 @@ class LayerPanel(ctk.CTkFrame):
         # Create transparent image
         from core.image_handler import ImageHandler
         transparent_image = ImageHandler.create_blank_image(
-            width, height, (0, 0, 0), True
+            width, height, (0, 0, 0, 0)  # RGBA with full transparency
         )
         
         # Create layer with transparent image
@@ -606,4 +654,19 @@ class LayerPanel(ctk.CTkFrame):
         # Set status message
         self.main_window.set_status(f"Layer '{layer.name}' blend mode: {blend_mode}")
         
-        logger.info(f"Layer '{layer.name}' blend mode changed to {blend_mode}") 
+        logger.info(f"Layer '{layer.name}' blend mode changed to {blend_mode}")
+    
+    def refresh(self):
+        """
+        Refresh the layer panel to match the current layer manager state.
+        This should be called whenever the layer structure changes.
+        """
+        if hasattr(self.main_window, 'layer_manager') and self.main_window.layer_manager:
+            self.update_layers()
+        else:
+            # Clear the layer list if no layer manager exists
+            for widget in self.layers_frame.winfo_children():
+                widget.destroy()
+            
+            # Reset layer items dictionary
+            self.layer_widgets.clear() 

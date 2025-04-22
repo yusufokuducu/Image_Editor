@@ -40,13 +40,20 @@ class EditCanvas(tk.Canvas):
         self.app_state = app_state
         self.parent = parent
         
+        # Store reference to main window (will be set by the MainWindow)
+        self.main_window = None
+        
         # Canvas state
         self.image = None  # Original image data
         self.tk_image = None  # Tkinter PhotoImage for display
         self.image_id = None  # Canvas item ID for the image
-        self.zoom = 1.0  # Current zoom level
-        self.offset_x = 0  # Horizontal offset for panning
-        self.offset_y = 0  # Vertical offset for panning
+        
+        # Register this canvas with the app_state
+        self.app_state.active_canvas = self
+        
+        # Initialize view state in app_state
+        self.app_state.view_scale = 1.0  # Current zoom level
+        self.app_state.view_offset = (0, 0)  # (x, y) offset for panning
         
         # Mouse state
         self.dragging = False
@@ -86,6 +93,10 @@ class EditCanvas(tk.Canvas):
         self.grid_size = 16
         self.create_background_grid()
         
+        # If the MainWindow has a callback for canvas ready, call it
+        if hasattr(parent, 'main_window') and hasattr(parent.main_window, 'on_canvas_ready'):
+            parent.main_window.on_canvas_ready(self)
+            
         logger.info("EditCanvas initialized")
     
     def create_background_grid(self):
@@ -148,7 +159,7 @@ class EditCanvas(tk.Canvas):
         self.update_display()
         
         # Reset view
-        self.zoom = 1.0
+        self.app_state.view_scale = 1.0
         self.center_image()
         
         # Update scrollregion
@@ -161,6 +172,27 @@ class EditCanvas(tk.Canvas):
         if self.image is None:
             return
         
+        # Performance optimization: Cache resized images at different zoom levels
+        current_scale = self.app_state.view_scale
+        
+        # Use cached image if available (for common zoom levels)
+        cached_scale = getattr(self, '_cached_scale', None)
+        cached_image = getattr(self, '_cached_image', None)
+        
+        # Check if we can use the cached image
+        if cached_scale == current_scale and cached_image is not None:
+            self.tk_image = cached_image
+            
+            # Update or create image on canvas
+            offset_x, offset_y = self.app_state.view_offset
+            if self.image_id is not None:
+                self.coords(self.image_id, offset_x, offset_y)
+            else:
+                self.image_id = self.create_image(
+                    offset_x, offset_y, image=self.tk_image, anchor=tk.NW
+                )
+            return
+        
         # Convert NumPy array to PIL Image
         if self.image.shape[2] == 4:  # RGBA
             pil_image = Image.fromarray(self.image, 'RGBA')
@@ -168,70 +200,109 @@ class EditCanvas(tk.Canvas):
             pil_image = Image.fromarray(self.image, 'RGB')
         
         # Apply zoom
-        if self.zoom != 1.0:
-            new_width = int(pil_image.width * self.zoom)
-            new_height = int(pil_image.height * self.zoom)
+        if current_scale != 1.0:
+            new_width = int(pil_image.width * current_scale)
+            new_height = int(pil_image.height * current_scale)
             
             # Ensure minimum size
             new_width = max(1, new_width)
             new_height = max(1, new_height)
             
+            # Performance optimization: Use faster resize for smaller scales
+            if current_scale < 0.25:
+                # For very low zoom levels, use fastest but lowest quality resize
+                resample = Image.NEAREST
+            elif current_scale < 0.5:
+                # For low zoom levels, use faster but lower quality resize
+                resample = Image.NEAREST
+            elif current_scale < 1.0:
+                # For medium zoom out, use bilinear
+                resample = Image.BILINEAR
+            else:
+                # For zoom in, use higher quality
+                resample = Image.LANCZOS
+                
             # Resize the image
-            pil_image = pil_image.resize((new_width, new_height), Image.LANCZOS)
+            pil_image = pil_image.resize((new_width, new_height), resample)
         
         # Convert to Tkinter PhotoImage
         self.tk_image = ImageTk.PhotoImage(pil_image)
         
+        # Cache for future use (only cache common zoom levels to save memory)
+        common_zoom_levels = [0.25, 0.5, 1.0, 1.5, 2.0]
+        if any(abs(current_scale - level) < 0.01 for level in common_zoom_levels):
+            # Clear previous cache if needed to prevent memory leaks
+            if hasattr(self, '_cached_image'):
+                self._cached_image = None
+                
+            self._cached_scale = current_scale
+            self._cached_image = self.tk_image
+        
         # Update or create image on canvas
+        offset_x, offset_y = self.app_state.view_offset
         if self.image_id is not None:
             self.itemconfig(self.image_id, image=self.tk_image)
-            self.coords(self.image_id, self.offset_x, self.offset_y)
+            self.coords(self.image_id, offset_x, offset_y)
         else:
             self.image_id = self.create_image(
-                self.offset_x, self.offset_y,
-                image=self.tk_image, anchor=tk.NW, tags="image"
+                offset_x, offset_y, image=self.tk_image, anchor=tk.NW
             )
     
     def set_zoom(self, zoom_level: float):
         """
-        Set the zoom level for the image.
+        Set the canvas zoom level.
         
         Args:
-            zoom_level: New zoom level (as a float, e.g., 1.0 = 100%)
+            zoom_level: Zoom level to set (1.0 = 100%)
         """
-        # Ensure zoom level is within reasonable bounds
-        zoom_level = max(0.01, min(32.0, zoom_level))
+        # Limit minimum and maximum zoom
+        zoom_level = max(0.05, min(10.0, zoom_level))
         
-        # Store center point before zoom change
+        # Avoid redundant updates for very similar zoom levels
+        if abs(self.app_state.view_scale - zoom_level) < 0.001:
+            return
+            
+        # Get center of view
+        view_width = self.winfo_width()
+        view_height = self.winfo_height()
+        center_x = view_width / 2
+        center_y = view_height / 2
+        
+        # Convert center to image coordinates before zoom
+        old_scale = self.app_state.view_scale
+        old_offset_x, old_offset_y = self.app_state.view_offset
+        
         if self.image is not None:
-            canvas_center_x = self.winfo_width() / 2
-            canvas_center_y = self.winfo_height() / 2
+            # Calculate the image coordinates of the center point
+            img_center_x = (center_x - old_offset_x) / old_scale
+            img_center_y = (center_y - old_offset_y) / old_scale
             
-            # Convert center point to image coordinates
-            image_x = (canvas_center_x - self.offset_x) / self.zoom
-            image_y = (canvas_center_y - self.offset_y) / self.zoom
+            # Calculate new offsets to keep the center point fixed
+            new_offset_x = center_x - img_center_x * zoom_level
+            new_offset_y = center_y - img_center_y * zoom_level
             
-            # Update zoom level
-            self.zoom = zoom_level
-            
-            # Calculate new offset to keep the center point at the same image position
-            self.offset_x = canvas_center_x - (image_x * self.zoom)
-            self.offset_y = canvas_center_y - (image_y * self.zoom)
+            # Set new scale and offset
+            self.app_state.view_scale = zoom_level
+            self.app_state.view_offset = (new_offset_x, new_offset_y)
             
             # Update display
             self.update_display()
+            
+            # Update scroll region
             self.update_scroll_region()
             
-            logger.info(f"Set zoom level to {zoom_level:.2f}")
+            # Update zoom information in status bar
+            if hasattr(self, 'main_window') and self.main_window:
+                self.main_window.set_zoom_level(zoom_level)
     
     def zoom_in(self, factor: float = 1.25):
         """
         Zoom in by the specified factor.
         
         Args:
-            factor: Zoom factor (e.g., 1.25 = zoom in by 25%)
+            factor: Zoom increase factor (e.g., 1.25 = 25% increase)
         """
-        new_zoom = self.zoom * factor
+        new_zoom = self.app_state.view_scale * factor
         self.set_zoom(new_zoom)
     
     def zoom_out(self, factor: float = 1.25):
@@ -239,323 +310,357 @@ class EditCanvas(tk.Canvas):
         Zoom out by the specified factor.
         
         Args:
-            factor: Zoom factor (e.g., 1.25 = zoom out by 25%)
+            factor: Zoom decrease factor (e.g., 1.25 = 20% decrease)
         """
-        new_zoom = self.zoom / factor
+        new_zoom = self.app_state.view_scale / factor
         self.set_zoom(new_zoom)
     
     def zoom_to_fit(self):
-        """Zoom to fit the image in the visible canvas area."""
+        """Adjust zoom to fit the image in the visible area."""
         if self.image is None:
             return
-        
-        # Get canvas dimensions
-        canvas_width = self.winfo_width()
-        canvas_height = self.winfo_height()
         
         # Get image dimensions
-        image_width, image_height = self.image.shape[1], self.image.shape[0]
-        
-        # Calculate scaling factors
-        scale_x = canvas_width / image_width
-        scale_y = canvas_height / image_height
-        
-        # Use the smaller scaling factor to fit the image
-        zoom = min(scale_x, scale_y) * 0.9  # 90% of fit to leave some margin
-        
-        # Set zoom and center the image
-        self.set_zoom(zoom)
-        self.center_image()
-        
-        logger.info(f"Zoomed to fit: {zoom:.2f}")
-    
-    def center_image(self):
-        """Center the image in the canvas."""
-        if self.image is None:
-            return
+        img_width, img_height = self.image.shape[1], self.image.shape[0]
         
         # Get canvas dimensions
         canvas_width = self.winfo_width()
         canvas_height = self.winfo_height()
         
-        # Get zoomed image dimensions
-        image_width = int(self.image.shape[1] * self.zoom)
-        image_height = int(self.image.shape[0] * self.zoom)
+        # Calculate zoom level to fit
+        zoom_x = canvas_width / img_width if img_width > 0 else 1.0
+        zoom_y = canvas_height / img_height if img_height > 0 else 1.0
         
-        # Calculate offsets to center the image
-        self.offset_x = max(0, (canvas_width - image_width) // 2)
-        self.offset_y = max(0, (canvas_height - image_height) // 2)
+        # Use the smaller factor to ensure whole image fits
+        zoom = min(zoom_x, zoom_y) * 0.95  # 5% margin
+        
+        # Set new zoom level
+        self.app_state.view_scale = zoom
+        
+        # Center the image
+        self.center_image()
+        
+        # Update display
+        self.update_display()
+        
+        # Update scroll region
+        self.update_scroll_region()
+        
+        # Update UI
+        if hasattr(self, 'main_window') and self.main_window:
+            self.main_window.set_zoom_level(self.app_state.view_scale)
+        
+        logger.debug(f"Zoomed to fit: {zoom:.2f}")
+    
+    def center_image(self):
+        """Center the image in the canvas view."""
+        if self.image is None:
+            return
+            
+        # Get canvas size
+        canvas_width = self.winfo_width()
+        canvas_height = self.winfo_height()
+        
+        # Get image size at current scale
+        image_height, image_width = self.image.shape[:2]
+        scaled_width = image_width * self.app_state.view_scale
+        scaled_height = image_height * self.app_state.view_scale
+        
+        # Calculate offset to center
+        offset_x = max(0, (canvas_width - scaled_width) / 2)
+        offset_y = max(0, (canvas_height - scaled_height) / 2)
+        
+        # Set new offset
+        self.app_state.view_offset = (offset_x, offset_y)
         
         # Update image position
-        if self.image_id is not None:
-            self.coords(self.image_id, self.offset_x, self.offset_y)
+        if self.image_id:
+            self.coords(self.image_id, offset_x, offset_y)
             
         # Update scroll region
         self.update_scroll_region()
-    
+        
     def update_scroll_region(self):
-        """Update the canvas scroll region based on the image size and position."""
+        """Update the scroll region based on current image size and zoom."""
         if self.image is None:
+            self.configure(scrollregion=(0, 0, 0, 0))
             return
+            
+        # Calculate scaled image dimensions
+        image_height, image_width = self.image.shape[:2]
+        scaled_width = image_width * self.app_state.view_scale
+        scaled_height = image_height * self.app_state.view_scale
         
-        # Calculate the bounds
-        image_width = int(self.image.shape[1] * self.zoom)
-        image_height = int(self.image.shape[0] * self.zoom)
+        # Get current offsets
+        offset_x, offset_y = self.app_state.view_offset
         
-        # Set scroll region to cover the image plus some padding
-        padding = 100
+        # Set scroll region to cover the entire image plus padding
+        padding = 100  # Add padding around the image
         self.configure(
             scrollregion=(
-                -padding,
-                -padding,
-                max(self.winfo_width(), self.offset_x + image_width) + padding,
-                max(self.winfo_height(), self.offset_y + image_height) + padding
+                -padding + offset_x,
+                -padding + offset_y,
+                scaled_width + padding + offset_x,
+                scaled_height + padding + offset_y
             )
         )
     
     def screen_to_image_coords(self, x: int, y: int) -> Tuple[int, int]:
         """
-        Convert screen coordinates to image coordinates.
+        Convert screen (canvas) coordinates to image coordinates.
         
         Args:
-            x: X-coordinate in screen space
-            y: Y-coordinate in screen space
+            x: X coordinate in screen space
+            y: Y coordinate in screen space
             
         Returns:
-            Tuple of (x, y) coordinates in image space
+            Tuple of (x, y) in image space
         """
-        if self.image is None:
-            return (0, 0)
+        offset_x, offset_y = self.app_state.view_offset
         
-        # Adjust for canvas scrolling
-        x = self.canvasx(x)
-        y = self.canvasy(y)
+        # Calculate image coordinates
+        img_x = int((x - offset_x) / self.app_state.view_scale)
+        img_y = int((y - offset_y) / self.app_state.view_scale)
         
-        # Convert to image coordinates
-        image_x = int((x - self.offset_x) / self.zoom)
-        image_y = int((y - self.offset_y) / self.zoom)
+        # Ensure coordinates are within bounds
+        if self.image is not None:
+            img_width, img_height = self.image.shape[1], self.image.shape[0]
+            img_x = max(0, min(img_x, img_width - 1))
+            img_y = max(0, min(img_y, img_height - 1))
         
-        # Ensure coordinates are within image bounds
-        image_width = self.image.shape[1]
-        image_height = self.image.shape[0]
-        
-        image_x = max(0, min(image_width - 1, image_x))
-        image_y = max(0, min(image_height - 1, image_y))
-        
-        return (image_x, image_y)
+        return img_x, img_y
     
     def image_to_screen_coords(self, x: int, y: int) -> Tuple[int, int]:
         """
-        Convert image coordinates to screen coordinates.
+        Convert image coordinates to screen (canvas) coordinates.
         
         Args:
-            x: X-coordinate in image space
-            y: Y-coordinate in image space
+            x: X coordinate in image space
+            y: Y coordinate in image space
             
         Returns:
-            Tuple of (x, y) coordinates in screen space
+            Tuple of (x, y) in screen space
         """
-        if self.image is None:
-            return (0, 0)
+        offset_x, offset_y = self.app_state.view_offset
         
-        # Convert to screen coordinates
-        screen_x = self.offset_x + (x * self.zoom)
-        screen_y = self.offset_y + (y * self.zoom)
+        # Calculate screen coordinates
+        screen_x = int(x * self.app_state.view_scale + offset_x)
+        screen_y = int(y * self.app_state.view_scale + offset_y)
         
-        return (int(screen_x), int(screen_y))
+        return screen_x, screen_y
     
     def on_mouse_down(self, event):
-        """Handle mouse button press event."""
-        # Store initial click position
-        self.dragging = True
-        self.last_x = self.canvasx(event.x)
-        self.last_y = self.canvasy(event.y)
-        self.drag_start_x = self.last_x
-        self.drag_start_y = self.last_y
+        """
+        Handle mouse button press.
         
-        # Convert to image coordinates
-        image_x, image_y = self.screen_to_image_coords(event.x, event.y)
+        Args:
+            event: Mouse event
+        """
+        # Store the initial position for potential dragging
+        self.last_x = event.x
+        self.last_y = event.y
+        self.drag_start_x = event.x
+        self.drag_start_y = event.y
         
-        # If space is pressed, we're in pan mode
+        # Handle tool interactions
         if self.space_pressed:
-            # Pan mode
+            # Space + click = pan mode
+            self.dragging = True
             self.config(cursor="fleur")
+        elif self.app_state.active_tool:
+            # Let the active tool handle the event
+            # The tool itself should handle the event from its event binding
+            pass
         else:
-            # Normal mode - delegate to active tool
-            if self.active_tool:
-                self.active_tool.on_mouse_down(image_x, image_y, event)
+            # Default behavior - start dragging the canvas
+            self.dragging = True
+            self.config(cursor="fleur")
     
     def on_mouse_up(self, event):
-        """Handle mouse button release event."""
+        """
+        Handle mouse button release.
+        
+        Args:
+            event: Mouse event
+        """
+        # Reset dragging state
         self.dragging = False
         
-        # Convert to image coordinates
-        image_x, image_y = self.screen_to_image_coords(event.x, event.y)
-        
-        # If space is pressed, we're in pan mode
+        # Reset cursor if we were in drag mode
         if self.space_pressed:
-            # Pan mode
             self.config(cursor="fleur")
-        else:
-            # Normal mode - delegate to active tool
-            if self.active_tool:
-                self.active_tool.on_mouse_up(image_x, image_y, event)
+        elif not self.app_state.active_tool:
+            self.config(cursor="")
     
     def on_mouse_drag(self, event):
-        """Handle mouse drag event."""
-        if not self.dragging:
-            return
+        """
+        Handle mouse drag.
         
-        # Get current mouse position
-        current_x = self.canvasx(event.x)
-        current_y = self.canvasy(event.y)
-        
+        Args:
+            event: Mouse event
+        """
         # Calculate movement delta
-        delta_x = current_x - self.last_x
-        delta_y = current_y - self.last_y
+        dx = event.x - self.last_x
+        dy = event.y - self.last_y
         
-        # If space is pressed or middle mouse button, we're in pan mode
-        if self.space_pressed or event.state & 0x0200:  # Check for middle mouse button
-            # Pan the image
-            self.offset_x += delta_x
-            self.offset_y += delta_y
+        # Handle based on current mode
+        if self.dragging or self.space_pressed:
+            # Pan the view
+            offset_x, offset_y = self.app_state.view_offset
+            new_offset_x = offset_x + dx
+            new_offset_y = offset_y + dy
+            
+            # Update offset
+            self.app_state.view_offset = (new_offset_x, new_offset_y)
             
             # Update image position
-            if self.image_id is not None:
-                self.coords(self.image_id, self.offset_x, self.offset_y)
+            if self.image_id:
+                self.coords(self.image_id, new_offset_x, new_offset_y)
             
-            # Update scroll region
-            self.update_scroll_region()
-        else:
-            # Normal mode - delegate to active tool
-            if self.active_tool:
-                # Convert to image coordinates
-                image_x, image_y = self.screen_to_image_coords(event.x, event.y)
-                self.active_tool.on_mouse_drag(image_x, image_y, event)
+            # Update grid
+            self.update_background_grid()
+        elif self.app_state.active_tool:
+            # Tool is handling the event through its own bindings
+            pass
         
         # Update last position
-        self.last_x = current_x
-        self.last_y = current_y
+        self.last_x = event.x
+        self.last_y = event.y
     
     def on_mouse_move(self, event):
-        """Handle mouse movement event (without dragging)."""
-        # Convert to image coordinates
-        image_x, image_y = self.screen_to_image_coords(event.x, event.y)
+        """
+        Handle mouse movement without dragging.
         
-        # Update cursor position in parent's status bar
-        if hasattr(self.parent, 'master') and hasattr(self.parent.master, 'update_cursor_position'):
-            self.parent.master.update_cursor_position(image_x, image_y)
+        Args:
+            event: Mouse event
+        """
+        # Update cursor position in main window status bar
+        if hasattr(self, 'main_window') and self.main_window:
+            img_x, img_y = self.screen_to_image_coords(event.x, event.y)
+            self.main_window.update_cursor_position(img_x, img_y)
         
-        # If space is pressed, we're in pan mode
-        if self.space_pressed:
-            # Pan mode
-            self.config(cursor="fleur")
-        else:
-            # Normal mode - delegate to active tool
-            if self.active_tool:
-                cursor = self.active_tool.get_cursor()
-                if cursor:
-                    self.config(cursor=cursor)
-                
-                self.active_tool.on_mouse_move(image_x, image_y, event)
+        # Let tool handle mouse move if active
+        if self.app_state.active_tool:
+            # Tool is handling the event through its own bindings
+            pass
     
     def on_mouse_wheel(self, event):
-        """Handle mouse wheel event for zooming."""
-        # Determine the direction and amount to zoom
-        if event.num == 4 or event.delta > 0:  # Scroll up
-            factor = 1.1
-        elif event.num == 5 or event.delta < 0:  # Scroll down
-            factor = 0.9
-        else:
+        """
+        Handle mouse wheel events for zooming.
+        
+        Args:
+            event: Mouse wheel event
+        """
+        # Determine zoom direction and delta
+        delta = 0
+        
+        # Windows or macOS with Shift
+        if event.num == 0:
+            # Windows/macOS
+            if event.delta > 0:
+                delta = 1
+            elif event.delta < 0:
+                delta = -1
+        # Linux
+        elif event.num == 4:
+            delta = 1
+        elif event.num == 5:
+            delta = -1
+            
+        if delta == 0:
             return
+            
+        # Calculate new zoom level
+        zoom_factor = 1.2 if delta > 0 else 1/1.2
+        new_zoom = self.app_state.view_scale * zoom_factor
         
-        # Get the mouse position
-        mouse_x = self.canvasx(event.x)
-        mouse_y = self.canvasy(event.y)
-        
+        # Get mouse position
+        mouse_x = event.x
+        mouse_y = event.y
+            
         # Convert mouse position to image coordinates before zoom
-        img_x = (mouse_x - self.offset_x) / self.zoom
-        img_y = (mouse_y - self.offset_y) / self.zoom
+        old_scale = self.app_state.view_scale
+        old_offset_x, old_offset_y = self.app_state.view_offset
         
-        # Update zoom level
-        new_zoom = self.zoom * factor
-        new_zoom = max(0.01, min(32.0, new_zoom))
-        self.zoom = new_zoom
+        # Calculate the image coordinates under the mouse
+        img_x = (mouse_x - old_offset_x) / old_scale
+        img_y = (mouse_y - old_offset_y) / old_scale
         
-        # Update offsets to keep mouse position over the same image point
-        self.offset_x = mouse_x - (img_x * self.zoom)
-        self.offset_y = mouse_y - (img_y * self.zoom)
+        # Calculate new offsets to keep the mouse position fixed
+        new_offset_x = mouse_x - img_x * new_zoom
+        new_offset_y = mouse_y - img_y * new_zoom
+        
+        # Set new scale and offset
+        self.app_state.view_scale = new_zoom
+        self.app_state.view_offset = (new_offset_x, new_offset_y)
         
         # Update display
         self.update_display()
+        
+        # Update scroll region
         self.update_scroll_region()
         
-        # Update zoom label in the parent's status bar
-        if hasattr(self.parent, 'master') and hasattr(self.parent.master, 'set_zoom_level'):
-            self.parent.master.set_zoom_level(self.zoom)
+        # Update zoom information in status bar
+        if hasattr(self, 'main_window') and self.main_window:
+            self.main_window.set_zoom_level(new_zoom)
     
     def on_space_press(self, event):
-        """Handle space key press for temporary pan mode."""
+        """
+        Handle space key press to enable pan mode.
+        
+        Args:
+            event: Key event
+        """
         if not self.space_pressed:
             self.space_pressed = True
             
-            # Store the current tool
-            self.previous_tool = self.active_tool
+            # Store previous tool for restoration later
+            self.previous_tool = self.app_state.current_tool
             
             # Set cursor for pan mode
             self.config(cursor="fleur")
     
     def on_space_release(self, event):
-        """Handle space key release to exit temporary pan mode."""
+        """
+        Handle space key release to disable pan mode.
+        
+        Args:
+            event: Key event
+        """
         if self.space_pressed:
             self.space_pressed = False
             
-            # Restore the previous tool
-            self.active_tool = self.previous_tool
-            
-            # Reset cursor
-            if self.active_tool:
-                cursor = self.active_tool.get_cursor()
-                if cursor:
-                    self.config(cursor=cursor)
-                else:
-                    self.config(cursor="")
+            # Restore previous tool
+            if self.previous_tool and self.previous_tool in self.app_state.tools:
+                self.app_state.set_active_tool(self.previous_tool)
             else:
+                # Reset cursor
                 self.config(cursor="")
     
     def on_right_click(self, event):
-        """Handle right-click for context menu."""
+        """
+        Handle right-click for context menu.
+        
+        Args:
+            event: Mouse event
+        """
         # TODO: Implement context menu
         pass
     
     def on_resize(self, event):
-        """Handle canvas resize event."""
-        self.update_background_grid()
-        self.update_scroll_region()
-    
-    def set_tool(self, tool):
         """
-        Set the active tool for the canvas.
+        Handle window resize events.
         
         Args:
-            tool: Tool instance to activate
+            event: Configure event
         """
-        # Deactivate current tool if exists
-        if self.active_tool:
-            self.active_tool.deactivate()
+        self.update_background_grid()
         
-        # Set new tool
-        self.active_tool = tool
+    def set_main_window(self, main_window):
+        """
+        Set the reference to the main window.
         
-        # Activate new tool
-        if tool:
-            tool.activate(self)
-            
-            # Set cursor
-            cursor = tool.get_cursor()
-            if cursor:
-                self.config(cursor=cursor)
-            else:
-                self.config(cursor="")
-        else:
-            self.config(cursor="") 
+        Args:
+            main_window: Reference to the main window
+        """
+        self.main_window = main_window 

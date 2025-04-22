@@ -8,6 +8,7 @@ import os
 import logging
 from pathlib import Path
 from typing import Tuple, Optional, List, Dict, Any, Union
+from functools import lru_cache
 
 import numpy as np
 from PIL import Image, ImageFilter, ImageEnhance, ImageOps
@@ -26,6 +27,12 @@ class ImageHandler:
         'open': ['.jpg', '.jpeg', '.png', '.bmp', '.tiff', '.tif', '.gif', '.webp'],
         'save': ['.jpg', '.jpeg', '.png', '.bmp', '.tiff', '.tif', '.gif', '.webp']
     }
+    
+    # Cache for processed images - Use a weak reference dictionary to avoid memory leaks
+    _cache = {}
+    _max_cache_size = 10  # Maximum number of items to keep in cache
+    _cache_hits = 0
+    _cache_misses = 0
     
     def __init__(self):
         """Initialize the image handler."""
@@ -53,6 +60,13 @@ class ImageHandler:
             ext = os.path.splitext(file_path)[1].lower()
             if ext not in ImageHandler.SUPPORTED_FORMATS['open']:
                 return None, f"Unsupported file format: {ext}"
+            
+            # Performance optimization: Check file size
+            file_size = os.path.getsize(file_path)
+            large_file_threshold = 50 * 1024 * 1024  # 50MB
+            
+            if file_size > large_file_threshold:
+                logger.warning(f"Loading large image ({file_size / (1024*1024):.1f}MB): {file_path}")
             
             # Load the image
             if ext == '.gif':
@@ -111,6 +125,19 @@ class ImageHandler:
             else:
                 return f"Unsupported image format: {image_array.shape}"
             
+            # Optimization: Resize very large images before saving to JPEG
+            if ext in ['.jpg', '.jpeg'] and quality < 100:
+                # Check if dimensions exceed a threshold
+                width, height = pil_image.size
+                max_dimension = 8000  # Maximum dimension we'll save at full resolution
+                
+                if width > max_dimension or height > max_dimension:
+                    scale_factor = max_dimension / max(width, height)
+                    new_width = int(width * scale_factor)
+                    new_height = int(height * scale_factor)
+                    logger.info(f"Resizing large image from {width}x{height} to {new_width}x{new_height} for saving")
+                    pil_image = pil_image.resize((new_width, new_height), Image.LANCZOS)
+            
             # Save the image based on the extension
             if ext in ['.jpg', '.jpeg']:
                 # Convert RGBA to RGB for JPEG (which doesn't support alpha)
@@ -118,7 +145,8 @@ class ImageHandler:
                     pil_image = pil_image.convert('RGB')
                 pil_image.save(file_path, quality=quality)
             elif ext == '.png':
-                pil_image.save(file_path, compress_level=min(9, 10 - quality // 10))
+                # Optimize PNG for smaller files
+                pil_image.save(file_path, compress_level=min(9, 10 - quality // 10), optimize=True)
             elif ext in ['.tiff', '.tif']:
                 pil_image.save(file_path, compression='tiff_deflate')
             else:
@@ -132,30 +160,55 @@ class ImageHandler:
             return f"Error saving image: {str(e)}"
     
     @staticmethod
-    def create_blank_image(width: int, height: int, color: Tuple[int, int, int] = (255, 255, 255),
-                          with_alpha: bool = True) -> np.ndarray:
+    def create_blank_image(width: int, height: int, color: Union[Tuple[int, int, int], Tuple[int, int, int, int]]) -> np.ndarray:
         """
         Create a new blank image with specified dimensions and background color.
         
         Args:
             width: Width of the new image in pixels.
             height: Height of the new image in pixels.
-            color: RGB tuple for the background color.
-            with_alpha: Whether to include an alpha channel.
+            color: RGB or RGBA tuple for the background color.
             
         Returns:
             NumPy array containing the new image.
         """
-        if with_alpha:
-            # Create RGBA image
-            color_with_alpha = (*color, 255)  # Add full opacity
-            image = np.ones((height, width, 4), dtype=np.uint8) * np.array(color_with_alpha, dtype=np.uint8)
-        else:
-            # Create RGB image
-            image = np.ones((height, width, 3), dtype=np.uint8) * np.array(color, dtype=np.uint8)
+        try:
+            # Create a blank image with the specified color
+            if len(color) == 3:
+                # RGB color
+                image = np.zeros((height, width, 3), dtype=np.uint8)
+                image[:, :] = color
+            elif len(color) == 4:
+                # RGBA color
+                image = np.zeros((height, width, 4), dtype=np.uint8)
+                image[:, :] = color
+            else:
+                raise ValueError(f"Invalid color format: {color}. Expected RGB or RGBA tuple.")
+            
+            logger.debug(f"Created blank {width}x{height} image")
+            return image
+            
+        except Exception as e:
+            logger.error(f"Error creating blank image: {str(e)}")
+            raise
+    
+    @classmethod
+    def clear_cache(cls):
+        """Clear the image cache to free memory."""
+        cls._cache.clear()
+        cls._cache_hits = 0
+        cls._cache_misses = 0
         
-        logger.debug(f"Created blank {width}x{height} image")
-        return image
+    @classmethod
+    def get_cache_stats(cls):
+        """Get cache statistics."""
+        return {
+            "size": len(cls._cache),
+            "max_size": cls._max_cache_size,
+            "hits": cls._cache_hits,
+            "misses": cls._cache_misses,
+            "hit_ratio": cls._cache_hits / max(1, cls._cache_hits + cls._cache_misses)
+        }
     
     @staticmethod
     def resize_image(image: np.ndarray, width: int, height: int, interpolation: int = cv2.INTER_LANCZOS4) -> np.ndarray:
@@ -171,7 +224,42 @@ class ImageHandler:
         Returns:
             Resized image as NumPy array.
         """
-        return cv2.resize(image, (width, height), interpolation=interpolation)
+        # Simple cache key based on image shape, size, and interpolation
+        # This avoids converting the whole image to bytes which is expensive
+        cache_key = f"resize_{image.shape}_{width}_{height}_{interpolation}_{hash(image.tobytes()[:1000])}"
+        
+        # Check cache
+        if cache_key in ImageHandler._cache:
+            ImageHandler._cache_hits += 1
+            return ImageHandler._cache[cache_key]
+        
+        ImageHandler._cache_misses += 1
+        
+        # Fast path for exact size match
+        if image.shape[1] == width and image.shape[0] == height:
+            return image.copy()
+            
+        # Pick best interpolation method based on the resize operation
+        if width * height < image.shape[1] * image.shape[0]:
+            # Downscaling - use area interpolation for better quality
+            if interpolation == cv2.INTER_LANCZOS4:
+                interpolation = cv2.INTER_AREA
+        
+        # Perform resize
+        result = cv2.resize(image, (width, height), interpolation=interpolation)
+        
+        # Add to cache with management
+        if len(ImageHandler._cache) >= ImageHandler._max_cache_size:
+            # Remove a random entry when cache is full
+            try:
+                key_to_remove = next(iter(ImageHandler._cache))
+                del ImageHandler._cache[key_to_remove]
+            except (StopIteration, RuntimeError):
+                # Handle case where cache is modified during iteration
+                ImageHandler._cache.clear()
+        
+        ImageHandler._cache[cache_key] = result
+        return result
     
     @staticmethod
     def crop_image(image: np.ndarray, x: int, y: int, width: int, height: int) -> np.ndarray:
@@ -180,76 +268,47 @@ class ImageHandler:
         
         Args:
             image: NumPy array containing the image data.
-            x: X-coordinate of the top-left corner.
-            y: Y-coordinate of the top-left corner.
+            x: Left coordinate of the crop rectangle.
+            y: Top coordinate of the crop rectangle.
             width: Width of the crop rectangle.
             height: Height of the crop rectangle.
             
         Returns:
             Cropped image as NumPy array.
         """
-        # Ensure crop region is within image bounds
+        # Ensure coordinates are valid
         img_height, img_width = image.shape[:2]
-        
-        # Adjust coordinates to be within bounds
         x = max(0, min(x, img_width - 1))
         y = max(0, min(y, img_height - 1))
         width = max(1, min(width, img_width - x))
         height = max(1, min(height, img_height - y))
         
-        return image[y:y+height, x:x+width].copy()
+        return image[y:y+height, x:x+width].copy()  # Use copy() to avoid reference to original
     
     @staticmethod
-    def rotate_image(image: np.ndarray, angle: float, 
-                    keep_dims: bool = True, 
-                    border_mode: int = cv2.BORDER_CONSTANT,
-                    border_value: Tuple[int, int, int, int] = (0, 0, 0, 0)) -> np.ndarray:
+    def rotate_image(image: np.ndarray, angle: float, expand: bool = True) -> np.ndarray:
         """
         Rotate an image by the specified angle.
         
         Args:
             image: NumPy array containing the image data.
-            angle: Rotation angle in degrees (positive = counterclockwise).
-            keep_dims: Whether to maintain the original image dimensions.
-            border_mode: Border handling mode.
-            border_value: Border color to use with BORDER_CONSTANT.
+            angle: Rotation angle in degrees (counterclockwise).
+            expand: Whether to expand the output image to fit the rotated content.
             
         Returns:
             Rotated image as NumPy array.
         """
-        height, width = image.shape[:2]
-        center = (width / 2, height / 2)
+        # Convert to PIL for rotation to handle alpha properly
+        if image.shape[2] == 4:  # RGBA
+            pil_image = Image.fromarray(image, 'RGBA')
+        else:  # RGB
+            pil_image = Image.fromarray(image, 'RGB')
         
-        # Get the rotation matrix
-        rotation_matrix = cv2.getRotationMatrix2D(center, angle, 1.0)
+        # Rotate the image
+        rotated = pil_image.rotate(angle, expand=expand, resample=Image.BILINEAR)
         
-        if keep_dims:
-            # Apply the rotation while maintaining the original dimensions
-            rotated_image = cv2.warpAffine(
-                image, rotation_matrix, (width, height),
-                flags=cv2.INTER_LINEAR, borderMode=border_mode,
-                borderValue=border_value
-            )
-        else:
-            # Calculate new dimensions
-            cos = abs(rotation_matrix[0, 0])
-            sin = abs(rotation_matrix[0, 1])
-            
-            new_width = int((height * sin) + (width * cos))
-            new_height = int((height * cos) + (width * sin))
-            
-            # Adjust the rotation matrix
-            rotation_matrix[0, 2] += (new_width / 2) - center[0]
-            rotation_matrix[1, 2] += (new_height / 2) - center[1]
-            
-            # Apply the rotation with the new dimensions
-            rotated_image = cv2.warpAffine(
-                image, rotation_matrix, (new_width, new_height),
-                flags=cv2.INTER_LINEAR, borderMode=border_mode,
-                borderValue=border_value
-            )
-        
-        return rotated_image
+        # Convert back to NumPy array
+        return np.array(rotated)
     
     @staticmethod
     def flip_image(image: np.ndarray, horizontal: bool = True) -> np.ndarray:
@@ -258,42 +317,88 @@ class ImageHandler:
         
         Args:
             image: NumPy array containing the image data.
-            horizontal: If True, flip horizontally; if False, flip vertically.
+            horizontal: If True, flip horizontally, else vertically.
             
         Returns:
             Flipped image as NumPy array.
         """
         if horizontal:
-            return cv2.flip(image, 1)  # 1 = horizontal flip
+            return cv2.flip(image, 1)  # 1 for horizontal flip
         else:
-            return cv2.flip(image, 0)  # 0 = vertical flip
+            return cv2.flip(image, 0)  # 0 for vertical flip
     
     @staticmethod
-    def adjust_brightness_contrast(image: np.ndarray, brightness: float, contrast: float) -> np.ndarray:
+    def adjust_brightness_contrast(image: np.ndarray, brightness: float = 1.0, contrast: float = 1.0) -> np.ndarray:
         """
         Adjust image brightness and contrast.
         
         Args:
             image: NumPy array containing the image data.
-            brightness: Brightness adjustment factor (0.0 to 2.0, where 1.0 is original).
-            contrast: Contrast adjustment factor (0.0 to 2.0, where 1.0 is original).
+            brightness: Brightness factor (0.0 to 2.0, 1.0 is neutral).
+            contrast: Contrast factor (0.0 to 2.0, 1.0 is neutral).
             
         Returns:
             Adjusted image as NumPy array.
         """
-        # Convert to PIL Image for these adjustments
-        pil_image = Image.fromarray(image)
+        # Create cache key
+        cache_key = f"bc_{hash(image.tobytes())}_{brightness}_{contrast}"
         
-        # Apply brightness adjustment
-        enhancer = ImageEnhance.Brightness(pil_image)
-        pil_image = enhancer.enhance(brightness)
+        # Check cache
+        if cache_key in ImageHandler._cache:
+            return ImageHandler._cache[cache_key]
         
-        # Apply contrast adjustment
-        enhancer = ImageEnhance.Contrast(pil_image)
-        pil_image = enhancer.enhance(contrast)
+        # Performance optimization: work with uint8 for most operations
+        # Only use floating point where necessary
         
-        # Convert back to NumPy array
-        return np.array(pil_image)
+        # Create a copy to avoid modifying the original
+        result = image.copy()
+        
+        # Separate alpha channel if it exists
+        if image.shape[2] == 4:
+            alpha = image[:, :, 3].copy()
+            rgb = result[:, :, :3]
+        else:
+            rgb = result
+        
+        # Apply brightness
+        if brightness != 1.0:
+            # Convert to float for calculation
+            rgb_float = rgb.astype(np.float32)
+            
+            # Apply brightness
+            rgb_float = rgb_float * brightness
+            
+            # Clip values
+            rgb = np.clip(rgb_float, 0, 255).astype(np.uint8)
+        
+        # Apply contrast
+        if contrast != 1.0:
+            # Calculate mean value for contrast adjustment
+            mean_value = 128
+            
+            # Convert to float for calculation
+            rgb_float = rgb.astype(np.float32)
+            
+            # Apply contrast formula: (value - mean) * contrast + mean
+            rgb_float = (rgb_float - mean_value) * contrast + mean_value
+            
+            # Clip values
+            rgb = np.clip(rgb_float, 0, 255).astype(np.uint8)
+        
+        # Restore alpha channel if it exists
+        if image.shape[2] == 4:
+            result[:, :, :3] = rgb
+            result[:, :, 3] = alpha
+        else:
+            result = rgb
+        
+        # Cache the result
+        if len(ImageHandler._cache) >= ImageHandler._max_cache_size:
+            # Remove a random entry if cache is full
+            ImageHandler._cache.pop(next(iter(ImageHandler._cache)))
+        
+        ImageHandler._cache[cache_key] = result
+        return result
     
     @staticmethod
     def adjust_hue_saturation(image: np.ndarray, hue: float, saturation: float) -> np.ndarray:

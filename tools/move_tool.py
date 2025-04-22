@@ -45,6 +45,9 @@ class MoveTool(BaseTool):
         self.preview_image_id = None
         self._preview_image_ref = None  # Keep reference to prevent garbage collection
         
+        # Canvas reference
+        self.canvas = None
+        
         logger.debug("MoveTool initialized")
     
     def init_settings(self):
@@ -67,31 +70,60 @@ class MoveTool(BaseTool):
         """
         return "fleur"  # Four-way arrow cursor
     
-    def activate(self, canvas):
+    def activate(self, canvas=None):
         """
         Activate the move tool.
         
         Args:
             canvas: The canvas to activate the tool on
         """
-        super().activate(canvas)
+        self.active = True
+        self.canvas = canvas or self.app_state.get_active_canvas()
+        
+        if self.canvas:
+            self.canvas.config(cursor=self.get_cursor())
+            
+            # Set up event bindings
+            self.canvas.bind("<Button-1>", self.on_mouse_down)
+            self.canvas.bind("<ButtonRelease-1>", self.on_mouse_up)
+            self.canvas.bind("<B1-Motion>", self.on_mouse_drag)
+            self.canvas.bind("<Motion>", self.on_mouse_move)
+        
+        logger.debug("Move tool activated")
     
     def deactivate(self):
         """Deactivate the move tool."""
+        self.active = False
+        
         # Clean up any temporary overlays
         self._clear_preview()
         
-        super().deactivate()
+        # Remove event bindings
+        if self.canvas:
+            self.canvas.unbind("<Button-1>")
+            self.canvas.unbind("<ButtonRelease-1>")
+            self.canvas.unbind("<B1-Motion>")
+            self.canvas.unbind("<Motion>")
+            self.canvas = None
+        
+        logger.debug("Move tool deactivated")
     
-    def on_mouse_down(self, x: int, y: int, event):
+    def on_mouse_down(self, event):
         """
         Start moving on mouse down.
         
         Args:
-            x: X coordinate in image space
-            y: Y coordinate in image space
             event: Original event object
         """
+        if not self.active or not self.canvas:
+            return
+            
+        # Get canvas coordinates
+        canvas_x, canvas_y = self.canvas.canvasx(event.x), self.canvas.canvasy(event.y)
+        
+        # Convert to image coordinates
+        x, y = self._canvas_to_image_coords(canvas_x, canvas_y)
+        
         # Reset state
         self.dragging = False
         self.active_layer = None
@@ -140,17 +172,21 @@ class MoveTool(BaseTool):
         # Create a preview of the layer being moved
         self._create_preview(layer.image_data)
     
-    def on_mouse_up(self, x: int, y: int, event):
+    def on_mouse_up(self, event):
         """
         Finish moving on mouse up.
         
         Args:
-            x: X coordinate in image space
-            y: Y coordinate in image space
             event: Original event object
         """
-        if not self.dragging:
+        if not self.active or not self.canvas or not self.dragging:
             return
+            
+        # Get canvas coordinates
+        canvas_x, canvas_y = self.canvas.canvasx(event.x), self.canvas.canvasy(event.y)
+        
+        # Convert to image coordinates
+        x, y = self._canvas_to_image_coords(canvas_x, canvas_y)
         
         # Apply the final movement
         if self.moving_selection:
@@ -171,17 +207,21 @@ class MoveTool(BaseTool):
         self.active_layer = None
         self.moving_selection = False
     
-    def on_mouse_drag(self, x: int, y: int, event):
+    def on_mouse_drag(self, event):
         """
         Move while dragging the mouse.
         
         Args:
-            x: X coordinate in image space
-            y: Y coordinate in image space
             event: Original event object
         """
-        if not self.dragging:
+        if not self.active or not self.canvas or not self.dragging:
             return
+            
+        # Get canvas coordinates
+        canvas_x, canvas_y = self.canvas.canvasx(event.x), self.canvas.canvasy(event.y)
+        
+        # Convert to image coordinates
+        x, y = self._canvas_to_image_coords(canvas_x, canvas_y)
         
         # Calculate movement delta
         dx = x - self.last_x
@@ -198,59 +238,78 @@ class MoveTool(BaseTool):
         self.last_x = x
         self.last_y = y
     
-    def on_mouse_move(self, x: int, y: int, event):
+    def on_mouse_move(self, event):
         """
-        Update cursor based on what's under it.
+        Update cursor on mouse move.
         
         Args:
-            x: X coordinate in image space
-            y: Y coordinate in image space
             event: Original event object
         """
-        # We could change the cursor based on what's underneath
-        # For example, if hovering over a selection or active layer
-        pass
+        if not self.active or not self.canvas or self.dragging:
+            return
+            
+        # Always use the move cursor when active
+        self.canvas.config(cursor=self.get_cursor())
+    
+    def _canvas_to_image_coords(self, canvas_x, canvas_y):
+        """Convert canvas coordinates to image coordinates."""
+        scale = self.app_state.view_scale
+        offset_x, offset_y = self.app_state.view_offset
+        
+        img_x = int((canvas_x - offset_x) / scale)
+        img_y = int((canvas_y - offset_y) / scale)
+        
+        return img_x, img_y
+    
+    def _image_to_canvas_coords(self, img_x, img_y):
+        """Convert image coordinates to canvas coordinates."""
+        scale = self.app_state.view_scale
+        offset_x, offset_y = self.app_state.view_offset
+        
+        canvas_x = int(img_x * scale + offset_x)
+        canvas_y = int(img_y * scale + offset_y)
+        
+        return canvas_x, canvas_y
     
     def _create_preview(self, image_data: np.ndarray):
         """
-        Create a preview image for dragging.
+        Create a visual preview of the layer being moved.
         
         Args:
-            image_data: Image data for the preview
+            image_data: The image data for the layer
         """
-        if not self.canvas:
+        if not self.canvas or image_data is None:
             return
+            
+        # Clean up any existing preview
+        self._clear_preview()
         
-        # Convert numpy array to PIL Image
-        from PIL import Image
+        # Create PIL Image from numpy array
+        from PIL import Image, ImageTk
         if image_data.shape[2] == 4:  # RGBA
-            pil_image = Image.fromarray(image_data, 'RGBA')
+            pil_image = Image.fromarray(image_data)
         else:  # RGB
-            pil_image = Image.fromarray(image_data, 'RGB')
+            pil_image = Image.fromarray(image_data)
+            
+        # Convert to PhotoImage
+        photo = ImageTk.PhotoImage(pil_image)
         
-        # Apply semi-transparency to indicate it's being moved
-        from PIL import ImageEnhance
-        enhancer = ImageEnhance.Brightness(pil_image)
-        pil_image = enhancer.enhance(1.2)  # Slightly brighter
+        # Keep a reference to prevent garbage collection
+        self._preview_image_ref = photo
         
-        # Convert to Tkinter PhotoImage
-        from PIL import ImageTk
-        tk_image = ImageTk.PhotoImage(pil_image)
+        # Get the current position of the layer (in canvas coordinates)
+        offset_x, offset_y = self.app_state.view_offset
+        scale = self.app_state.view_scale
         
-        # Store reference to prevent garbage collection
-        self._preview_image_ref = tk_image
-        
-        # Create image on canvas
-        canvas_x, canvas_y = self.canvas.image_to_screen_coords(0, 0)
-        
+        # Create the preview image on the canvas
         self.preview_image_id = self.canvas.create_image(
-            canvas_x, canvas_y,
-            image=tk_image,
+            offset_x, offset_y,
+            image=photo,
             anchor=tk.NW,
             tags="move_preview"
         )
         
-        # Bring preview to front
+        # Move the preview to the top of the canvas display list
         self.canvas.tag_raise(self.preview_image_id)
     
     def _move_preview(self, dx: int, dy: int):
@@ -263,16 +322,17 @@ class MoveTool(BaseTool):
         """
         if not self.canvas or not self.preview_image_id:
             return
-        
-        # Convert to screen coordinates
-        screen_dx = dx * self.canvas.zoom
-        screen_dy = dy * self.canvas.zoom
+            
+        # Convert image coordinate delta to canvas coordinate delta
+        scale = self.app_state.view_scale
+        canvas_dx = dx * scale
+        canvas_dy = dy * scale
         
         # Move the preview
-        self.canvas.move(self.preview_image_id, screen_dx, screen_dy)
+        self.canvas.move(self.preview_image_id, canvas_dx, canvas_dy)
     
     def _clear_preview(self):
-        """Remove the preview image from the canvas."""
+        """Clear the move preview."""
         if self.canvas and self.preview_image_id:
             self.canvas.delete(self.preview_image_id)
             self.preview_image_id = None
@@ -280,64 +340,71 @@ class MoveTool(BaseTool):
     
     def _apply_layer_move(self, dx: int, dy: int):
         """
-        Apply the move to the layer.
+        Apply the movement to the layer.
         
         Args:
-            dx: Total X movement
-            dy: Total Y movement
+            dx: X movement in image coordinates
+            dy: Y movement in image coordinates
         """
         if not self.active_layer:
             return
-        
-        # For now, we'll just update the layer's offset attribute
-        # In a more complete implementation, this would modify the layer's position
-        # and possibly apply the transformation to the image data
-        
-        # TODO: Implement layer position/transformation in the Layer class
-        
-        # Update the canvas
-        layer_manager = self.canvas.main_window.layer_manager
-        if layer_manager:
-            # Re-render the composite with the moved layer
-            composite = layer_manager.render_composite()
-            self.canvas.set_image(composite)
             
-            # Log the movement
-            logger.debug(f"Moved layer by dx={dx}, dy={dy}")
+        # Get the active layer
+        layer_manager = self.canvas.main_window.layer_manager
+        if not layer_manager:
+            return
+            
+        # Update the layer position
+        if hasattr(self.active_layer, 'position'):
+            # Get current position
+            x, y = self.active_layer.position
+            
+            # Update position
+            self.active_layer.position = (x + dx, y + dy)
+            
+            # Create history state
+            self.app_state.add_history_state(
+                "Move Layer",
+                {
+                    "layer_index": layer_manager.active_layer_index,
+                    "previous_position": (x, y),
+                    "new_position": self.active_layer.position
+                }
+            )
+            
+        # Update the canvas display
+        if self.canvas.main_window:
+            self.canvas.main_window.refresh_view()
+            
+        logger.debug(f"Applied layer move: dx={dx}, dy={dy}")
     
     def _move_selection(self, dx: int, dy: int):
         """
         Move the current selection.
         
         Args:
-            dx: X movement
-            dy: Y movement
+            dx: X movement in image coordinates
+            dy: Y movement in image coordinates
         """
-        if not self.app_state.has_selection or not self.app_state.selection_bounds:
+        if not self.app_state.has_selection:
             return
-        
-        # Get the current selection bounds
-        sel_x, sel_y, sel_width, sel_height = self.app_state.selection_bounds
+            
+        selection_bounds = self.app_state.selection_bounds
+        if not selection_bounds:
+            return
+            
+        # Unpack the current bounds
+        sel_x, sel_y, sel_width, sel_height = selection_bounds
         
         # Update the bounds
-        sel_x += dx
-        sel_y += dy
+        new_bounds = (sel_x + dx, sel_y + dy, sel_width, sel_height)
+        self.app_state.selection_bounds = new_bounds
         
-        # Enforce bounds within image dimensions
-        if self.app_state.image_dimensions:
-            img_width, img_height = self.app_state.image_dimensions
-            sel_x = max(0, min(sel_x, img_width - sel_width))
-            sel_y = max(0, min(sel_y, img_height - sel_height))
+        # Update any selection visuals
+        # This would typically be handled by the selection_manager or similar component
         
-        # Update the selection in app state
-        self.app_state.selection_bounds = (sel_x, sel_y, sel_width, sel_height)
-        
-        # Update the selection display on the canvas
-        if self.canvas:
-            # For now, we'll just assume the canvas will update the selection display
-            # In a real implementation, you would call a method on the canvas to update
-            # the selection visualization
-            self.canvas.update_selection_display()
+        # Refresh the view
+        if self.canvas.main_window:
+            self.canvas.main_window.refresh_view()
             
-        # Log the selection movement
-        logger.debug(f"Moved selection to x={sel_x}, y={sel_y}") 
+        logger.debug(f"Moved selection: dx={dx}, dy={dy}") 

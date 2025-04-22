@@ -12,9 +12,6 @@ import customtkinter as ctk
 from PIL import Image, ImageTk
 import tkinter.ttk as ttk
 
-from tools.move_tool import MoveTool
-from tools.crop_tool import CropTool
-
 logger = logging.getLogger("Image_Editor.Toolbar")
 
 class ToolButton(ctk.CTkButton):
@@ -137,26 +134,10 @@ class Toolbar(ctk.CTkFrame):
         self.tool_buttons: Dict[str, ToolButton] = {}
         self.active_tool: Optional[str] = None
         
-        # Create tools
-        self._initialize_tools()
-        
         # Create modern toolbar UI
         self._create_toolbar_buttons()
         
         logger.info("Toolbar initialized")
-    
-    def _initialize_tools(self):
-        """Initialize all tools."""
-        # Create tool instances
-        self.tools = {
-            "move": MoveTool(self.app_state),
-            "crop": CropTool(self.app_state),
-            # Add other tools here
-        }
-        
-        # Set the initially active tool
-        self.active_tool = "move"
-        self.app_state.current_tool = "move"
     
     def _create_toolbar_buttons(self):
         """Create buttons for the toolbar."""
@@ -229,6 +210,17 @@ class Toolbar(ctk.CTkFrame):
         )
         self.tool_buttons["eraser"].pack(pady=5, fill=tk.X)
         
+        # Effects tool
+        self.tool_buttons["effects"] = ToolButton(
+            self.tools_container,
+            tool_name="Effects",
+            tooltip="Effects Tool (F)",
+            text="✨",
+            font=("Arial", 18),
+            command=lambda: self.set_active_tool("effects")
+        )
+        self.tool_buttons["effects"].pack(pady=5, fill=tk.X)
+        
         # Text tool
         self.tool_buttons["text"] = ToolButton(
             self.tools_container,
@@ -240,42 +232,62 @@ class Toolbar(ctk.CTkFrame):
         )
         self.tool_buttons["text"].pack(pady=5, fill=tk.X)
         
-        # Set initial active tool
-        self.set_active_tool("move")
+        # Set initial active tool based on app_state
+        initial_tool = self.app_state.current_tool
+        if initial_tool in self.tool_buttons:
+            self.update_tool_button_state(initial_tool)
     
     def set_active_tool(self, tool_name: str):
         """
         Select a tool and update the UI.
         
         Args:
-            tool_name: Name of the tool to select
+            tool_name: Name of the tool to activate
         """
-        # Skip if already selected
-        if self.active_tool == tool_name:
-            return
+        if tool_name == self.active_tool:
+            return  # Tool already active
         
-        # Deactivate current tool button
-        if self.active_tool and self.active_tool in self.tool_buttons:
-            self.tool_buttons[self.active_tool].configure(
-                fg_color=("gray80", "gray28")
-            )
+        # Update UI
+        self.update_tool_button_state(tool_name)
         
-        # Activate new tool button
-        if tool_name in self.tool_buttons:
-            self.tool_buttons[tool_name].configure(
-                fg_color=("#3a7ebf", "#1f538d")
-            )
+        # Set tool as active in app state
+        canvas = None
+        if hasattr(self.main_window, 'canvas'):
+            canvas = self.main_window.canvas
+            
+        # Use app_state to set the active tool
+        self.app_state.set_active_tool(tool_name, canvas)
+        
+        logger.info(f"Tool selected: {tool_name}")
+    
+    def update_tool_button_state(self, tool_name: str):
+        """
+        Update the visual state of tool buttons.
+        
+        Args:
+            tool_name: Name of the tool to mark as active
+        """
+        # Reset all buttons to normal state
+        for name, button in self.tool_buttons.items():
+            if name == tool_name:
+                button.configure(
+                    fg_color=("gray60", "gray40"),  # Highlighted color
+                    hover_color=("gray50", "gray45")
+                )
+            else:
+                button.configure(
+                    fg_color=("gray80", "gray28"),  # Normal color
+                    hover_color=("gray70", "gray38")
+                )
         
         # Update active tool
         self.active_tool = tool_name
-        self.app_state.current_tool = tool_name
-        
-        # Log selection
-        logger.info(f"Selected tool: {tool_name}")
-        
-        # Notify main window to update active tool
-        # TODO: Implement callback
     
     def get_active_tool(self) -> Optional[str]:
-        """Get the currently active tool name."""
+        """
+        Get the currently active tool.
+        
+        Returns:
+            Name of the active tool or None
+        """
         return self.active_tool 
