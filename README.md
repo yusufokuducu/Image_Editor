@@ -1,167 +1,79 @@
-# Image_Editor
+# Gelişmiş Görsel Düzenleyici
 
-![License](https://img.shields.io/badge/license-MIT-blue.svg)
-![Python](https://img.shields.io/badge/python-3.8%2B-brightgreen.svg)
-![Status](https://img.shields.io/badge/status-active-success.svg)
+Python ve customtkinter ile oluşturulmuş, modern karanlık temalı bir arayüze ve gelişmiş görsel işleme özelliklerine sahip güçlü bir görsel düzenleme uygulaması.
 
-## 📋 Contents
+## Özellikler
 
-- [Overview](#overview)
-- [Features](#features)
-- [Screenshots](#screenshots)
-- [Installation](#installation)
-- [Usage](#usage)
-- [Tools](#tools)
-- [Project Structure](#project-structure)
-- [Roadmap](#roadmap)
-- [Contributing](#contributing)
-- [License](#license)
-- [Contact](#contact)
+- **Modern Karanlık Arayüz**: Customtkinter ile temiz, modern arayüz
+- **Temel Görsel İşlemleri**: Görsel açma, kaydetme ve sıfırlama
+- **Temel Filtreler**: Bulanıklaştırma, keskinleştirme, kontur, kabartma, siyah-beyaz, ters çevirme
+- **Gelişmiş Filtreler**: 
+  - Sepia tonu
+  - Çizgi film efekti
+  - Vinyet efekti
+  - Pikselleştirme
+  - Renk sıçratma (kırmızı, yeşil, mavi kanallar)
+  - Yağlı boya efekti
+  - Gürültü (rastgele doku)
+- **Ayarlanabilir Efekt Yoğunluğu**: Her efektin gücünü kaydırıcılarla kontrol etme
+- **Efekt Önizleme**: Efektleri uygulamadan önce önizleme yapabilme
+- **Görsel Ayarlamaları**:
+  - Parlaklık kontrolü
+  - Kontrast kontrolü
+  - Doygunluk kontrolü
+- **Dönüştürme Seçenekleri**:
+  - Sola/sağa döndürme
+  - Yatay/dikey çevirme
 
-## 🔭 Overview
+## Gereksinimler
 
-Image_Editor is a professional-grade image editing application developed in Python. Built on powerful libraries like CustomTkinter, PIL (Pillow), NumPy, and OpenCV, this application stands out with its advanced image processing capabilities and user-friendly interface.
+- Python 3.6+
+- Gerekli paketler:
+  - customtkinter
+  - Pillow (PIL)
+  - numpy
 
-This project aims to provide a comprehensive image editing solution for both professional photographers and hobbyists.
+## Kurulum
 
-## ✨ Features
-
-### Image Processing
-- **Basic Edits**: Cropping, rotation, flipping, resizing
-- **Color Adjustments**: Brightness, contrast, saturation, hue
-- **Layers**: Multi-layer support, blending modes, opacity settings
-- **Filters**: Blur, sharpen, edge detection, noise reduction
-- **Selection Tools**: Rectangle, ellipse, freehand, and color-based selectors
-
-### User Interface
-- **Modern Design**: Contemporary interface created with CustomTkinter
-- **Customizable Workspace**: Customize panel layouts
-- **Dark/Light Mode**: Theme options compatible with system settings
-- **Toolbars**: Intuitively organized tools
-
-### File Operations
-- **Multiple Format Support**: JPG, PNG, TIFF, BMP, GIF, WebP
-- **Project Files**: Save/load including layers and editing history
-- **Batch Processing**: Apply the same operations across multiple files
-
-## 📸 Screenshots
-
-*Screenshots to be added here*
-
-## 🚀 Installation
-
-### Requirements
-- Python 3.8 or above
-- pip (Python package manager)
-
-### Installation Steps
-
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/faust-lvii/Image_Editor.git
-   cd Image_Editor
-   ```
-
-2. Create a virtual environment (optional):
-   ```bash
-   python -m venv venv
-   # On Windows
-   venv\Scripts\activate
-   # On macOS/Linux
-   source venv/bin/activate
-   ```
-
-3. Install required packages:
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-4. Start the application:
-   ```bash
-   python main.py
-   ```
-
-## 📖 Usage
-
-### Basic Usage
-1. Create a new image or open an existing file
-2. Select the desired editing tool from the toolbar
-3. Use the selected tool on the image
-4. Apply changes and save
-
-### Working with Layers
-1. Click the "+" button in the layers panel to add a new layer
-2. Navigate between layers using the layer list
-3. Use layer properties to adjust blending modes and opacity
-
-### Filters and Effects
-1. Select the desired effect from the filters menu
-2. Customize settings and check the preview
-3. Click "Apply" to apply the changes
-
-## 🧰 Tools
-
-- **Selection Tools**: Rectangle, ellipse, lasso, magic wand
-- **Editing Tools**: Brush, eraser, fill, text, crop, move
-- **Filters**: Blur, sharpen, noise reduction
-- **Adjustments**: Brightness/contrast, HSL, levels, curves
-
-## 📂 Project Structure
+1. Sisteminizde Python'un kurulu olduğundan emin olun
+2. Gerekli paketleri yükleyin:
 
 ```
-Image_Editor/
-├── core/                  # Core functionality
-│   ├── app_state.py       # Application state management
-│   ├── image_handler.py   # Image processing functions
-│   └── layer_manager.py   # Layer management
-├── ui/                    # User interface
-│   ├── canvas.py          # Editing canvas
-│   ├── main_window.py     # Main application window
-│   ├── menubar.py         # Application menu
-│   ├── toolbar.py         # Toolbar
-│   └── panels/            # UI panels
-├── operations/            # Image processing operations
-│   ├── adjustments/       # Color adjustments
-│   ├── effects/           # Visual effects
-│   ├── filters/           # Filters
-│   └── transformations/   # Transformations
-├── tools/                 # Editing tools
-├── resources/             # Application resources
-├── utils/                 # Helper functions
-├── config/                # Configuration files
-├── main.py                # Main entry point
-└── requirements.txt       # Dependencies
+pip install customtkinter pillow numpy
 ```
 
-## 🗺️ Roadmap
+3. Uygulamayı çalıştırın:
 
-- [ ] Advanced selection tools (magnetic lasso, edge detection)
-- [ ] Adjustment layers and non-destructive editing support
-- [ ] Layer masks and effects
-- [ ] Brush engine improvements
-- [ ] Macro and action recording
-- [ ] Content-aware fill and erasure
-- [ ] GPU acceleration
-- [ ] Color profile support
-- [ ] Plugin system
-- [ ] Scripting automation
+```
+python image_editor.py
+```
 
-## 👥 Contributing
+## Kullanım
 
-If you would like to contribute:
+1. "Open Image" düğmesini kullanarak bir görsel açın
+2. Temel filtreleri tek tıklamayla doğrudan uygulayın
+3. Gelişmiş filtreler için:
+   - Gelişmiş Filtreler bölümünden filtreyi seçin
+   - Kaydırıcıları kullanarak filtre yoğunluğunu ayarlayın
+   - Önizleme seçeneğini işaretleyerek efekti görebilirsiniz
+   - "Efekti Uygula" düğmesine tıklayarak görselinize uygulayın
+4. Parlaklık, kontrast ve doygunluğu gerektiği gibi ayarlayın
+5. Düzenlediğiniz görseli "Save Image" düğmesi ile kaydedin
+6. "Reset Image" düğmesi ile her zaman orijinal görsele dönebilirsiniz
 
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to your branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+## Gelişmiş Filtre Detayları
 
-## 📄 License
+- **Sepia**: Vintage bir görünüm için sıcak kahverengi ton uygular
+- **Çizgi Film**: Çizgi film benzeri bir efekt için renkleri sadeleştirir ve kenarları belirginleştirir
+- **Vinyet**: Dramatik bir odak için görüntünün köşelerini karartır
+- **Pikselleştirme**: Piksel boyutunu ayarlayarak bloklu bir efekt oluşturur
+- **Renk Sıçratma**: Sadece seçili renk kanalını koruyarak diğerlerini gri tonlamalı yapar
+- **Yağlı Boya**: Renk frekanslarını analiz ederek yağlı boya efekti oluşturur
+- **Gürültü**: Görsele ayarlanabilir yoğunlukta rastgele doku/gürültü ekler
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+## Proje Yapısı
 
-## 📞 Contact
-
-Project Manager - [@faust-lvii](https://github.com/faust-lvii)
-
-Project Link: [https://github.com/faust-lvii/Image_Editor](https://github.com/faust-lvii/Image_Editor) 
+- `image_editor.py` - Ana uygulama dosyası
+- `advanced_filters.py` - Gelişmiş filtre uygulamalarını içeren modül
+- `app_icon.py` - Özel uygulama simgesi oluşturur
+- `resources/` - Uygulama kaynakları için dizin 
