@@ -1,37 +1,56 @@
-# Gelişmiş Görsel Düzenleyici
+# Pro Image Editor (Gelişmiş Görsel Düzenleyici)
 
-Python ve customtkinter ile oluşturulmuş, modern karanlık temalı bir arayüze ve gelişmiş görsel işleme özelliklerine sahip güçlü bir görsel düzenleme uygulaması.
+Python ve customtkinter ile geliştirilmiş, modern tasarımlı, güçlü bir görsel düzenleme uygulaması.
+
+![Pro Image Editor](resources/app_icon.png)
 
 ## Özellikler
 
-- **Modern Karanlık Arayüz**: Customtkinter ile temiz, modern arayüz
-- **Temel Görsel İşlemleri**: Görsel açma, kaydetme ve sıfırlama
-- **Temel Filtreler**: Bulanıklaştırma, keskinleştirme, kontur, kabartma, siyah-beyaz, ters çevirme
-- **Gelişmiş Filtreler**: 
-  - Sepia tonu
-  - Çizgi film efekti
-  - Vinyet efekti
-  - Pikselleştirme
-  - Renk sıçratma (kırmızı, yeşil, mavi kanallar)
-  - Yağlı boya efekti
-  - Gürültü (rastgele doku)
-- **Ayarlanabilir Efekt Yoğunluğu**: Her efektin gücünü kaydırıcılarla kontrol etme
-- **Efekt Önizleme**: Efektleri uygulamadan önce önizleme yapabilme
-- **Görsel Ayarlamaları**:
-  - Parlaklık kontrolü
-  - Kontrast kontrolü
-  - Doygunluk kontrolü
+- **Modern Karanlık Arayüz**: Customtkinter ile özelleştirilmiş, kullanıcı dostu arayüz
+- **Dosya İşlemleri**:
+  - Görsel açma (JPEG, PNG, BMP ve diğer formatlar)
+  - Düzenlenen görseli farklı formatlarda kaydetme 
+  - Orijinal görsele dönme
+  
+- **Temel Görsel Ayarları**:
+  - Parlaklık kontrolü (0.0 - 2.0)
+  - Kontrast kontrolü (0.0 - 2.0)
+  - Doygunluk kontrolü (0.0 - 2.0)
+  
 - **Dönüştürme Seçenekleri**:
-  - Sola/sağa döndürme
+  - Sola/sağa 90° döndürme
   - Yatay/dikey çevirme
+  
+- **Temel Filtreler**:
+  - Bulanıklaştırma (Blur)
+  - Keskinleştirme (Sharpen)
+  - Kontur (Contour)
+  - Kabartma (Emboss)
+  - Siyah-Beyaz
+  - Negatif (Renk Tersine Çevirme)
+  
+- **Gelişmiş Filtreler**:
+  - **Sepya Tonu**: Nostaljik bir görünüm için ayarlanabilir yoğunluk
+  - **Çizgi Film Efekti**: Animasyon benzeri görünüm, kenar belirginliği ve renk sadeleştirme ayarları
+  - **Vinyet Efekti**: Köşe kararma efekti ile dramatik odaklama
+  - **Pikselleştirme**: Piksel boyutu ayarlanabilir mozaik efekti
+  - **Renk Sıçratma**: Seçilen renk kanalını koruyarak diğer kanalları siyah-beyaz yapma
+  - **Yağlı Boya**: Fırça boyutu ve detay seviyesi ayarlanabilir yağlı boya efekti
+  - **Gürültü Efekti**: Çeşitli tipte (Uniform, Gaussian, Salt & Pepper) gürültü efektleri ve kanal seçimleri
+  
+- **Efekt Uygulaması**:
+  - Önizleme özelliği ile değişiklikler uygulanmadan görüntüleme
+  - Ayarlanabilir efekt parametreleri
+  - Çoklu iş parçacığı (multithreading) desteği ile yüksek performans
 
 ## Gereksinimler
 
-- Python 3.6+
+- Python 3.7 veya üzeri
 - Gerekli paketler:
-  - customtkinter
-  - Pillow (PIL)
-  - numpy
+  - customtkinter >= 5.2.0
+  - Pillow >= 10.0.0
+  - numpy >= 1.24.0
+  - opencv-python >= 4.8.0
 
 ## Kurulum
 
@@ -39,87 +58,61 @@ Python ve customtkinter ile oluşturulmuş, modern karanlık temalı bir arayüz
 2. Gerekli paketleri yükleyin:
 
 ```
-pip install customtkinter pillow numpy
+pip install -r requirements.txt
 ```
 
 3. Uygulamayı çalıştırın:
 
 ```
-python image_editor.py
+python run.py
 ```
 
 ## Kullanım
 
-1. "Open Image" düğmesini kullanarak bir görsel açın
-2. Temel filtreleri tek tıklamayla doğrudan uygulayın
-3. Gelişmiş filtreler için:
-   - Gelişmiş Filtreler bölümünden filtreyi seçin
-   - Kaydırıcıları kullanarak filtre yoğunluğunu ayarlayın
-   - Önizleme seçeneğini işaretleyerek efekti görebilirsiniz
-   - "Efekti Uygula" düğmesine tıklayarak görselinize uygulayın
-4. Parlaklık, kontrast ve doygunluğu gerektiği gibi ayarlayın
-5. Düzenlediğiniz görseli "Save Image" düğmesi ile kaydedin
-6. "Reset Image" düğmesi ile her zaman orijinal görsele dönebilirsiniz
+1. **Görsel Açma**: "Dosya Aç" düğmesine tıklayarak bir görsel açın
+2. **Temel Ayarlar**: Parlaklık, kontrast ve doygunluk kaydırıcılarını kullanarak temel ayarları yapın
+3. **Temel Filtreler**: Filtreler bölümündeki düğmelere tıklayarak doğrudan uygulayın
+4. **Gelişmiş Filtreler**: 
+   - İstediğiniz efekti seçin (örn. "Yağlı Boya", "Gürültü" vb.)
+   - Yan panelde açılan ayarlar ile efekt parametrelerini yapılandırın
+   - Önizleme seçeneğini işaretleyerek sonucu görebilirsiniz
+   - "Efekti Uygula" düğmesine tıklayarak kalıcı olarak uygulayın
+5. **Dönüştürme İşlemleri**: Döndürme ve çevirme düğmelerini kullanarak görselin yönünü değiştirin
+6. **Kaydetme**: "Kaydet" düğmesi ile düzenlenen görseli istediğiniz formatta kaydedin
+7. **Sıfırlama**: "Sıfırla" düğmesi ile orijinal görsele geri dönün
 
-## Gelişmiş Filtre Detayları
+## Modüler Yapı
 
-- **Sepia**: Vintage bir görünüm için sıcak kahverengi ton uygular
-- **Çizgi Film**: Çizgi film benzeri bir efekt için renkleri sadeleştirir ve kenarları belirginleştirir
-- **Vinyet**: Dramatik bir odak için görüntünün köşelerini karartır
-- **Pikselleştirme**: Piksel boyutunu ayarlayarak bloklu bir efekt oluşturur
-- **Renk Sıçratma**: Sadece seçili renk kanalını koruyarak diğerlerini gri tonlamalı yapar
-- **Yağlı Boya**: Renk frekanslarını analiz ederek yağlı boya efekti oluşturur
-- **Gürültü**: Görsele ayarlanabilir yoğunlukta rastgele doku/gürültü ekler
-
-## Proje Yapısı
-
-- `image_editor.py` - Ana uygulama dosyası
-- `advanced_filters.py` - Gelişmiş filtre uygulamalarını içeren modül
-- `app_icon.py` - Özel uygulama simgesi oluşturur
-- `resources/` - Uygulama kaynakları için dizin
-
-## Modular Structure
-
-The application has been reorganized into a modular structure for better maintainability:
+Uygulama, bakım ve geliştirme kolaylığı için modüler bir yapıda tasarlanmıştır:
 
 ```
-image_editor_app/           # Main package directory
-├── __init__.py             # Package init with version and run function
-├── app.py                  # Main ImageEditor class
-├── core/                   # Core functionality modules
+image_editor_app/           # Ana paket dizini
+├── __init__.py             # Paket başlatıcı
+├── app.py                  # Ana ImageEditor sınıfı
+├── core/                   # Çekirdek işlevler
 │   ├── __init__.py
 │   ├── basic_adjustments.py
 │   ├── effect_processing.py
 │   ├── file_operations.py
 │   └── image_display.py
-├── ui/                     # User interface modules
+├── ui/                     # Kullanıcı arayüzü bileşenleri
 │   ├── __init__.py
 │   ├── effects.py
 │   ├── main_view.py
 │   └── sidebar.py
-├── utils/                  # Utility functions and constants
+├── utils/                  # Yardımcı işlevler
 │   ├── __init__.py
 │   ├── constants.py
+│   ├── advanced_effects.py
+│   ├── app_icon.py
 │   └── image_effects.py
-└── widgets/                # Custom widget components
+└── widgets/                # Özel arayüz bileşenleri
     ├── __init__.py
     ├── effect_intensity.py
     ├── toggle_button.py
     └── tooltip.py
 ```
 
-### Running the Application
+## Lisans
 
-To run the application, simply execute:
-
-```
-python run.py
-```
-
-### Code Organization
-
-- **app.py**: Main application class with initialization
-- **core/**: Core functionality like file operations and image processing
-- **ui/**: User interface components like sidebar and main view
-- **utils/**: Utility functions and constants
-- **widgets/**: Custom UI widget components 
+Bu yazılım açık kaynaklıdır ve MIT lisansı altında dağıtılmaktadır. 

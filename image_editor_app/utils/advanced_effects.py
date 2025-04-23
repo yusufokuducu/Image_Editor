@@ -153,17 +153,57 @@ def apply_oil_painting(image, brush_size=5, levels=8):
     
     return oil_img
 
-def apply_noise(image, amount=0.5):
-    """Add random noise to the image with adjustable intensity"""
+def apply_noise(image, amount=0.5, noise_type="uniform", channels=None):
+    """
+    Add random noise to the image with adjustable intensity and type
+    
+    Parameters:
+    - image: PIL Image
+    - amount: float 0-1, noise intensity
+    - noise_type: string, one of "uniform", "gaussian", "salt_pepper"
+    - channels: list of strings, which channels to affect ("r", "g", "b")
+    """
+    if channels is None:
+        channels = ["r", "g", "b"]  # Default to all channels
+    
     # Convert to array
     img_array = np.array(image).copy()
     
-    # Calculate noise intensity (scale factor)
-    noise_factor = int(amount * 50)  # Scale from 0 to 50
+    # Handle different noise types
+    if noise_type == "uniform":
+        # Calculate noise intensity (scale factor)
+        noise_factor = int(amount * 50)  # Scale from 0 to 50
+        
+        # Add random uniform noise to selected channels
+        for i, channel in enumerate(["r", "g", "b"]):
+            if channel in channels:
+                noise = np.random.randint(-noise_factor, noise_factor + 1, img_array.shape[:2])
+                img_array[:, :, i] = np.clip(img_array[:, :, i] + noise, 0, 255)
     
-    # Add random noise to each channel
-    for i in range(3):  # RGB channels
-        noise = np.random.randint(-noise_factor, noise_factor + 1, img_array.shape[:2])
-        img_array[:, :, i] = np.clip(img_array[:, :, i] + noise, 0, 255)
+    elif noise_type == "gaussian":
+        # Calculate standard deviation from amount
+        std_dev = amount * 25.0  # Scale from 0 to 25
+        
+        # Add Gaussian noise to selected channels
+        for i, channel in enumerate(["r", "g", "b"]):
+            if channel in channels:
+                noise = np.random.normal(0, std_dev, img_array.shape[:2])
+                img_array[:, :, i] = np.clip(img_array[:, :, i] + noise, 0, 255).astype(np.uint8)
+    
+    elif noise_type == "salt_pepper":
+        # Calculate probability of salt and pepper
+        prob = amount * 0.1  # Scale from 0 to 0.1
+        
+        # Create salt and pepper masks
+        salt = np.random.random(img_array.shape[:2]) < prob/2
+        pepper = np.random.random(img_array.shape[:2]) < prob/2
+        
+        # Apply salt and pepper to selected channels
+        for i, channel in enumerate(["r", "g", "b"]):
+            if channel in channels:
+                # Salt: white pixels
+                img_array[:, :, i][salt] = 255
+                # Pepper: black pixels
+                img_array[:, :, i][pepper] = 0
     
     return Image.fromarray(img_array.astype(np.uint8)) 
