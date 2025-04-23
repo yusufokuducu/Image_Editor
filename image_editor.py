@@ -12,16 +12,184 @@ import time
 print("Uygulama başlatılıyor...")
 
 # Set appearance mode and color theme
-ctk.set_appearance_mode("dark")
-ctk.set_default_color_theme("dark-blue")
+ctk.set_appearance_mode("system")  # "system", "dark" veya "light"
+ctk.set_default_color_theme("blue")  # "blue", "green", "dark-blue"
+
+# UI Teması
+ACCENT_COLOR = "#3a7ebf"
+SECONDARY_COLOR = "#2a5d8f"
+SUCCESS_COLOR = "#2d9657"
+WARNING_COLOR = "#d19a41"
+ERROR_COLOR = "#b33f3f"
+
+# UI Yazı Tipleri
+FONT_FAMILY = "Segoe UI" if os.name == "nt" else "Helvetica"
+TITLE_FONT = (FONT_FAMILY, 20, "bold")
+SUBTITLE_FONT = (FONT_FAMILY, 16, "bold")
+BUTTON_FONT = (FONT_FAMILY, 12)
+LABEL_FONT = (FONT_FAMILY, 12)
+SMALL_FONT = (FONT_FAMILY, 10)
 
 # Maksimum önizleme boyutu - daha büyük görüntüler önizleme için bu boyuta küçültülecek
 MAX_PREVIEW_WIDTH = 1200
 MAX_PREVIEW_HEIGHT = 800
 
+class ToolTip:
+    """Arayüz elemanları için ipucu balonu sınıfı"""
+    def __init__(self, widget, text):
+        self.widget = widget
+        self.text = text
+        self.tooltip = None
+        self.timer_id = None
+        self.widget.bind("<Enter>", self.on_enter)
+        self.widget.bind("<Leave>", self.on_leave)
+        # Eğer widget tıklanırsa tooltip kaybolsun
+        self.widget.bind("<Button-1>", self.hide_tooltip)
+    
+    def on_enter(self, event=None):
+        """Fare widget üzerine geldiğinde tooltip'i göster"""
+        # Önceki zamanlayıcıyı iptal et
+        if self.timer_id:
+            self.widget.after_cancel(self.timer_id)
+            self.timer_id = None
+        
+        # Tooltip zaten görünür değilse göster
+        if not self.tooltip:
+            # Küçük bir gecikme ekle ki kazara aktivasyonlar olmasın
+            self.timer_id = self.widget.after(400, self.show_tooltip)
+    
+    def on_leave(self, event=None):
+        """Fare widget üzerinden ayrıldığında tooltip'i gizle"""
+        # Zamanlayıcıyı iptal et
+        if self.timer_id:
+            self.widget.after_cancel(self.timer_id)
+            self.timer_id = None
+        
+        # Tooltip'i gizle
+        self.hide_tooltip()
+    
+    def show_tooltip(self, event=None):
+        """İpucu balonunu göster"""
+        # Önceden var olan tooltip'i temizle
+        self.hide_tooltip()
+        
+        # Konum hesaplama
+        x, y = 0, 0
+        
+        try:
+            x, y, _, _ = self.widget.bbox("insert")
+            # Insert konumu bulunamadıysa, widget'ın merkez konumunu kullan
+        except:
+            x = self.widget.winfo_width() // 2
+            y = self.widget.winfo_height() // 2
+        
+        x += self.widget.winfo_rootx() + 25
+        y += self.widget.winfo_rooty() + 25
+        
+        # İpucu penceresi oluştur
+        self.tooltip = ctk.CTkToplevel(self.widget)
+        self.tooltip.wm_overrideredirect(True)  # Pencere dekorasyonlarını kaldır
+        
+        # Tooltip her zaman üstte olsun
+        self.tooltip.attributes('-topmost', True)
+        
+        # Windows'ta tooltip pencerelerini taskbar'da gösterme
+        if os.name == "nt":
+            self.tooltip.attributes("-toolwindow", True)
+        
+        # İpucu içeriğini oluştur - tema rengi yerine sabit renkler kullan
+        bg_color = "#333333"  # Koyu tema için varsayılan renk
+        border_color = "#555555"  # Koyu tema için kenarlık rengi
+        text_color = "white"  # Koyu tema için metin rengi
+        
+        # Aydınlık tema için farklı renkler kullan
+        if ctk.get_appearance_mode() == "light":
+            bg_color = "#f0f0f0"
+            border_color = "#cccccc"
+            text_color = "black"
+        
+        frame = ctk.CTkFrame(
+            self.tooltip,
+            corner_radius=6,
+            border_width=1,
+            fg_color=bg_color,
+            border_color=border_color
+        )
+        frame.pack(padx=2, pady=2)
+        
+        label = ctk.CTkLabel(
+            frame,
+            text=self.text,
+            font=SMALL_FONT,
+            text_color=text_color
+        )
+        label.pack(padx=6, pady=3)
+        
+        # Tooltip boyutlarını al ve ekrana sığdır
+        self.tooltip.update_idletasks()
+        tooltip_width = self.tooltip.winfo_width()
+        tooltip_height = self.tooltip.winfo_height()
+        
+        # Ekran boyutlarını al
+        screen_width = self.widget.winfo_screenwidth()
+        screen_height = self.widget.winfo_screenheight()
+        
+        # Tooltip konumunu ekran sınırları içinde tut
+        if x + tooltip_width > screen_width:
+            x = screen_width - tooltip_width - 10
+        if y + tooltip_height > screen_height:
+            y = screen_height - tooltip_height - 10
+        
+        # Tooltip'i konumlandır
+        self.tooltip.wm_geometry(f"+{x}+{y}")
+        
+        # Güvenlik için otomatik kapanma zamanlayıcısı
+        self.timer_id = self.widget.after(5000, self.hide_tooltip)
+    
+    def hide_tooltip(self, event=None):
+        """İpucu balonunu gizle"""
+        if self.tooltip:
+            try:
+                self.tooltip.destroy()
+            except:
+                pass  # Pencere zaten kapatılmış olabilir
+            self.tooltip = None
+        
+        # Zamanlayıcıyı temizle
+        if self.timer_id:
+            self.widget.after_cancel(self.timer_id)
+            self.timer_id = None
+
+# Yeni modern stil ToggleButton sınıfı
+class ToggleButton(ctk.CTkButton):
+    """Açılıp kapanabilen buton sınıfı"""
+    def __init__(self, master, text="", command=None, **kwargs):
+        super().__init__(master, text=text, command=self._toggle, **kwargs)
+        self.command = command
+        self.active = False
+        self.configure(fg_color=ACCENT_COLOR)
+    
+    def _toggle(self):
+        """Butonun durumunu değiştir"""
+        self.active = not self.active
+        if self.active:
+            self.configure(fg_color=SUCCESS_COLOR)
+        else:
+            self.configure(fg_color=ACCENT_COLOR)
+        
+        if self.command:
+            self.command(self.active)
+    
+    def set_state(self, state):
+        """Butonun durumunu dışarıdan ayarla"""
+        if state != self.active:
+            self._toggle()
+
 class EffectIntensityFrame(ctk.CTkFrame):
-    """A frame containing sliders to control filter intensity"""
+    """Modern slider kontrol paneli"""
     def __init__(self, parent, title, min_val, max_val, default_val, callback, step_size=None, integer=False, **kwargs):
+        kwargs["fg_color"] = kwargs.get("fg_color", "transparent")
+        kwargs["corner_radius"] = kwargs.get("corner_radius", 8)
         super().__init__(parent, **kwargs)
         
         # Store parameters
@@ -37,44 +205,95 @@ class EffectIntensityFrame(ctk.CTkFrame):
         else:
             self.number_of_steps = 100
         
-        # Create title label
-        self.title_label = ctk.CTkLabel(self, text=title)
-        self.title_label.grid(row=0, column=0, padx=5, pady=(5, 0), sticky="w")
+        # Create title label with icon
+        title_frame = ctk.CTkFrame(self, fg_color="transparent")
+        title_frame.grid(row=0, column=0, columnspan=2, padx=5, pady=(8, 0), sticky="ew")
         
-        # Create slider
-        self.slider = ctk.CTkSlider(self, from_=min_val, to=max_val, number_of_steps=self.number_of_steps, command=self.on_change)
-        self.slider.grid(row=1, column=0, padx=5, pady=(0, 5), sticky="ew")
+        self.title_label = ctk.CTkLabel(
+            title_frame, 
+            text=title,
+            font=LABEL_FONT,
+            anchor="w"
+        )
+        self.title_label.pack(side="left", padx=5)
+        
+        # Value display
+        self.value_str = self._format_value(default_val)
+        self.value_label = ctk.CTkLabel(
+            title_frame, 
+            text=self.value_str, 
+            width=50,
+            font=SMALL_FONT
+        )
+        self.value_label.pack(side="right", padx=5)
+        
+        # Create slider with progress bar appearance
+        slider_frame = ctk.CTkFrame(self, fg_color="transparent")
+        slider_frame.grid(row=1, column=0, columnspan=2, padx=5, pady=(0, 5), sticky="ew")
+        
+        self.slider = ctk.CTkSlider(
+            slider_frame, 
+            from_=min_val, 
+            to=max_val, 
+            number_of_steps=self.number_of_steps, 
+            command=self.on_change,
+            button_color=ACCENT_COLOR,
+            button_hover_color=SECONDARY_COLOR,
+            progress_color=ACCENT_COLOR
+        )
+        self.slider.pack(fill="x", padx=5, pady=5)
         self.slider.set(default_val)
         
-        # Create value label
-        self.value_str = self._format_value(default_val)
-        self.value_label = ctk.CTkLabel(self, text=self.value_str, width=40)
-        self.value_label.grid(row=1, column=1, padx=(0, 5), pady=(0, 5))
-        
-        # Create controls for direct value input
-        self.controls_frame = ctk.CTkFrame(self)
+        # Create controls frame with modern styling
+        self.controls_frame = ctk.CTkFrame(self, fg_color="transparent")
         self.controls_frame.grid(row=2, column=0, columnspan=2, padx=5, pady=(0, 5), sticky="ew")
-        self.controls_frame.grid_columnconfigure(0, weight=1)
-        self.controls_frame.grid_columnconfigure(1, weight=1)
         
-        # Add preset buttons
-        self.min_btn = ctk.CTkButton(self.controls_frame, text="Min", width=40, 
-                                    command=lambda: self.set_value(min_val), 
-                                    font=ctk.CTkFont(size=12))
+        # Add preset buttons with icons
+        button_style = {
+            "corner_radius": 6,
+            "border_width": 0,
+            "text_color": "white",
+            "hover": True,
+            "font": SMALL_FONT
+        }
+        
+        self.min_btn = ctk.CTkButton(
+            self.controls_frame, 
+            text="Min", 
+            width=40, 
+            command=lambda: self.set_value(min_val),
+            fg_color=SECONDARY_COLOR,
+            **button_style
+        )
         self.min_btn.grid(row=0, column=0, padx=2, pady=2, sticky="w")
         
-        self.max_btn = ctk.CTkButton(self.controls_frame, text="Max", width=40, 
-                                    command=lambda: self.set_value(max_val), 
-                                    font=ctk.CTkFont(size=12))
+        self.max_btn = ctk.CTkButton(
+            self.controls_frame, 
+            text="Max", 
+            width=40, 
+            command=lambda: self.set_value(max_val),
+            fg_color=SECONDARY_COLOR,
+            **button_style
+        )
         self.max_btn.grid(row=0, column=1, padx=2, pady=2, sticky="w")
         
-        self.default_btn = ctk.CTkButton(self.controls_frame, text="Varsayılan", width=70, 
-                                       command=self.reset, 
-                                       font=ctk.CTkFont(size=12))
+        self.default_btn = ctk.CTkButton(
+            self.controls_frame, 
+            text="Varsayılan", 
+            width=70, 
+            command=self.reset,
+            fg_color=SECONDARY_COLOR,
+            **button_style
+        )
         self.default_btn.grid(row=0, column=2, padx=2, pady=2, sticky="e")
         
         # Configure grid
         self.grid_columnconfigure(0, weight=1)
+        
+        # Tooltips for buttons
+        ToolTip(self.min_btn, f"Minimum değere ayarla: {min_val}")
+        ToolTip(self.max_btn, f"Maksimum değere ayarla: {max_val}")
+        ToolTip(self.default_btn, f"Varsayılan değere sıfırla: {default_val}")
     
     def _format_value(self, value):
         """Format value for display"""
@@ -123,9 +342,9 @@ class ImageEditor(ctk.CTk):
         super().__init__()
         
         # Window setup
-        self.title("Advanced Image Editor")
+        self.title("Pro Image Editor")
         self.geometry("1300x800")
-        self.minsize(900, 700)
+        self.minsize(1000, 700)
         
         # Set icon
         self.set_app_icon()
@@ -133,9 +352,11 @@ class ImageEditor(ctk.CTk):
         # Variables
         self.current_image = None
         self.original_image = None
+        self.working_image = None
         self.image_path = None
         self.filename = None
         self.current_effect = None
+        self.last_edited_time = None  # Son düzenleme zamanı
         self.effect_params = {
             # Gelişmiş filtreler
             "sepia": {"intensity": 1.0},
@@ -159,7 +380,14 @@ class ImageEditor(ctk.CTk):
         
         # Effect intensity controls (created hidden initially)
         self.create_effect_controls()
-        self.hide_effect_controls()
+        
+        # Effect control frame'ini gizle, ancak henüz hide_effect_controls() metodu tanımlanmadı
+        if hasattr(self, 'effect_control_frame'):
+            self.effect_control_frame.grid_forget() 
+            self.current_effect = None
+            
+        # Uygulamanın hazır olduğunu göster
+        self.after(500, lambda: self.show_status("Uygulama hazır. Görüntü açmak için 'Dosya Aç' düğmesine tıklayın."))
         
     def set_app_icon(self):
         """Set the application icon"""
@@ -176,158 +404,348 @@ class ImageEditor(ctk.CTk):
         self.iconphoto(True, self.icon_photo)
         
     def create_ui(self):
-        # Main frame structure - use weight to ensure proper scaling
-        self.grid_columnconfigure(0, weight=1)  # sidebar
-        self.grid_columnconfigure(1, weight=3)  # canvas
+        # Ana çerçeve düzeni - düzgün ölçekleme için ağırlık kullan
+        self.grid_columnconfigure(0, weight=1)
+        self.grid_columnconfigure(1, weight=5)
         self.grid_rowconfigure(0, weight=1)
         
-        # Create sidebar frame with scrollable content
-        self.sidebar_frame = ctk.CTkFrame(self, corner_radius=0)
+        # Sol panel (Sidebar) oluştur
+        self.create_sidebar()
+        
+        # Ana içerik alanı (resim tuvali) oluştur
+        self.create_main_view()
+        
+        # Durum çubuğu oluştur
+        self.create_status_bar()
+    
+    def create_sidebar(self):
+        """Sol kenar çubuğunu oluştur"""
+        # Kenar çubuğu ana çerçevesi
+        # Tema rengini sabit değerle değiştir
+        sidebar_color = "#2b2b2b"  # Koyu tema için varsayılan renk
+        if ctk.get_appearance_mode() == "light":
+            sidebar_color = "#ebebeb"  # Açık tema için varsayılan renk
+            
+        self.sidebar_frame = ctk.CTkFrame(self, corner_radius=0, fg_color=sidebar_color)
         self.sidebar_frame.grid(row=0, column=0, sticky="nsew")
         
-        # Create scrollable frame for sidebar - make it fill the entire sidebar
-        self.scrollable_frame = ctk.CTkScrollableFrame(self.sidebar_frame, width=250)
+        # Kaydırılabilir içerik için çerçeve oluştur
+        self.scrollable_frame = ctk.CTkScrollableFrame(
+            self.sidebar_frame, 
+            width=280,
+            fg_color="transparent",
+            scrollbar_button_color=ACCENT_COLOR,
+            scrollbar_button_hover_color=SECONDARY_COLOR
+        )
         self.scrollable_frame.grid(row=0, column=0, padx=5, pady=5, sticky="nsew")
         self.sidebar_frame.grid_rowconfigure(0, weight=1)
         self.sidebar_frame.grid_columnconfigure(0, weight=1)
         
-        # App title
-        self.logo_label = ctk.CTkLabel(self.scrollable_frame, text="Image Editor Pro", font=ctk.CTkFont(size=20, weight="bold"))
-        self.logo_label.grid(row=0, column=0, padx=20, pady=(10, 10))
+        # App logosu ve başlığı
+        logo_frame = ctk.CTkFrame(self.scrollable_frame, fg_color="transparent")
+        logo_frame.grid(row=0, column=0, padx=10, pady=(10, 20), sticky="ew")
         
-        # File operations section
-        self.file_frame = ctk.CTkFrame(self.scrollable_frame)
-        self.file_frame.grid(row=1, column=0, padx=5, pady=5, sticky="ew")
+        self.logo_label = ctk.CTkLabel(
+            logo_frame, 
+            text="Pro Image Editor",
+            font=TITLE_FONT,
+            text_color=ACCENT_COLOR
+        )
+        self.logo_label.pack(pady=(5, 0))
+        
+        version_label = ctk.CTkLabel(
+            logo_frame, 
+            text="Sürüm 2.0", 
+            font=SMALL_FONT,
+            text_color="gray"
+        )
+        version_label.pack(pady=(0, 5))
+        
+        # Dosya işlemleri bölümü
+        file_section = self.create_section(self.scrollable_frame, "Dosya İşlemleri", 1)
+        
+        self.file_frame = ctk.CTkFrame(file_section, fg_color="transparent")
+        self.file_frame.pack(fill="x", padx=5, pady=5)
+        
+        # Grid yapılandırması
         self.file_frame.grid_columnconfigure(0, weight=1)
         self.file_frame.grid_columnconfigure(1, weight=1)
         
-        # Add open file button
-        self.open_button = ctk.CTkButton(self.file_frame, text="Open Image", command=self.open_image)
+        # Dosya açma butonu
+        self.open_button = ctk.CTkButton(
+            self.file_frame, 
+            text="Dosya Aç",
+            command=self.open_image,
+            font=BUTTON_FONT,
+            fg_color=ACCENT_COLOR,
+            hover_color=SECONDARY_COLOR,
+            height=36,
+            corner_radius=8
+        )
         self.open_button.grid(row=0, column=0, padx=3, pady=3, sticky="ew")
+        ToolTip(self.open_button, "Düzenlemek için bir görüntü dosyası açın")
         
-        # Add save file button
-        self.save_button = ctk.CTkButton(self.file_frame, text="Save Image", command=self.save_image)
+        # Kaydetme butonu
+        self.save_button = ctk.CTkButton(
+            self.file_frame, 
+            text="Kaydet",
+            command=self.save_image,
+            font=BUTTON_FONT,
+            fg_color=ACCENT_COLOR,
+            hover_color=SECONDARY_COLOR,
+            height=36,
+            corner_radius=8
+        )
         self.save_button.grid(row=0, column=1, padx=3, pady=3, sticky="ew")
+        ToolTip(self.save_button, "Düzenlenmiş görüntüyü kaydedin")
         
-        # Add reset button
-        self.reset_button = ctk.CTkButton(self.scrollable_frame, text="Reset Image", command=self.reset_image)
-        self.reset_button.grid(row=2, column=0, padx=5, pady=5, sticky="ew")
+        # Sıfırlama butonu
+        self.reset_button = ctk.CTkButton(
+            file_section, 
+            text="Görüntüyü Sıfırla",
+            command=self.reset_image,
+            font=BUTTON_FONT,
+            fg_color=WARNING_COLOR,
+            hover_color="#b88733",
+            height=36,
+            corner_radius=8
+        )
+        self.reset_button.pack(fill="x", padx=8, pady=(0, 5))
+        ToolTip(self.reset_button, "Görüntüyü orijinal haline sıfırlayın")
         
-        # Create basic filter section
-        self.filter_label = ctk.CTkLabel(self.scrollable_frame, text="Basic Filters", font=ctk.CTkFont(size=16, weight="bold"))
-        self.filter_label.grid(row=3, column=0, padx=10, pady=(15, 5))
+        # Temel filtreler bölümü
+        filter_section = self.create_section(self.scrollable_frame, "Temel Filtreler", 2)
         
-        # Basic filter buttons frame
-        self.basic_filter_frame = ctk.CTkFrame(self.scrollable_frame)
-        self.basic_filter_frame.grid(row=4, column=0, padx=5, pady=5, sticky="ew")
+        # Filtre butonları için çerçeve
+        self.basic_filter_frame = ctk.CTkFrame(filter_section, fg_color="transparent")
+        self.basic_filter_frame.pack(fill="x", padx=5, pady=5)
         
-        # Configure columns for better distribution
+        # Daha iyi dağılım için sütunları yapılandır
         for i in range(3):
             self.basic_filter_frame.grid_columnconfigure(i, weight=1)
         
-        # Basic filter buttons (2x3 grid)
+        # Temel filtre butonları (2x3 ızgara)
         filters = [
-            ("Blur", lambda: self.apply_filter("blur")),
-            ("Sharpen", lambda: self.apply_filter("sharpen")),
-            ("Contour", lambda: self.apply_filter("contour")),
-            ("Emboss", lambda: self.apply_filter("emboss")),
-            ("B&W", lambda: self.apply_filter("bw")),
-            ("Invert", lambda: self.apply_filter("invert"))
+            ("Bulanık", lambda: self.apply_filter("blur"), "Görüntü üzerine bulanıklık efekti uygular"),
+            ("Keskin", lambda: self.apply_filter("sharpen"), "Görüntüyü keskinleştirir"),
+            ("Kontur", lambda: self.apply_filter("contour"), "Nesnelerin kenarlarını belirginleştirir"),
+            ("Kabartma", lambda: self.apply_filter("emboss"), "Kabartma efekti uygular"),
+            ("S/B", lambda: self.apply_filter("bw"), "Siyah-beyaz dönüşüm yapar"),
+            ("Negatif", lambda: self.apply_filter("invert"), "Görüntünün renklerini tersine çevirir")
         ]
         
-        for i, (name, command) in enumerate(filters):
-            btn = ctk.CTkButton(self.basic_filter_frame, text=name, command=command, width=70, height=28)
+        for i, (name, command, tooltip) in enumerate(filters):
+            btn = ctk.CTkButton(
+                self.basic_filter_frame, 
+                text=name, 
+                command=command, 
+                width=70, 
+                height=32,
+                fg_color=ACCENT_COLOR,
+                hover_color=SECONDARY_COLOR,
+                font=BUTTON_FONT,
+                corner_radius=6
+            )
             btn.grid(row=i//3, column=i%3, padx=2, pady=2, sticky="ew")
+            ToolTip(btn, tooltip)
         
-        # Create advanced filter section
-        self.adv_filter_label = ctk.CTkLabel(self.scrollable_frame, text="Advanced Filters", font=ctk.CTkFont(size=16, weight="bold"))
-        self.adv_filter_label.grid(row=5, column=0, padx=10, pady=(15, 5))
+        # Gelişmiş filtreler bölümü
+        adv_filter_section = self.create_section(self.scrollable_frame, "Gelişmiş Filtreler", 3)
         
-        # Advanced filter buttons frame
-        self.adv_filter_frame = ctk.CTkFrame(self.scrollable_frame)
-        self.adv_filter_frame.grid(row=6, column=0, padx=5, pady=5, sticky="ew")
+        # Gelişmiş filtre butonları için çerçeve
+        self.adv_filter_frame = ctk.CTkFrame(adv_filter_section, fg_color="transparent")
+        self.adv_filter_frame.pack(fill="x", padx=5, pady=5)
         
-        # Configure columns for better distribution
+        # Daha iyi dağılım için sütunları yapılandır
         for i in range(3):
             self.adv_filter_frame.grid_columnconfigure(i, weight=1)
         
-        # Advanced filter buttons (3x3 grid with responsive layout)
+        # Gelişmiş filtre butonları (3x3 ızgara, duyarlı düzen ile)
         adv_filters = [
-            ("Sepia", lambda: self.apply_advanced_filter("sepia")),
-            ("Cartoon", lambda: self.apply_advanced_filter("cartoon")),
-            ("Vignette", lambda: self.apply_advanced_filter("vignette")),
-            ("Pixelate", lambda: self.apply_advanced_filter("pixelate")),
-            ("Red Only", lambda: self.apply_advanced_filter("red_splash")),
-            ("Oil Paint", lambda: self.apply_advanced_filter("oil")),
-            ("Noise", lambda: self.apply_advanced_filter("noise"))
+            ("Sepya", lambda: self.apply_advanced_filter("sepia"), "Nostaljik sepya efekti uygular"),
+            ("Çizgi Film", lambda: self.apply_advanced_filter("cartoon"), "Görüntüyü çizgi film stiline dönüştürür"),
+            ("Vinyet", lambda: self.apply_advanced_filter("vignette"), "Köşeleri karartan vinyet efekti ekler"),
+            ("Piksel", lambda: self.apply_advanced_filter("pixelate"), "Piksel efekti uygular"),
+            ("Renk Sıçrama", lambda: self.apply_advanced_filter("red_splash"), "Sadece seçilen rengi korur"),
+            ("Yağlı Boya", lambda: self.apply_advanced_filter("oil"), "Yağlı boya resim efekti uygular"),
+            ("Gürültü", lambda: self.apply_advanced_filter("noise"), "Görüntüye rastgele gürültü ekler")
         ]
         
-        for i, (name, command) in enumerate(adv_filters):
-            btn = ctk.CTkButton(self.adv_filter_frame, text=name, command=command, width=70, height=28)
+        for i, (name, command, tooltip) in enumerate(adv_filters):
+            btn = ctk.CTkButton(
+                self.adv_filter_frame, 
+                text=name, 
+                command=command, 
+                width=70, 
+                height=32,
+                fg_color=ACCENT_COLOR,
+                hover_color=SECONDARY_COLOR,
+                font=BUTTON_FONT,
+                corner_radius=6
+            )
             btn.grid(row=i//3, column=i%3, padx=2, pady=2, sticky="ew")
+            ToolTip(btn, tooltip)
         
-        # Create adjustments section
-        self.adjust_label = ctk.CTkLabel(self.scrollable_frame, text="Adjustments", font=ctk.CTkFont(size=16, weight="bold"))
-        self.adjust_label.grid(row=7, column=0, padx=10, pady=(15, 5))
+        # Ayarlamalar bölümü
+        adjustments_section = self.create_section(self.scrollable_frame, "Temel Ayarlar", 4)
         
-        # Brightness slider
-        self.brightness_frame = EffectIntensityFrame(self.scrollable_frame, "Brightness", 0.1, 2.0, 1.0, self.update_brightness)
-        self.brightness_frame.grid(row=8, column=0, padx=5, pady=(5, 0), sticky="ew")
+        # Parlaklık ayarı
+        self.brightness_frame = EffectIntensityFrame(
+            adjustments_section, 
+            "Parlaklık", 
+            0.1, 2.0, 1.0, 
+            self.update_brightness
+        )
+        self.brightness_frame.pack(fill="x", padx=5, pady=(5, 0))
         
-        # Contrast slider
-        self.contrast_frame = EffectIntensityFrame(self.scrollable_frame, "Contrast", 0.1, 2.0, 1.0, self.update_contrast)
-        self.contrast_frame.grid(row=9, column=0, padx=5, pady=(5, 0), sticky="ew")
+        # Kontrast ayarı
+        self.contrast_frame = EffectIntensityFrame(
+            adjustments_section, 
+            "Kontrast", 
+            0.1, 2.0, 1.0, 
+            self.update_contrast
+        )
+        self.contrast_frame.pack(fill="x", padx=5, pady=(10, 0))
         
-        # Saturation slider
-        self.saturation_frame = EffectIntensityFrame(self.scrollable_frame, "Saturation", 0.0, 2.0, 1.0, self.update_saturation)
-        self.saturation_frame.grid(row=10, column=0, padx=5, pady=(5, 0), sticky="ew")
+        # Doygunluk ayarı
+        self.saturation_frame = EffectIntensityFrame(
+            adjustments_section, 
+            "Doygunluk", 
+            0.0, 2.0, 1.0, 
+            self.update_saturation
+        )
+        self.saturation_frame.pack(fill="x", padx=5, pady=(10, 5))
         
-        # Rotation section
-        self.rotate_label = ctk.CTkLabel(self.scrollable_frame, text="Rotate & Flip", font=ctk.CTkFont(size=16, weight="bold"))
-        self.rotate_label.grid(row=11, column=0, padx=10, pady=(15, 5))
+        # Döndürme bölümü
+        rotation_section = self.create_section(self.scrollable_frame, "Döndürme ve Çevirme", 5)
         
-        # Rotation buttons frame
-        self.rotate_frame = ctk.CTkFrame(self.scrollable_frame)
-        self.rotate_frame.grid(row=12, column=0, padx=5, pady=5, sticky="ew")
+        # Döndürme butonları çerçevesi
+        self.rotate_frame = ctk.CTkFrame(rotation_section, fg_color="transparent")
+        self.rotate_frame.pack(fill="x", padx=5, pady=5)
         
-        # Configure columns for equal distribution
+        # Eşit dağılım için sütunları yapılandır
         for i in range(4):
             self.rotate_frame.grid_columnconfigure(i, weight=1)
         
-        # Create rotation buttons
-        self.rotate_left = ctk.CTkButton(self.rotate_frame, text="↺", width=40, command=lambda: self.rotate_image("left"))
+        # Döndürme butonları
+        rotate_style = {
+            "width": 40,
+            "height": 40,
+            "corner_radius": 8,
+            "fg_color": ACCENT_COLOR,
+            "hover_color": SECONDARY_COLOR,
+            "text_color": "white",
+            "font": ctk.CTkFont(size=18)
+        }
+        
+        self.rotate_left = ctk.CTkButton(
+            self.rotate_frame, 
+            text="↺", 
+            command=lambda: self.rotate_image("left"),
+            **rotate_style
+        )
         self.rotate_left.grid(row=0, column=0, padx=2, pady=2, sticky="ew")
+        ToolTip(self.rotate_left, "90° sola döndür")
         
-        self.rotate_right = ctk.CTkButton(self.rotate_frame, text="↻", width=40, command=lambda: self.rotate_image("right"))
+        self.rotate_right = ctk.CTkButton(
+            self.rotate_frame, 
+            text="↻", 
+            command=lambda: self.rotate_image("right"),
+            **rotate_style
+        )
         self.rotate_right.grid(row=0, column=1, padx=2, pady=2, sticky="ew")
+        ToolTip(self.rotate_right, "90° sağa döndür")
         
-        self.flip_h = ctk.CTkButton(self.rotate_frame, text="↔", width=40, command=lambda: self.flip_image("horizontal"))
+        self.flip_h = ctk.CTkButton(
+            self.rotate_frame, 
+            text="↔", 
+            command=lambda: self.flip_image("horizontal"),
+            **rotate_style
+        )
         self.flip_h.grid(row=0, column=2, padx=2, pady=2, sticky="ew")
+        ToolTip(self.flip_h, "Yatay çevir")
         
-        self.flip_v = ctk.CTkButton(self.rotate_frame, text="↕", width=40, command=lambda: self.flip_image("vertical"))
+        self.flip_v = ctk.CTkButton(
+            self.rotate_frame, 
+            text="↕", 
+            command=lambda: self.flip_image("vertical"),
+            **rotate_style
+        )
         self.flip_v.grid(row=0, column=3, padx=2, pady=2, sticky="ew")
+        ToolTip(self.flip_v, "Dikey çevir")
+    
+    def create_section(self, parent, title, row):
+        """UI için bölüm oluştur"""
+        section_frame = ctk.CTkFrame(parent, fg_color="transparent")
+        section_frame.grid(row=row, column=0, padx=5, pady=(15, 5), sticky="ew")
         
-        # Status label
-        self.status_label = ctk.CTkLabel(self.scrollable_frame, text="Ready", height=20)
-        self.status_label.grid(row=13, column=0, padx=5, pady=(15, 5), sticky="ew")
+        section_title = ctk.CTkLabel(
+            section_frame, 
+            text=title, 
+            font=SUBTITLE_FONT,
+            anchor="w"
+        )
+        section_title.pack(fill="x", padx=10, pady=(5, 10))
         
-        # Main content area (image canvas)
+        # Her bölüm için iç içe içerik çerçevesi
+        content_frame = ctk.CTkFrame(section_frame, fg_color="transparent")
+        content_frame.pack(fill="x", padx=5)
+        
+        return content_frame
+        
+    def create_main_view(self):
+        """Ana görüntüleme alanını oluştur"""
+        # Ana içerik alanı (görüntü tuvali)
         self.main_frame = ctk.CTkFrame(self, corner_radius=0)
         self.main_frame.grid(row=0, column=1, sticky="nsew")
         self.main_frame.grid_rowconfigure(0, weight=1)
         self.main_frame.grid_columnconfigure(0, weight=1)
         
-        # Create canvas for image
-        self.canvas = ctk.CTkCanvas(self.main_frame, bg="#2b2b2b", highlightthickness=0)
+        # Görüntü çerçevesi - sabit renk değeri kullan
+        frame_color = "#2b2b2b"  # Koyu tema için varsayılan renk
+        if ctk.get_appearance_mode() == "light":
+            frame_color = "#ebebeb"  # Açık tema için varsayılan renk
+            
+        self.image_frame = ctk.CTkFrame(
+            self.main_frame, 
+            fg_color=frame_color
+        )
+        self.image_frame.place(relx=0.5, rely=0.5, anchor="center")
+        
+        # Görüntü tuvalini oluştur - CTkCanvas değil, normal Canvas kullan
+        # Tema renginden tek bir değer kullan, muhtemelen gece/gündüz moduna göre farklı
+        bg_color = "#2b2b2b"  # Koyu tema için varsayılan renk
+        if ctk.get_appearance_mode() == "light":
+            bg_color = "#ebebeb"  # Açık tema için varsayılan renk
+            
+        self.canvas = ctk.CTkCanvas(
+            self.main_frame, 
+            bg=bg_color,
+            highlightthickness=0
+        )
         self.canvas.grid(row=0, column=0, sticky="nsew")
         
-        # Display welcome message
+        # Karşılama mesajı göster
         self.canvas.create_text(
             self.winfo_width() // 2, self.winfo_height() // 2,
-            text="Open an image to begin editing",
-            fill="white", font=("Helvetica", 16)
+            text="Düzenlemeye başlamak için bir görüntü açın",
+            fill="white", font=SUBTITLE_FONT
         )
+    
+    def create_status_bar(self):
+        """Durum çubuğunu oluştur"""
+        self.status_bar = ctk.CTkFrame(self, height=30, corner_radius=0)
+        self.status_bar.grid(row=1, column=0, columnspan=2, sticky="ew")
+        self.status_bar.grid_propagate(False)
         
+        self.status_label = ctk.CTkLabel(
+            self.status_bar, 
+            text="Hazır", 
+            font=SMALL_FONT,
+            anchor="w"
+        )
+        self.status_label.pack(side="left", padx=10, fill="y")
+    
     def open_image(self):
         """Open an image file"""
         file_path = filedialog.askopenfilename(
@@ -570,7 +988,7 @@ class ImageEditor(ctk.CTk):
             
             # Efekt panellerini kapat
             if self.current_effect:
-                self.hide_effect_controls()
+                self.hide_all_effect_controls()
     
     def display_image(self, image=None):
         """Display the current image on the canvas"""
@@ -831,20 +1249,89 @@ class ImageEditor(ctk.CTk):
             self.status_label.configure(text="Error flipping image")
     
     def update_canvas_size(self, event):
-        """Update the canvas when window size changes"""
+        """Pencere boyutu değiştiğinde tuvali güncelle"""
         self.display_image()
+        
+        # Görüntü yoksa, karşılama mesajını ortala
+        if not self.current_image:
+            self.canvas.delete("all")
+            
+            # Karşılama mesajı ve Logo
+            center_x = self.canvas.winfo_width() // 2
+            center_y = self.canvas.winfo_height() // 2
+            
+            # Karşılama paneli arka planı
+            panel_width = 400
+            panel_height = 200
+            
+            # Tema için tek bir renk kullan
+            panel_bg = "#2b2b2b"  # Koyu tema için varsayılan renk
+            if ctk.get_appearance_mode() == "light":
+                panel_bg = "#ebebeb"  # Açık tema için varsayılan renk
+            
+            self.canvas.create_rectangle(
+                center_x - panel_width//2, center_y - panel_height//2,
+                center_x + panel_width//2, center_y + panel_height//2,
+                fill=panel_bg,
+                outline=ACCENT_COLOR,
+                width=2,
+                stipple="gray50"
+            )
+            
+            # Uygulama başlığı
+            self.canvas.create_text(
+                center_x, center_y - 40,
+                text="Pro Image Editor",
+                fill=ACCENT_COLOR, 
+                font=TITLE_FONT
+            )
+            
+            # Karşılama mesajı
+            self.canvas.create_text(
+                center_x, center_y + 10,
+                text="Görüntü düzenlemeye başlamak için bir dosya açın",
+                fill="white", 
+                font=LABEL_FONT
+            )
+            
+            # Dosya aç talimatı
+            self.canvas.create_text(
+                center_x, center_y + 50,
+                text="Sol panelden 'Dosya Aç' düğmesine tıklayın",
+                fill="light gray", 
+                font=SMALL_FONT
+            )
 
     def create_effect_controls(self):
-        """Create the effect intensity control sliders"""
-        # Create frame for effect controls
-        self.effect_control_frame = ctk.CTkFrame(self.scrollable_frame)
-        self.effect_control_frame.grid(row=20, column=0, padx=10, pady=10, sticky="ew")
+        """Efekt yoğunluk kontrol kaydırıcılarını oluştur"""
+        # Efekt kontrolleri için çerçeve oluştur - sabit renk değeri kullan
+        border_color = "#444444"  # Koyu tema için varsayılan border rengi
+        if ctk.get_appearance_mode() == "light":
+            border_color = "#cccccc"  # Açık tema için varsayılan border rengi
+            
+        self.effect_control_frame = ctk.CTkFrame(
+            self.scrollable_frame,
+            corner_radius=10,
+            border_width=1,
+            border_color=border_color
+        )
+        self.effect_control_frame.grid(row=30, column=0, padx=15, pady=15, sticky="ew")
         self.effect_control_frame.grid_columnconfigure(0, weight=1)
         
-        # Section title
-        self.effect_title = ctk.CTkLabel(self.effect_control_frame, text="Efekt Ayarları", 
-                                        font=ctk.CTkFont(size=16, weight="bold"))
-        self.effect_title.grid(row=0, column=0, padx=10, pady=10, sticky="ew")
+        # Başlık bölümü
+        self.effect_title_frame = ctk.CTkFrame(self.effect_control_frame, fg_color="transparent")
+        self.effect_title_frame.grid(row=0, column=0, padx=10, pady=(15, 5), sticky="ew")
+        
+        self.effect_title = ctk.CTkLabel(
+            self.effect_title_frame, 
+            text="Efekt Ayarları", 
+            font=SUBTITLE_FONT,
+            text_color=ACCENT_COLOR
+        )
+        self.effect_title.pack(anchor="center")
+        
+        # Efekt kontrol kaydırıcıları burada oluşturulacak
+        # Her efekt için ayrı bir kontrol çerçevesi oluşturalım
         
         # ------- TEMEL FİLTRELER -------
         
@@ -908,7 +1395,7 @@ class ImageEditor(ctk.CTk):
         # Sepia controls
         self.sepia_controls = EffectIntensityFrame(
             self.effect_control_frame, 
-            "Sepia Yoğunluğu", 
+            "Sepya Yoğunluğu", 
             0.1, 1.0, 1.0, 
             lambda v: self.update_effect_param("sepia", "intensity", v),
             step_size=0.05
@@ -961,33 +1448,50 @@ class ImageEditor(ctk.CTk):
         )
         
         # Color Splash channel selection
-        self.splash_channel_frame = ctk.CTkFrame(self.effect_control_frame)
-        self.splash_channel_label = ctk.CTkLabel(self.splash_channel_frame, text="Renk Kanalı:")
-        self.splash_channel_label.grid(row=0, column=0, padx=5, pady=5, sticky="w")
+        self.splash_channel_frame = ctk.CTkFrame(self.effect_control_frame, fg_color="transparent")
+        color_label = ctk.CTkLabel(
+            self.splash_channel_frame, 
+            text="Renk Kanalı:",
+            font=LABEL_FONT
+        )
+        color_label.pack(side="left", padx=10, pady=5)
         
-        # Create channel radio buttons with variable
+        # Kanal seçimi için değişken
         self.splash_channel_var = ctk.StringVar(value="red")
         
+        # Kanal radyo butonları
+        channel_frame = ctk.CTkFrame(self.splash_channel_frame, fg_color="transparent")
+        channel_frame.pack(side="right", fill="x", expand=True, padx=10)
+        
         self.splash_red_btn = ctk.CTkRadioButton(
-            self.splash_channel_frame, text="Kırmızı", 
-            variable=self.splash_channel_var, value="red",
-            command=lambda: self.update_effect_param("red_splash", "color", "red")
+            channel_frame, 
+            text="Kırmızı", 
+            variable=self.splash_channel_var, 
+            value="red",
+            command=lambda: self.update_effect_param("red_splash", "color", "red"),
+            fg_color=ACCENT_COLOR
         )
-        self.splash_red_btn.grid(row=0, column=1, padx=5, pady=5)
+        self.splash_red_btn.pack(side="left", padx=5, pady=5)
         
         self.splash_green_btn = ctk.CTkRadioButton(
-            self.splash_channel_frame, text="Yeşil", 
-            variable=self.splash_channel_var, value="green",
-            command=lambda: self.update_effect_param("red_splash", "color", "green")
+            channel_frame, 
+            text="Yeşil", 
+            variable=self.splash_channel_var, 
+            value="green",
+            command=lambda: self.update_effect_param("red_splash", "color", "green"),
+            fg_color=ACCENT_COLOR
         )
-        self.splash_green_btn.grid(row=0, column=2, padx=5, pady=5)
+        self.splash_green_btn.pack(side="left", padx=5, pady=5)
         
         self.splash_blue_btn = ctk.CTkRadioButton(
-            self.splash_channel_frame, text="Mavi", 
-            variable=self.splash_channel_var, value="blue",
-            command=lambda: self.update_effect_param("red_splash", "color", "blue")
+            channel_frame, 
+            text="Mavi", 
+            variable=self.splash_channel_var, 
+            value="blue",
+            command=lambda: self.update_effect_param("red_splash", "color", "blue"),
+            fg_color=ACCENT_COLOR
         )
-        self.splash_blue_btn.grid(row=0, column=3, padx=5, pady=5)
+        self.splash_blue_btn.pack(side="left", padx=5, pady=5)
         
         # Oil Paint controls
         self.oil_brush_controls = EffectIntensityFrame(
@@ -1016,28 +1520,56 @@ class ImageEditor(ctk.CTk):
             step_size=0.05
         )
         
-        # Preview checkbox
-        self.preview_frame = ctk.CTkFrame(self.effect_control_frame)
-        self.preview_frame.grid(row=90, column=0, padx=5, pady=(10, 2), sticky="ew")
+        # Önizleme onay kutusu
+        self.preview_frame = ctk.CTkFrame(self.effect_control_frame, fg_color="transparent")
         
-        self.preview_var = ctk.BooleanVar(value=False)
+        self.preview_var = ctk.BooleanVar(value=True)
         self.preview_checkbox = ctk.CTkCheckBox(
-            self.preview_frame, text="Önizleme", 
+            self.preview_frame, 
+            text="Önizleme", 
             variable=self.preview_var,
-            command=self.toggle_preview
+            command=self.toggle_preview,
+            checkbox_width=24,
+            checkbox_height=24,
+            corner_radius=4,
+            fg_color=ACCENT_COLOR,
+            hover_color=SECONDARY_COLOR,
+            font=BUTTON_FONT
         )
-        self.preview_checkbox.grid(row=0, column=0, padx=10, pady=5, sticky="w")
+        self.preview_checkbox.pack(side="left", padx=10, pady=5)
         
-        # Apply button
+        # Efekt uygulama butonu
         self.apply_effect_btn = ctk.CTkButton(
             self.effect_control_frame, 
-            text="Efekti Uygula", 
+            text="Efekti Uygula",
             command=self.apply_effect,
-            height=35,
-            font=ctk.CTkFont(size=14, weight="bold")
+            height=40,
+            corner_radius=8,
+            fg_color=SUCCESS_COLOR,
+            hover_color="#247545",
+            font=BUTTON_FONT
         )
-        self.apply_effect_btn.grid(row=100, column=0, padx=10, pady=10, sticky="ew")
         
+        # İptal butonu
+        self.cancel_effect_btn = ctk.CTkButton(
+            self.effect_control_frame, 
+            text="İptal",
+            command=self.hide_all_effect_controls,
+            height=40,
+            corner_radius=8,
+            fg_color=ERROR_COLOR,
+            hover_color="#933232",
+            font=BUTTON_FONT
+        )
+        
+        # Butonları bir frame içinde düzenle
+        self.effect_button_frame = ctk.CTkFrame(self.effect_control_frame, fg_color="transparent")
+        self.effect_button_frame.grid_columnconfigure(0, weight=1)
+        self.effect_button_frame.grid_columnconfigure(1, weight=1)
+        
+        self.apply_effect_btn.grid(row=0, column=0, padx=5, pady=5, sticky="ew", in_=self.effect_button_frame)
+        self.cancel_effect_btn.grid(row=0, column=1, padx=5, pady=5, sticky="ew", in_=self.effect_button_frame)
+    
     def toggle_preview(self, is_preview=None):
         """Preview seçeneğini aç/kapa"""
         if is_preview is None:
@@ -1248,63 +1780,94 @@ class ImageEditor(ctk.CTk):
             self.apply_effect(is_preview=True)
 
     def show_effect_controls(self, effect_name):
-        """Show the controls for the specified effect"""
-        # Hide all controls first
-        self.hide_effect_controls()
+        """Belirtilen efekt için kontrolleri göster"""
+        # Önce tüm kontrolleri gizle
+        self.hide_all_effect_controls()
         
-        # Set current effect
+        # Mevcut efekti ayarla
         self.current_effect = effect_name
         
-        # Set effect title
+        # Efekt başlığını ayarla
         effect_titles = {
-            "sepia": "Sepia Efekti",
+            "sepia": "Sepya Efekti",
             "cartoon": "Çizgi Film Efekti",
             "vignette": "Vinyet Efekti",
             "pixelate": "Pikselleştirme",
             "red_splash": "Renk Sıçratma",
             "oil": "Yağlı Boya Efekti",
-            "noise": "Gürültü Efekti"
+            "noise": "Gürültü Efekti",
+            "blur": "Bulanıklaştırma",
+            "sharpen": "Keskinleştirme",
+            "contour": "Kontur",
+            "emboss": "Kabartma",
+            "bw": "Siyah-Beyaz",
+            "invert": "Negatif"
         }
         
         self.effect_title.configure(text=effect_titles.get(effect_name, "Efekt Ayarları"))
         
-        # Show controls based on effect type
+        # Efekt türüne göre kontrolleri göster
         if effect_name == "sepia":
-            self.sepia_controls.grid(row=10, column=0, padx=5, pady=5, sticky="ew")
+            self.sepia_controls.grid(row=10, column=0, padx=15, pady=10, sticky="ew")
             
         elif effect_name == "cartoon":
-            self.cartoon_edge_controls.grid(row=10, column=0, padx=5, pady=5, sticky="ew")
-            self.cartoon_simplify_controls.grid(row=20, column=0, padx=5, pady=5, sticky="ew")
+            self.cartoon_edge_controls.grid(row=10, column=0, padx=15, pady=10, sticky="ew")
+            self.cartoon_simplify_controls.grid(row=20, column=0, padx=15, pady=10, sticky="ew")
             
         elif effect_name == "vignette":
-            self.vignette_controls.grid(row=10, column=0, padx=5, pady=5, sticky="ew")
+            self.vignette_controls.grid(row=10, column=0, padx=15, pady=10, sticky="ew")
             
         elif effect_name == "pixelate":
-            self.pixelate_controls.grid(row=10, column=0, padx=5, pady=5, sticky="ew")
+            self.pixelate_controls.grid(row=10, column=0, padx=15, pady=10, sticky="ew")
             
         elif effect_name == "red_splash":
-            self.splash_controls.grid(row=10, column=0, padx=5, pady=5, sticky="ew")
-            self.splash_channel_frame.grid(row=20, column=0, padx=5, pady=5, sticky="ew")
-            # Update radio button to match current setting
+            self.splash_controls.grid(row=10, column=0, padx=15, pady=10, sticky="ew")
+            self.splash_channel_frame.grid(row=20, column=0, padx=15, pady=10, sticky="ew")
+            # Mevcut ayara göre radyo düğmesini güncelle
             current_color = self.effect_params["red_splash"].get("color", "red")
             self.splash_channel_var.set(current_color)
             
         elif effect_name == "oil":
-            self.oil_brush_controls.grid(row=10, column=0, padx=5, pady=5, sticky="ew")
-            self.oil_levels_controls.grid(row=20, column=0, padx=5, pady=5, sticky="ew")
+            self.oil_brush_controls.grid(row=10, column=0, padx=15, pady=10, sticky="ew")
+            self.oil_levels_controls.grid(row=20, column=0, padx=15, pady=10, sticky="ew")
             
         elif effect_name == "noise":
-            self.noise_controls.grid(row=10, column=0, padx=5, pady=5, sticky="ew")
+            self.noise_controls.grid(row=10, column=0, padx=15, pady=10, sticky="ew")
+            
+        elif effect_name == "blur":
+            self.blur_controls.grid(row=10, column=0, padx=15, pady=10, sticky="ew")
+            
+        elif effect_name == "sharpen":
+            self.sharpen_controls.grid(row=10, column=0, padx=15, pady=10, sticky="ew")
+            
+        elif effect_name == "contour":
+            self.contour_controls.grid(row=10, column=0, padx=15, pady=10, sticky="ew")
+            
+        elif effect_name == "emboss":
+            self.emboss_controls.grid(row=10, column=0, padx=15, pady=10, sticky="ew")
+            
+        elif effect_name == "bw":
+            self.bw_controls.grid(row=10, column=0, padx=15, pady=10, sticky="ew")
+            
+        elif effect_name == "invert":
+            self.invert_controls.grid(row=10, column=0, padx=15, pady=10, sticky="ew")
         
-        # Show preview checkbox
-        self.preview_frame.grid(row=90, column=0, padx=5, pady=(10, 2), sticky="ew")
+        # Önizleme onay kutusunu göster
+        self.preview_frame.grid(row=90, column=0, padx=15, pady=(15, 5), sticky="ew")
         
-        # Show apply button
-        self.apply_effect_btn.grid(row=100, column=0, padx=10, pady=10, sticky="ew")
+        # Buton çerçevesini göster
+        self.effect_button_frame.grid(row=100, column=0, padx=15, pady=(5, 15), sticky="ew")
         
-        # Show control frame
-        self.effect_control_frame.grid(row=20, column=0, padx=10, pady=10, sticky="ew")
+        # Kontrol çerçevesini göster
+        self.effect_control_frame.grid(row=30, column=0, padx=15, pady=15, sticky="ew")
         
+        # Efekti önizle
+        self.preview_var.set(True)
+        self.toggle_preview(True)
+        
+        # Durum mesajını güncelle
+        self.show_status(f"{effect_titles.get(effect_name, 'Efekt')} ayarlarını düzenleyin")
+    
     def add_preview_controls(self):
         """Önizleme kontrolleri oluştur"""
         if not self.preview_controls_added:
@@ -1329,9 +1892,12 @@ class ImageEditor(ctk.CTk):
             self.preview_controls_added = True
 
     def show_status(self, message):
-        """Status bar mesajını güncelle"""
+        """Durum çubuğu mesajını güncelle"""
         if hasattr(self, 'status_label'):
             self.status_label.configure(text=message)
+            
+            # Durum mesajını 5 saniye sonra temizle
+            self.after(5000, lambda: self.status_label.configure(text="Hazır") if self.status_label.cget("text") == message else None)
 
 
 if __name__ == "__main__":
