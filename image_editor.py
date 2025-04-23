@@ -357,6 +357,12 @@ class ImageEditor(ctk.CTk):
         self.filename = None
         self.current_effect = None
         self.last_edited_time = None  # Son düzenleme zamanı
+        
+        # Performans iyileştirmeleri için önbellek ve işlem durumu değişkenleri
+        self.preview_cache = {}  # Önizleme sonuçlarını önbelleğe almak için
+        self.processing = False  # İşlem durumunu izlemek için
+        self.processing_animation_frame = 0  # Yükleniyor animasyonu için
+        
         self.effect_params = {
             # Gelişmiş filtreler
             "sepia": {"intensity": 1.0},
@@ -1580,6 +1586,13 @@ class ImageEditor(ctk.CTk):
             if not hasattr(self, 'pre_preview_image'):
                 self.pre_preview_image = self.current_image.copy()
             
+            # İşlem devam ediyorsa durdur
+            if hasattr(self, 'preview_thread') and self.preview_thread.is_alive():
+                # İşlemin durmasını beklemek için değişken ayarla
+                self.cancel_processing = True
+                self.show_status("Önceki işlem iptal ediliyor...")
+                return
+            
             # Önizleme işlemini arka planda başlat
             self.apply_effect(is_preview=True)
         else:
@@ -1602,42 +1615,98 @@ class ImageEditor(ctk.CTk):
                 # İşlemin başladığını bildir
                 self.show_status(f"{self.current_effect} efekti önizleniyor...")
                 
-                # Büyük görüntüler için gecikmeli işleme kullan
-                if hasattr(self, 'preview_thread') and self.preview_thread.is_alive():
-                    print("Önceki önizleme iptal edildi")
-                    # Önceki önizleme hala çalışıyor, yeni bir tane başlatıyoruz
-                    # Burada bir iptal mekanizması olabilir, ama basit tutuyoruz
-                    pass
-                    
-                # Ağır efektler için asenkron işleme kullan
-                heavy_effects = ["oil", "cartoon", "noise"]
+                # İptal kontrolü için değişken
+                self.cancel_processing = False
                 
-                if self.current_effect in heavy_effects and (
-                    self.current_image.width > 800 or self.current_image.height > 800
-                ):
-                    # Ağır efektler için arka planda işleme yap
-                    self.preview_thread = threading.Thread(
-                        target=self._threaded_preview_effect,
-                        daemon=True
-                    )
-                    self.preview_thread.start()
-                else:
-                    # Hafif efektler için normal işleme
-                    self.preview_effect()
+                # "Yükleniyor" göstergesi başlat
+                if not hasattr(self, 'loading_indicator'):
+                    self._start_loading_animation()
+                
+                # Önbellek anahtarı oluştur - efekt adı ve parametrelerden
+                cache_key = self._create_cache_key()
+                
+                # Önbellekte varsa, hemen göster
+                if cache_key in self.preview_cache:
+                    print(f"Önbellek kullanılıyor: {cache_key}")
+                    cached_result = self.preview_cache[cache_key]
+                    self.preview_image = cached_result
+                    self.display_image(self.preview_image)
+                    self._stop_loading_animation()
+                    self.show_status(f"{self.current_effect} önizlemesi (önbellekten) tamamlandı")
+                    return
+                
+                # Tüm efektler için arka plan işleme kullan
+                self.preview_thread = threading.Thread(
+                    target=self._threaded_preview_effect,
+                    args=(cache_key,),
+                    daemon=True
+                )
+                self.preview_thread.start()
                     
                 return
             
             # Önizleme görüntüsünü mevcut görüntü olarak ayarla
-            if self.preview_image:
+            if hasattr(self, 'preview_image') and self.preview_image is not None:
                 self.current_image = self.preview_image.copy()
                 self.display_image(self.current_image)
                 self.show_status(f"{self.current_effect} efekti uygulandı.")
+                
+                # Önbelleği temizle, çünkü görüntü değişti
+                self.preview_cache.clear()
             else:
                 self.show_status("Önizleme görüntüsü oluşturulmadı.")
         except Exception as e:
             self.show_status(f"Efekt uygulama hatası: {e}")
+            self._stop_loading_animation()
+            
+    def _create_cache_key(self):
+        """Mevcut efekt ve parametreler için önbellek anahtarı oluştur"""
+        # Efekt adı ve görüntü boyutu temel alınarak anahtar oluştur
+        effect_name = self.current_effect
+        img_size = f"{self.pre_preview_image.width}x{self.pre_preview_image.height}"
+        
+        # Parametreleri string olarak oluştur
+        param_str = ""
+        if effect_name in self.effect_params:
+            for key, value in self.effect_params[effect_name].items():
+                param_str += f"_{key}_{value}"
+        
+        return f"{effect_name}_{img_size}{param_str}"
+        
+    def _start_loading_animation(self):
+        """Yükleniyor animasyonunu başlat"""
+        self.processing = True
+        self.loading_indicator = True
+        self.processing_animation_frame = 0
+        self._update_loading_animation()
+        
+    def _stop_loading_animation(self):
+        """Yükleniyor animasyonunu durdur"""
+        self.processing = False
+        self.loading_indicator = False
+        
+    def _update_loading_animation(self):
+        """Yükleniyor animasyonunu güncelle"""
+        if not self.processing or not self.loading_indicator:
+            return
+            
+        # Animasyon çerçevesini ilerlet
+        self.processing_animation_frame = (self.processing_animation_frame + 1) % 8
+        
+        # Animasyon karakter dizisi
+        animation_chars = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧"]
+        current_char = animation_chars[self.processing_animation_frame]
+        
+        # Durum çubuğunu güncelle
+        self.status_label.configure(text=f"{current_char} İşleniyor... Lütfen bekleyin")
+        
+        # Arayüzü güncelle
+        self.update_idletasks()
+        
+        # Animasyonu devam ettir
+        self.after(100, self._update_loading_animation)
     
-    def _threaded_preview_effect(self):
+    def _threaded_preview_effect(self, cache_key=None):
         """Arka planda çalışacak önizleme işlevidir"""
         try:
             # Orijinal görüntüden başla
@@ -1645,17 +1714,41 @@ class ImageEditor(ctk.CTk):
                 # Yüksek çözünürlüklü görüntüler için daha küçük bir sürüm kullan
                 img = self.pre_preview_image.copy()
                 
-                # Görüntü büyükse ve ağır bir efekt ise, işlem için küçültme
-                if (img.width > 800 or img.height > 800) and self.current_effect in ["oil", "cartoon"]:
+                # Görüntü büyükse işlem için küçültme
+                if img.width > 1200 or img.height > 800:
                     # İşleme için görüntüyü küçült
-                    ratio = min(800 / img.width, 800 / img.height)
+                    ratio = min(1200 / img.width, 800 / img.height)
                     new_width = int(img.width * ratio)
                     new_height = int(img.height * ratio)
                     img = img.resize((new_width, new_height), Image.Resampling.LANCZOS)
                     print(f"Efekt için görüntü boyutu küçültüldü: {new_width}x{new_height}")
                 
-                # Efekti uygula (aynı kodu burada yeniden tanımlamak yerine process_effect kullanıyoruz)
+                # İptal edilmiş mi kontrol et
+                if hasattr(self, 'cancel_processing') and self.cancel_processing:
+                    print("İşlem iptal edildi")
+                    self.after(100, self._stop_loading_animation)
+                    self.after(100, lambda: self.show_status("İşlem iptal edildi"))
+                    return
+                
+                # Efekti uygula
                 img = self.process_effect(img)
+                
+                # İptal edilmiş mi tekrar kontrol et
+                if hasattr(self, 'cancel_processing') and self.cancel_processing:
+                    print("İşlem iptal edildi")
+                    self.after(100, self._stop_loading_animation)
+                    self.after(100, lambda: self.show_status("İşlem iptal edildi"))
+                    return
+                
+                # Önbelleğe ekle
+                if cache_key is not None:
+                    # Önbellek boyutunu kontrol et (çok fazla bellek kullanımını önlemek için)
+                    if len(self.preview_cache) > 20:  # En fazla 20 efekt önbellekte tutulsun
+                        # En eski elemanı sil
+                        oldest_key = next(iter(self.preview_cache))
+                        del self.preview_cache[oldest_key]
+                    
+                    self.preview_cache[cache_key] = img
                 
                 # Sonucu ana thread'e gönder
                 self.after(100, lambda: self._update_preview_result(img))
@@ -1663,20 +1756,25 @@ class ImageEditor(ctk.CTk):
         except Exception as e:
             print(f"Arka plan önizleme hatası: {e}")
             self.after(100, lambda: self.show_status(f"Önizleme hatası: {e}"))
+            self.after(100, self._stop_loading_animation)
     
     def _update_preview_result(self, result_image):
         """Arka plan işlemi tamamlandığında sonucu günceller"""
         if result_image:
             self.preview_image = result_image
             self.display_image(result_image)
+            self._stop_loading_animation()
             self.show_status(f"{self.current_effect} önizlemesi tamamlandı")
     
     def process_effect(self, img):
         """Verilen görüntüye mevcut efekti uygular"""
         if not self.current_effect:
             return img
-            
-        # Efektin türüne göre işlem uygula - preview_effect'ten kodu kopyaladık
+        
+        # İşlemi başlat
+        start_time = time.time()
+        
+        # Efektin türüne göre işlem uygula
         if self.current_effect == "brightness":
             value = self.brightness_frame.get_value()
             enhancer = ImageEnhance.Brightness(img)
@@ -1692,10 +1790,55 @@ class ImageEditor(ctk.CTk):
             enhancer = ImageEnhance.Color(img)
             img = enhancer.enhance(value)
         
-        # Diğer tüm efektler buraya eklenmeli, ancak kod tekrarı önlemek için
-        # preview_effect metodunun mevcut içeriğini kopyalayın
+        elif self.current_effect == "blur":
+            radius = self.effect_params["blur"]["radius"]
+            img = img.filter(ImageFilter.GaussianBlur(radius=radius))
             
-        # Burada sadece birkaç örnek gösteriyoruz
+        elif self.current_effect == "sharpen":
+            intensity = self.effect_params["sharpen"]["intensity"]
+            # Yoğunluğa göre filtre uygulama sayısını ayarla
+            iterations = max(1, int(intensity))
+            
+            for _ in range(iterations):
+                # İptal kontrolü
+                if hasattr(self, 'cancel_processing') and self.cancel_processing:
+                    break
+                    
+                img = img.filter(ImageFilter.SHARPEN)
+            
+        elif self.current_effect == "contour":
+            intensity = self.effect_params["contour"]["intensity"]
+            iterations = max(1, int(intensity))
+            
+            for _ in range(iterations):
+                if hasattr(self, 'cancel_processing') and self.cancel_processing:
+                    break
+                    
+                img = img.filter(ImageFilter.CONTOUR)
+            
+        elif self.current_effect == "emboss":
+            intensity = self.effect_params["emboss"]["intensity"]
+            iterations = max(1, int(intensity))
+            
+            for _ in range(iterations):
+                if hasattr(self, 'cancel_processing') and self.cancel_processing:
+                    break
+                    
+                img = img.filter(ImageFilter.EMBOSS)
+            
+        elif self.current_effect == "bw":
+            threshold = self.effect_params["bw"]["threshold"]
+            img = img.convert("L").point(lambda x: 255 if x > threshold else 0, mode='1')
+            
+        elif self.current_effect == "invert":
+            intensity = self.effect_params["invert"]["intensity"]
+            if intensity >= 0.95:  # Tam ters çevirme
+                img = ImageOps.invert(img)
+            else:
+                # Kısmi ters çevirme için orijinal ve ters çevrilmiş görüntüleri karıştır
+                inverted = ImageOps.invert(img.copy())
+                img = Image.blend(img, inverted, intensity)
+            
         elif self.current_effect == "sepia":
             intensity = self.effect_params["sepia"]["intensity"]
             # Düşük yoğunluk değerleri için de çalışmasını sağla
@@ -1703,6 +1846,29 @@ class ImageEditor(ctk.CTk):
                 # Orijinal ve tamamen sepia uygulanmış görüntü arasında blend yapalım
                 sepia_img = advanced_filters.apply_sepia(img.copy(), intensity=1.0)
                 img = Image.blend(img, sepia_img, intensity)
+            
+        elif self.current_effect == "cartoon":
+            edge_intensity = self.effect_params["cartoon"]["edge_intensity"]
+            simplify = self.effect_params["cartoon"]["simplify"]
+            img = advanced_filters.apply_cartoon(img, edge_intensity=edge_intensity, simplify=simplify)
+            
+        elif self.current_effect == "vignette":
+            amount = self.effect_params["vignette"]["amount"]
+            img = advanced_filters.apply_vignette(img, amount=amount)
+            
+        elif self.current_effect == "pixelate":
+            pixel_size = self.effect_params["pixelate"]["pixel_size"]
+            img = advanced_filters.apply_pixelate(img, pixel_size=pixel_size)
+            
+        elif self.current_effect == "red_splash":
+            intensity = self.effect_params["red_splash"]["intensity"]
+            color = self.effect_params["red_splash"]["color"]
+            img = advanced_filters.apply_color_splash(img, color=color, intensity=intensity)
+            
+        elif self.current_effect == "oil":
+            brush_size = self.effect_params["oil"]["brush_size"]
+            levels = self.effect_params["oil"]["levels"]
+            img = advanced_filters.apply_oil_painting(img, brush_size=brush_size, levels=levels)
             
         elif self.current_effect == "noise":
             amount = self.effect_params["noise"]["amount"]
@@ -1715,13 +1881,15 @@ class ImageEditor(ctk.CTk):
                     img = Image.blend(img, noise_img, blend_factor)
                 else:
                     img = noise_img
-            
-        # Diğer efektler buraya eklenebilir
+        
+        # İşlem süresini ölç
+        end_time = time.time()
+        print(f"Efekt işleme süresi ({self.current_effect}): {end_time - start_time:.3f} saniye")
             
         return img
             
     def preview_effect(self):
-        """Seçili efektin önizlemesini göster"""
+        """Seçili efektin önizlemesini göster - tüm işlemleri arka planda yap"""
         if not self.current_image or not self.current_effect:
             return
             
@@ -1730,26 +1898,9 @@ class ImageEditor(ctk.CTk):
             self.toggle_preview(False)
             return
             
-        # Debug
-        print(f"Önizleme: {self.current_effect} efekti, parametreler: {self.effect_params.get(self.current_effect, {})}")
-        
-        # Orijinal görüntüden başla (önizleme öncesi orijinal görüntü)
-        if hasattr(self, 'pre_preview_image'):
-            # Önizleme için saklanmış olan orijinal görüntüyü kullan
-            img = self.pre_preview_image.copy()
-        else:
-            # Eğer saklanmış bir orijinal görüntü yoksa mevcut görüntüyü kullan
-            img = self.current_image.copy()
-            # Ve bunu sakla
-            self.pre_preview_image = self.current_image.copy()
-        
-        # Efekti uygula
-        img = self.process_effect(img)
-        
-        # Değiştirilmiş görüntüyü önizleme olarak ayarla        
-        self.preview_image = img
-        self.display_image(self.preview_image)
-
+        # Efekti arka planda uygula
+        self.apply_effect(is_preview=True)
+    
     def hide_all_effect_controls(self):
         """Hide all effect controls"""
         for widget in self.effect_control_frame.winfo_children():
