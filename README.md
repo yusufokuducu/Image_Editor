@@ -76,4 +76,50 @@ python image_editor.py
 - `image_editor.py` - Ana uygulama dosyası
 - `advanced_filters.py` - Gelişmiş filtre uygulamalarını içeren modül
 - `app_icon.py` - Özel uygulama simgesi oluşturur
-- `resources/` - Uygulama kaynakları için dizin 
+- `resources/` - Uygulama kaynakları için dizin
+
+## Modular Structure
+
+The application has been reorganized into a modular structure for better maintainability:
+
+```
+image_editor_app/           # Main package directory
+├── __init__.py             # Package init with version and run function
+├── app.py                  # Main ImageEditor class
+├── core/                   # Core functionality modules
+│   ├── __init__.py
+│   ├── basic_adjustments.py
+│   ├── effect_processing.py
+│   ├── file_operations.py
+│   └── image_display.py
+├── ui/                     # User interface modules
+│   ├── __init__.py
+│   ├── effects.py
+│   ├── main_view.py
+│   └── sidebar.py
+├── utils/                  # Utility functions and constants
+│   ├── __init__.py
+│   ├── constants.py
+│   └── image_effects.py
+└── widgets/                # Custom widget components
+    ├── __init__.py
+    ├── effect_intensity.py
+    ├── toggle_button.py
+    └── tooltip.py
+```
+
+### Running the Application
+
+To run the application, simply execute:
+
+```
+python run.py
+```
+
+### Code Organization
+
+- **app.py**: Main application class with initialization
+- **core/**: Core functionality like file operations and image processing
+- **ui/**: User interface components like sidebar and main view
+- **utils/**: Utility functions and constants
+- **widgets/**: Custom UI widget components 

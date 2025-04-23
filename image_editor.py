@@ -1,5 +1,6 @@
 import os
 import customtkinter as ctk
+import tkinter as tk  # Normal tkinter da ekleyelim tooltip için
 from customtkinter import filedialog
 from PIL import Image, ImageTk, ImageFilter, ImageEnhance, ImageOps
 import numpy as np
@@ -7,6 +8,8 @@ import advanced_filters
 import app_icon
 import threading
 import time
+import gc
+import cv2
 
 # Debug çıktısı
 print("Uygulama başlatılıyor...")
@@ -35,130 +38,139 @@ MAX_PREVIEW_WIDTH = 1200
 MAX_PREVIEW_HEIGHT = 800
 
 class ToolTip:
-    """Arayüz elemanları için ipucu balonu sınıfı"""
+    """Optimized lightweight tooltip class for UI elements"""
+    # Class variable to track active tooltips
+    _tooltip_window = None
+    _active_tooltip = None
+    _after_id = None
+    
     def __init__(self, widget, text):
         self.widget = widget
         self.text = text
-        self.tooltip = None
         self.timer_id = None
-        self.widget.bind("<Enter>", self.on_enter)
-        self.widget.bind("<Leave>", self.on_leave)
-        # Eğer widget tıklanırsa tooltip kaybolsun
-        self.widget.bind("<Button-1>", self.hide_tooltip)
+        
+        # Bind only necessary events
+        self.widget.bind("<Enter>", self.schedule_show)
+        self.widget.bind("<Leave>", self.hide)
+        self.widget.bind("<ButtonPress>", self.hide)
     
-    def on_enter(self, event=None):
-        """Fare widget üzerine geldiğinde tooltip'i göster"""
-        # Önceki zamanlayıcıyı iptal et
+    def schedule_show(self, event=None):
+        """Delay showing tooltip to prevent accidental triggering"""
+        self.cancel_schedule()
+        self.timer_id = self.widget.after(700, self.show)  # Longer delay (700ms)
+    
+    def cancel_schedule(self):
+        """Cancel any pending timers"""
         if self.timer_id:
             self.widget.after_cancel(self.timer_id)
             self.timer_id = None
-        
-        # Tooltip zaten görünür değilse göster
-        if not self.tooltip:
-            # Küçük bir gecikme ekle ki kazara aktivasyonlar olmasın
-            self.timer_id = self.widget.after(400, self.show_tooltip)
     
-    def on_leave(self, event=None):
-        """Fare widget üzerinden ayrıldığında tooltip'i gizle"""
-        # Zamanlayıcıyı iptal et
-        if self.timer_id:
-            self.widget.after_cancel(self.timer_id)
-            self.timer_id = None
+    @classmethod
+    def _init_tooltip_window(cls, widget):
+        """Create a single tooltip window for all tooltips"""
+        # Clean up any existing window
+        if cls._tooltip_window and cls._tooltip_window.winfo_exists():
+            cls._tooltip_window.destroy()
         
-        # Tooltip'i gizle
-        self.hide_tooltip()
+        # Create basic tooltip window
+        cls._tooltip_window = tk.Toplevel(widget)
+        cls._tooltip_window.withdraw()
+        
+        # Configure as basic overlay window
+        cls._tooltip_window.wm_overrideredirect(True)
+        cls._tooltip_window.wm_transient(widget.winfo_toplevel())  # Be transient to main window
+        
+        if os.name == "nt":  # Windows-specific optimization
+            cls._tooltip_window.attributes("-toolwindow", True)
+            cls._tooltip_window.attributes("-alpha", 0.9)  # Slight transparency
+        
+        # Simple frame and label
+        cls._frame = tk.Frame(cls._tooltip_window, background="#333333", borderwidth=1, relief="solid")
+        cls._frame.pack(fill="both", expand=True)
+        
+        cls._label = tk.Label(
+            cls._frame, 
+            text="", 
+            background="#333333", 
+            foreground="white",
+            font=("Segoe UI", 9),
+            padx=6, 
+            pady=3,
+            justify="left"
+        )
+        cls._label.pack()
+        
+        return cls._tooltip_window
     
-    def show_tooltip(self, event=None):
-        """İpucu balonunu göster"""
-        # Önceden var olan tooltip'i temizle
-        self.hide_tooltip()
+    def show(self):
+        """Show tooltip with optimized positioning and display"""
+        self.cancel_schedule()
         
-        # Konum hesaplama
-        x, y = 0, 0
+        # Track active tooltip
+        ToolTip._active_tooltip = self
         
-        try:
-            x, y, _, _ = self.widget.bbox("insert")
-            # Insert konumu bulunamadıysa, widget'ın merkez konumunu kullan
-        except:
-            x = self.widget.winfo_width() // 2
-            y = self.widget.winfo_height() // 2
+        # Create window if needed
+        if not ToolTip._tooltip_window or not ToolTip._tooltip_window.winfo_exists():
+            ToolTip._init_tooltip_window(self.widget)
         
-        x += self.widget.winfo_rootx() + 25
-        y += self.widget.winfo_rooty() + 25
+        # Update content
+        ToolTip._label.configure(text=self.text)
+        ToolTip._tooltip_window.update_idletasks()  # Force geometry calculation
         
-        # İpucu penceresi oluştur
-        self.tooltip = ctk.CTkToplevel(self.widget)
-        self.tooltip.wm_overrideredirect(True)  # Pencere dekorasyonlarını kaldır
+        # Calculate optimal position
+        widget_width = self.widget.winfo_width()
+        widget_height = self.widget.winfo_height()
+        widget_x = self.widget.winfo_rootx()
+        widget_y = self.widget.winfo_rooty()
         
-        # Tooltip her zaman üstte olsun
-        self.tooltip.attributes('-topmost', True)
+        # Get tooltip dimensions
+        tooltip_width = ToolTip._tooltip_window.winfo_reqwidth()
+        tooltip_height = ToolTip._tooltip_window.winfo_reqheight()
         
-        # Windows'ta tooltip pencerelerini taskbar'da gösterme
-        if os.name == "nt":
-            self.tooltip.attributes("-toolwindow", True)
-        
-        # İpucu içeriğini oluştur - tema rengi yerine sabit renkler kullan
-        bg_color = "#333333"  # Koyu tema için varsayılan renk
-        border_color = "#555555"  # Koyu tema için kenarlık rengi
-        text_color = "white"  # Koyu tema için metin rengi
-        
-        # Aydınlık tema için farklı renkler kullan
-        if ctk.get_appearance_mode() == "light":
-            bg_color = "#f0f0f0"
-            border_color = "#cccccc"
-            text_color = "black"
-        
-        frame = ctk.CTkFrame(
-            self.tooltip,
-            corner_radius=6,
-            border_width=1,
-            fg_color=bg_color,
-            border_color=border_color
-        )
-        frame.pack(padx=2, pady=2)
-        
-        label = ctk.CTkLabel(
-            frame,
-            text=self.text,
-            font=SMALL_FONT,
-            text_color=text_color
-        )
-        label.pack(padx=6, pady=3)
-        
-        # Tooltip boyutlarını al ve ekrana sığdır
-        self.tooltip.update_idletasks()
-        tooltip_width = self.tooltip.winfo_width()
-        tooltip_height = self.tooltip.winfo_height()
-        
-        # Ekran boyutlarını al
+        # Screen dimensions to prevent going off-screen
         screen_width = self.widget.winfo_screenwidth()
         screen_height = self.widget.winfo_screenheight()
         
-        # Tooltip konumunu ekran sınırları içinde tut
+        # Calculate position (centered below widget by default)
+        x = widget_x + (widget_width - tooltip_width) // 2
+        y = widget_y + widget_height + 5
+        
+        # Ensure tooltip stays on screen
         if x + tooltip_width > screen_width:
-            x = screen_width - tooltip_width - 10
+            x = screen_width - tooltip_width - 5
+        if x < 0:
+            x = 5
         if y + tooltip_height > screen_height:
-            y = screen_height - tooltip_height - 10
+            y = widget_y - tooltip_height - 5  # Show above widget
         
-        # Tooltip'i konumlandır
-        self.tooltip.wm_geometry(f"+{x}+{y}")
+        # Position and show tooltip
+        ToolTip._tooltip_window.geometry(f"+{x}+{y}")
+        ToolTip._tooltip_window.deiconify()
         
-        # Güvenlik için otomatik kapanma zamanlayıcısı
-        self.timer_id = self.widget.after(5000, self.hide_tooltip)
+        # Set auto-hide after 5 seconds as a fallback
+        if ToolTip._after_id:
+            ToolTip._tooltip_window.after_cancel(ToolTip._after_id)
+        ToolTip._after_id = ToolTip._tooltip_window.after(5000, self.hide)
     
-    def hide_tooltip(self, event=None):
-        """İpucu balonunu gizle"""
-        if self.tooltip:
-            try:
-                self.tooltip.destroy()
-            except:
-                pass  # Pencere zaten kapatılmış olabilir
-            self.tooltip = None
+    def hide(self, event=None):
+        """Hide tooltip and clean up timers"""
+        self.cancel_schedule()
         
-        # Zamanlayıcıyı temizle
-        if self.timer_id:
-            self.widget.after_cancel(self.timer_id)
-            self.timer_id = None
+        # Cancel auto-hide timer if active
+        if ToolTip._after_id:
+            try:
+                ToolTip._tooltip_window.after_cancel(ToolTip._after_id)
+                ToolTip._after_id = None
+            except:
+                pass
+        
+        # Only hide if this tooltip is still active
+        if ToolTip._active_tooltip == self and ToolTip._tooltip_window and ToolTip._tooltip_window.winfo_exists():
+            try:
+                ToolTip._tooltip_window.withdraw()
+            except:
+                pass
+            ToolTip._active_tooltip = None
 
 # Yeni modern stil ToggleButton sınıfı
 class ToggleButton(ctk.CTkButton):
@@ -766,63 +778,80 @@ class ImageEditor(ctk.CTk):
             try:
                 # İlerleme durumunu göster
                 self.show_status("Görüntü yükleniyor...")
-                self.update()  # UI güncellemelerini zorla
                 
-                # Open and process the image
-                self.image_path = file_path
-                self.filename = os.path.basename(file_path)
-                
-                # Yüksek çözünürlüklü orijinal görüntü
-                self.original_image = Image.open(file_path)
-                
-                # Convert to RGB if not already
-                if self.original_image.mode != 'RGB':
-                    self.original_image = self.original_image.convert('RGB')
-                
-                # Görüntünün boyutunu al
-                img_width, img_height = self.original_image.size
-                
-                # Görüntü boyutları hakkında bilgi
-                print(f"Orijinal görüntü boyutu: {img_width}x{img_height}")
-                
-                # Eğer görüntü çok büyükse, çalışma versiyonu için ölçeklendir
-                # Bu, hızlı önizleme ve işleme için kullanılacak
-                if img_width > MAX_PREVIEW_WIDTH or img_height > MAX_PREVIEW_HEIGHT:
-                    ratio = min(MAX_PREVIEW_WIDTH / img_width, MAX_PREVIEW_HEIGHT / img_height)
-                    new_width = int(img_width * ratio)
-                    new_height = int(img_height * ratio)
-                    
-                    # Ölçeklendirilmiş çalışma kopyası
-                    self.working_image = self.original_image.resize(
-                        (new_width, new_height), 
-                        Image.Resampling.LANCZOS
-                    )
-                    print(f"Ölçeklendirilmiş çalışma kopyası: {new_width}x{new_height}")
-                else:
-                    # Boyut küçükse, doğrudan kopyala
-                    self.working_image = self.original_image.copy()
-                
-                # Mevcut görüntüyü çalışma görüntüsü olarak ayarla
-                self.current_image = self.working_image.copy()
-                
-                # Gösterme
-                self.display_image()
-                
-                # Reset sliders
-                self.brightness_frame.reset()
-                self.contrast_frame.reset()
-                self.saturation_frame.reset()
-                
-                # Update window title
-                self.title(f"Advanced Image Editor - {self.filename}")
-                
-                # Update status
-                self.status_label.configure(text=f"Yüklendi: {self.filename}")
+                # Yükleme işlemini arka planda yap
+                threading.Thread(target=self._threaded_load_image, args=(file_path,), daemon=True).start()
                 
             except Exception as e:
                 print(f"Error opening image: {e}")
                 self.status_label.configure(text=f"Hata: Görüntü açılamadı")
-    
+            
+    def _threaded_load_image(self, file_path):
+        """Görüntü yükleme işlemini arka planda gerçekleştir"""
+        try:
+            # Open and process the image
+            self.image_path = file_path
+            self.filename = os.path.basename(file_path)
+            
+            # Yüksek çözünürlüklü orijinal görüntü
+            self.original_image = Image.open(file_path)
+            
+            # Convert to RGB if not already
+            if self.original_image.mode != 'RGB':
+                self.original_image = self.original_image.convert('RGB')
+            
+            # Görüntünün boyutunu al
+            img_width, img_height = self.original_image.size
+            
+            # Görüntü boyutları hakkında bilgi
+            print(f"Orijinal görüntü boyutu: {img_width}x{img_height}")
+            
+            # Eğer görüntü çok büyükse, çalışma versiyonu için ölçeklendir
+            # Bu, hızlı önizleme ve işleme için kullanılacak
+            if img_width > MAX_PREVIEW_WIDTH or img_height > MAX_PREVIEW_HEIGHT:
+                ratio = min(MAX_PREVIEW_WIDTH / img_width, MAX_PREVIEW_HEIGHT / img_height)
+                new_width = int(img_width * ratio)
+                new_height = int(img_height * ratio)
+                
+                # Ölçeklendirilmiş çalışma kopyası
+                self.working_image = self.original_image.resize(
+                    (new_width, new_height), 
+                    Image.Resampling.LANCZOS
+                )
+                print(f"Ölçeklendirilmiş çalışma kopyası: {new_width}x{new_height}")
+            else:
+                # Boyut küçükse, doğrudan kopyala
+                self.working_image = self.original_image.copy()
+            
+            # Mevcut görüntüyü çalışma görüntüsü olarak ayarla
+            self.current_image = self.working_image.copy()
+            
+            # Ana UI thread'de gösterme işlemini yap
+            self.after(10, lambda: self._finalize_image_loading())
+            
+        except Exception as e:
+            print(f"Görüntü yükleme hatası: {e}")
+            self.after(10, lambda: self.show_status(f"Hata: Görüntü açılamadı - {str(e)}"))
+
+    def _finalize_image_loading(self):
+        """Görüntü yüklendikten sonra UI güncellemelerini yap"""
+        # Gösterme
+        self.display_image()
+        
+        # Reset sliders
+        self.brightness_frame.reset()
+        self.contrast_frame.reset() 
+        self.saturation_frame.reset()
+        
+        # Update window title
+        self.title(f"Advanced Image Editor - {self.filename}")
+        
+        # Update status
+        self.status_label.configure(text=f"Yüklendi: {self.filename}")
+        
+        # Önbelleği temizle
+        self.preview_cache.clear()
+
     def save_image(self):
         """Save the edited image"""
         if self.current_image:
@@ -996,79 +1025,107 @@ class ImageEditor(ctk.CTk):
             if self.current_effect:
                 self.hide_all_effect_controls()
     
-    def display_image(self, image=None):
-        """Display the current image on the canvas"""
-        if image:
-            self.current_image = image
+    def display_image(self, img=None, update_canvas=True, reset_zoom=False):
+        """Display the image on the canvas with optimized performance"""
+        if img is None:
+            img = self.current_image
         
-        if self.current_image:
-            # Önceki görüntüyü temizle
-            self.canvas.delete("all")
-            
-            start_time = time.time()
-            
-            # Görüntüleme için görüntüyü hazırla - performans için
-            # Get canvas dimensions
-            canvas_width = self.main_frame.winfo_width()
-            canvas_height = self.main_frame.winfo_height()
-            
-            # Eğer görüntü 800x600'den büyükse ve çok fazla ölçekleme gerekiyorsa,
-            # görüntüyü işlemeden önce kabaca yeniden boyutlandır, ardından ince ayar yap
-            img_width, img_height = self.current_image.size
-            
-            # Ölçekleme oranını hesapla
-            ratio = min(canvas_width / img_width, canvas_height / img_height)
-            new_width = int(img_width * ratio)
-            new_height = int(img_height * ratio)
-            
-            display_image = None
-            
-            # Yalnızca gerekirse küçült
-            if ratio < 1 or (img_width > 1000 and img_height > 1000):
-                # İlk ölçeklendirme adımını çok büyük görüntüler için optimize et
-                if img_width > 2000 or img_height > 2000:
-                    # İki adımda ölçeklendirme - ilk adımda hızlı bir yöntem kullan
-                    intermediate_ratio = min(1000 / img_width, 1000 / img_height)
-                    intermediate_width = int(img_width * intermediate_ratio)
-                    intermediate_height = int(img_height * intermediate_ratio)
-                    
-                    # İlk adım için hızlı yeniden boyutlandırma
-                    intermediate_image = self.current_image.resize(
-                        (intermediate_width, intermediate_height), 
-                        Image.Resampling.BILINEAR  # Hızlı, düşük kalite
-                    )
-                    
-                    # İkinci adım için daha kaliteli yeniden boyutlandırma
-                    if ratio < intermediate_ratio:
-                        display_image = intermediate_image.resize(
-                            (new_width, new_height), 
-                            Image.Resampling.LANCZOS  # Yüksek kalite
-                        )
-                    else:
-                        display_image = intermediate_image
-                else:
-                    # Küçük görüntüler için doğrudan kaliteli yeniden boyutlandırma
-                    display_image = self.current_image.resize(
-                        (new_width, new_height), 
-                        Image.Resampling.LANCZOS
-                    )
+        if img is None:
+            return
+        
+        # Get current canvas dimensions once
+        canvas_width = self.canvas.winfo_width()
+        canvas_height = self.canvas.winfo_height()
+        
+        # Skip redisplay if dimensions haven't changed and image is the same
+        if (not reset_zoom and 
+            hasattr(self, '_last_display_params') and 
+            self._last_display_params.get('width') == canvas_width and
+            self._last_display_params.get('height') == canvas_height and
+            self._last_display_params.get('img_id') == id(img) and
+            not update_canvas):
+            return
+        
+        # Cache display parameters to prevent unnecessary redraws
+        self._last_display_params = {
+            'width': canvas_width,
+            'height': canvas_height,
+            'img_id': id(img)
+        }
+        
+        # Ensure minimum canvas size
+        if canvas_width < 10 or canvas_height < 10:
+            self.canvas.after(100, lambda: self.display_image(img, update_canvas, reset_zoom))
+            return
+        
+        # Determine zoom level and scale factor
+        if reset_zoom:
+            self.scale_factor = 1.0
+        
+        # Calculate display dimensions while preserving aspect ratio
+        img_width, img_height = img.size
+        width_ratio = canvas_width / img_width
+        height_ratio = canvas_height / img_height
+        
+        # Use the smaller ratio to fit the image within the canvas
+        ratio = min(width_ratio, height_ratio) * self.scale_factor
+        
+        # Calculate new dimensions
+        new_width = int(img_width * ratio)
+        new_height = int(img_height * ratio)
+        
+        # Skip resize operation if the image is already at the target size
+        if hasattr(self, '_display_cache'):
+            cached_key = (id(img), new_width, new_height)
+            if cached_key in self._display_cache:
+                resized_img = self._display_cache[cached_key]
             else:
-                # Ölçeklendirme gerekmiyorsa orijinali kullan
-                display_image = self.current_image.copy()
+                # Performance optimization - use LANCZOS for better quality at reasonable speed
+                resized_img = img.resize((new_width, new_height), Image.LANCZOS)
+                
+                # Only cache if image is not too large (to prevent memory issues)
+                if new_width * new_height < 4000000:  # Limit cache to ~4MP images
+                    # Maintain cache size
+                    if not hasattr(self, '_display_cache'):
+                        self._display_cache = {}
+                    if len(self._display_cache) > 3:
+                        # Remove oldest item if cache is too large
+                        self._display_cache.pop(next(iter(self._display_cache)))
+                    self._display_cache[cached_key] = resized_img
+        else:
+            self._display_cache = {}
+            resized_img = img.resize((new_width, new_height), Image.LANCZOS)
+            self._display_cache[(id(img), new_width, new_height)] = resized_img
+        
+        # Create PhotoImage for display - this must be kept as reference
+        self.tk_image = ImageTk.PhotoImage(resized_img)
+        
+        # Calculate center position
+        x_center = canvas_width // 2
+        y_center = canvas_height // 2
+        
+        # Update canvas efficiently
+        if update_canvas:
+            self.canvas.delete("all")  # Clear only when necessary
+            self.canvas.create_image(x_center, y_center, image=self.tk_image, tags="image")
             
-            # Convert to PhotoImage and keep a reference
-            self.photo_image = ImageTk.PhotoImage(display_image)
-            
-            # Calculate center position
-            x = (canvas_width - new_width) // 2
-            y = (canvas_height - new_height) // 2
-            
-            # Add image to canvas
-            self.canvas.create_image(x, y, anchor="nw", image=self.photo_image)
-            
-            # Performans ölçümü
-            end_time = time.time()
-            print(f"Görüntüleme işlemi: {end_time - start_time:.3f} saniye")
+            # Update info label with optimization - avoid UI updates when unnecessary
+            if hasattr(self, 'info_var'):
+                # Throttle updates to reduce UI work
+                current_time = time.time()
+                if not hasattr(self, '_last_info_update') or current_time - self._last_info_update > 0.2:
+                    self._last_info_update = current_time
+                    self.info_var.set(f"Size: {img_width}x{img_height} | Zoom: {int(self.scale_factor * 100)}%")
+        
+        # Trigger garbage collection less frequently
+        if not hasattr(self, '_gc_counter'):
+            self._gc_counter = 0
+        self._gc_counter += 1
+        
+        # Only trigger garbage collection occasionally to avoid performance impact
+        if self._gc_counter > 10:
+            self._gc_counter = 0
+            gc.collect()  # Help prevent memory leaks
     
     def apply_filter(self, filter_name):
         """Temel filtre uygula"""
@@ -1154,7 +1211,7 @@ class ImageEditor(ctk.CTk):
         self.show_status(f"Filtre gücünü ayarlayın ve 'Efekti Uygula' düğmesine tıklayın")
         
         # Önizlemeyi başlat
-        self.preview_effect()
+        self.preview_effect(self.current_effect)
     
     def apply_advanced_filter(self, filter_name):
         """Show controls for the selected advanced filter"""
@@ -1593,8 +1650,10 @@ class ImageEditor(ctk.CTk):
                 self.show_status("Önceki işlem iptal ediliyor...")
                 return
             
-            # Önizleme işlemini arka planda başlat
-            self.apply_effect(is_preview=True)
+            # Use the optimized preview_effect with current effect
+            if self.current_effect:
+                self.preview_effect(self.current_effect)
+            
         else:
             # Önizleme kapalıysa, orijinal görüntüyü göster
             if hasattr(self, 'pre_preview_image'):
@@ -1615,34 +1674,8 @@ class ImageEditor(ctk.CTk):
                 # İşlemin başladığını bildir
                 self.show_status(f"{self.current_effect} efekti önizleniyor...")
                 
-                # İptal kontrolü için değişken
-                self.cancel_processing = False
-                
-                # "Yükleniyor" göstergesi başlat
-                if not hasattr(self, 'loading_indicator'):
-                    self._start_loading_animation()
-                
-                # Önbellek anahtarı oluştur - efekt adı ve parametrelerden
-                cache_key = self._create_cache_key()
-                
-                # Önbellekte varsa, hemen göster
-                if cache_key in self.preview_cache:
-                    print(f"Önbellek kullanılıyor: {cache_key}")
-                    cached_result = self.preview_cache[cache_key]
-                    self.preview_image = cached_result
-                    self.display_image(self.preview_image)
-                    self._stop_loading_animation()
-                    self.show_status(f"{self.current_effect} önizlemesi (önbellekten) tamamlandı")
-                    return
-                
-                # Tüm efektler için arka plan işleme kullan
-                self.preview_thread = threading.Thread(
-                    target=self._threaded_preview_effect,
-                    args=(cache_key,),
-                    daemon=True
-                )
-                self.preview_thread.start()
-                    
+                # Use the new optimized preview_effect method
+                self.preview_effect(self.current_effect)
                 return
             
             # Önizleme görüntüsünü mevcut görüntü olarak ayarla
@@ -1888,18 +1921,357 @@ class ImageEditor(ctk.CTk):
             
         return img
             
-    def preview_effect(self):
-        """Seçili efektin önizlemesini göster - tüm işlemleri arka planda yap"""
-        if not self.current_image or not self.current_effect:
+    def preview_effect(self, effect_name):
+        """Preview the currently selected effect with optimized performance"""
+        # Skip if no image loaded or no effect selected
+        if self.current_image is None or effect_name is None:
             return
             
-        # Önizleme aktif değilse, orjinal görüntüyü göster
-        if not self.preview_var.get():
-            self.toggle_preview(False)
-            return
+        # Use cached original when available to prevent quality loss
+        if not hasattr(self, '_preview_original'):
+            self._preview_original = self.current_image.copy()
+        
+        # Create a working copy to avoid modifying the original
+        img = self._preview_original.copy()
+        
+        # Don't process if image is too large for preview
+        if img.width * img.height > 4000000:  # ~4MP limit for previews
+            preview_scale = (4000000 / (img.width * img.height)) ** 0.5
+            preview_width = int(img.width * preview_scale)
+            preview_height = int(img.height * preview_scale)
+            img = img.resize((preview_width, preview_height), Image.LANCZOS)
             
-        # Efekti arka planda uygula
-        self.apply_effect(is_preview=True)
+        # Start timer for performance tracking
+        start_time = time.time()
+        
+        # Apply the selected effect with its parameters
+        try:
+            if effect_name == "brightness":
+                # Brightness effect
+                factor = self.effect_params["brightness"]["intensity"]
+                enhancer = ImageEnhance.Brightness(img)
+                img = enhancer.enhance(factor)
+                
+            elif effect_name == "contrast":
+                # Contrast effect
+                factor = self.effect_params["contrast"]["intensity"]
+                enhancer = ImageEnhance.Contrast(img)
+                img = enhancer.enhance(factor)
+                
+            elif effect_name == "saturation":
+                # Saturation effect
+                factor = self.effect_params["saturation"]["intensity"]
+                enhancer = ImageEnhance.Color(img)
+                img = enhancer.enhance(factor)
+                
+            elif effect_name == "sepia":
+                # Use precalculated sepia matrix for better performance
+                intensity = self.effect_params["sepia"]["intensity"]
+                if intensity < 0.1:
+                    # Skip processing if intensity is very low
+                    pass
+                else:
+                    # Convert to numpy array for faster processing
+                    img_array = np.array(img)
+                    
+                    # Apply sepia with intensity
+                    sepia_array = np.array([
+                        [0.393, 0.769, 0.189],
+                        [0.349, 0.686, 0.168],
+                        [0.272, 0.534, 0.131]
+                    ])
+                    
+                    # Scale sepia effect based on intensity
+                    if intensity < 1.0:
+                        # Partially apply effect
+                        sepia_array = intensity * sepia_array + (1 - intensity) * np.array([
+                            [1, 0, 0],
+                            [0, 1, 0],
+                            [0, 0, 1]
+                        ])
+                    
+                    # Apply transformation efficiently
+                    img_array = img_array.dot(sepia_array.T)
+                    img_array = np.clip(img_array, 0, 255).astype(np.uint8)
+                    img = Image.fromarray(img_array)
+                    
+            elif effect_name == "cartoon":
+                edge_intensity = self.effect_params["cartoon"]["edge_intensity"]
+                simplify = self.effect_params["cartoon"]["simplify"]
+                
+                # Skip processing if parameters are very low
+                if edge_intensity < 0.05 and simplify < 0.05:
+                    pass
+                else:
+                    # Use more efficient implementation for cartoonization
+                    img_array = np.array(img)
+                    
+                    # Apply bilateral filter for simplification with adaptive settings
+                    # Higher simplify = more color quantization
+                    if simplify > 0.1:
+                        # Use size-aware parameters
+                        size_factor = max(1, min(3, (img.width * img.height) / (1000 * 1000)))
+                        d = int(9 / size_factor)
+                        sigma_color = int(simplify * 150)
+                        sigma_space = int(simplify * 150)
+                        
+                        # Apply bilateral filter for simplification
+                        color = cv2.bilateralFilter(img_array, d, sigma_color, sigma_space)
+                    else:
+                        color = img_array
+                    
+                    # Apply edge detection with adaptive parameters
+                    if edge_intensity > 0.1:
+                        gray = cv2.cvtColor(img_array, cv2.COLOR_RGB2GRAY)
+                        edge_threshold = int((1 - edge_intensity) * 150) + 50
+                        edges = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_MEAN_C, 
+                                                     cv2.THRESH_BINARY, 9, edge_threshold)
+                        
+                        # Create cartoon effect by combining edges and color
+                        edges_rgb = cv2.cvtColor(edges, cv2.COLOR_GRAY2RGB)
+                        cartoon_array = np.bitwise_and(color, edges_rgb)
+                        img = Image.fromarray(cartoon_array)
+                    else:
+                        img = Image.fromarray(color)
+                    
+            elif effect_name == "vignette":
+                amount = self.effect_params["vignette"]["amount"]
+                
+                # Skip if amount is very low
+                if amount < 0.05:
+                    pass
+                else:
+                    # Use faster numpy-based vignette 
+                    width, height = img.size
+                    img_array = np.array(img)
+                    
+                    # Create coordinate grids
+                    y, x = np.ogrid[0:height, 0:width]
+                    
+                    # Calculate center and distances
+                    center_x, center_y = width / 2, height / 2
+                    dist_from_center = np.sqrt((x - center_x)**2 + (y - center_y)**2)
+                    
+                    # Normalize distances
+                    max_dist = np.sqrt(center_x**2 + center_y**2)
+                    norm_dist = dist_from_center / max_dist
+                    
+                    # Create vignette mask with adjustable falloff
+                    falloff = 3 + amount * 5  # Higher amount = steeper falloff
+                    mask = 1 - np.clip(norm_dist**falloff, 0, 1)
+                    
+                    # Apply mask to each channel
+                    img_array = img_array * mask[:, :, np.newaxis]
+                    img = Image.fromarray(np.clip(img_array, 0, 255).astype(np.uint8))
+                    
+            elif effect_name == "pixelate":
+                factor = self.effect_params["pixelate"]["block_size"]
+                if factor < 2:
+                    pass  # No visible effect
+                else:
+                    # More efficient pixelation
+                    width, height = img.size
+                    
+                    # Calculate target dimensions
+                    small_width = max(1, width // factor)
+                    small_height = max(1, height // factor)
+                    
+                    # Downscale and upscale for pixelation effect
+                    img = img.resize((small_width, small_height), Image.NEAREST)
+                    img = img.resize((width, height), Image.NEAREST)
+                    
+            elif effect_name == "red_splash":
+                threshold = self.effect_params["red_splash"]["threshold"]
+                
+                # Convert to HSV for more accurate color isolation
+                img_array = np.array(img)
+                hsv = cv2.cvtColor(img_array, cv2.COLOR_RGB2HSV)
+                
+                # Define red range in HSV
+                # Red wraps around the hue spectrum, so we need two masks
+                lower_red1 = np.array([0, 70, 50])
+                upper_red1 = np.array([10, 255, 255])
+                lower_red2 = np.array([170, 70, 50])
+                upper_red2 = np.array([180, 255, 255])
+                
+                # Create masks for red regions
+                mask1 = cv2.inRange(hsv, lower_red1, upper_red1)
+                mask2 = cv2.inRange(hsv, lower_red2, upper_red2)
+                mask = cv2.bitwise_or(mask1, mask2)
+                
+                # Adjust mask based on threshold
+                if threshold < 1.0:
+                    kernel = np.ones((3, 3), np.uint8)
+                    iterations = int(threshold * 5)
+                    if iterations > 0:
+                        mask = cv2.dilate(mask, kernel, iterations=iterations)
+                
+                # Convert original to grayscale
+                gray = cv2.cvtColor(img_array, cv2.COLOR_RGB2GRAY)
+                gray_rgb = cv2.cvtColor(gray, cv2.COLOR_GRAY2RGB)
+                
+                # Create the final image by combining grayscale and colored parts
+                mask_rgb = cv2.cvtColor(mask, cv2.COLOR_GRAY2RGB) / 255.0
+                result = img_array * mask_rgb + gray_rgb * (1 - mask_rgb)
+                img = Image.fromarray(result.astype(np.uint8))
+                
+            elif effect_name == "oil":
+                radius = self.effect_params["oil"]["radius"]
+                intensity = self.effect_params["oil"]["intensity"]
+                
+                if radius < 1 or intensity < 0.1:
+                    pass  # Skip for minimal effect
+                else:
+                    # Simplified oil painting effect
+                    img_array = np.array(img)
+                    radius = int(radius)
+                    intensity = int(intensity * 10) + 1
+                    
+                    # Apply oil painting with optimized parameters
+                    temp = cv2.xphoto.oilPainting(img_array, radius, intensity)
+                    img = Image.fromarray(temp)
+                    
+            elif effect_name == "noise":
+                amount = self.effect_params["noise"]["amount"]
+                
+                if amount < 0.05:
+                    pass  # Skip for minimal effect
+                else:
+                    # Add noise efficiently with numpy
+                    img_array = np.array(img).astype(np.float32)
+                    
+                    # Generate noise
+                    noise = np.random.normal(0, amount * 50, img_array.shape)
+                    
+                    # Add noise to image
+                    noisy_array = img_array + noise
+                    
+                    # Clip values to valid range
+                    img = Image.fromarray(np.clip(noisy_array, 0, 255).astype(np.uint8))
+                    
+            elif effect_name == "blur":
+                radius = self.effect_params["blur"]["radius"]
+                
+                if radius < 0.5:
+                    pass  # Skip for minimal effect
+                else:
+                    # Use faster Gaussian blur
+                    radius = int(radius * 2) * 2 + 1  # Ensure odd number
+                    img_array = np.array(img)
+                    blurred = cv2.GaussianBlur(img_array, (radius, radius), 0)
+                    img = Image.fromarray(blurred)
+                    
+            elif effect_name == "sharpen":
+                intensity = self.effect_params["sharpen"]["intensity"]
+                
+                if intensity < 0.05:
+                    pass  # Skip for minimal effect
+                else:
+                    # Use unsharp mask for better sharpening
+                    img_array = np.array(img)
+                    
+                    # Blur the image
+                    blur_radius = 5
+                    blurred = cv2.GaussianBlur(img_array, (blur_radius, blur_radius), 0)
+                    
+                    # Create unsharp mask
+                    sharpened = cv2.addWeighted(
+                        img_array, 1.0 + intensity,
+                        blurred, -intensity,
+                        0
+                    )
+                    
+                    img = Image.fromarray(np.clip(sharpened, 0, 255).astype(np.uint8))
+                    
+            elif effect_name == "contour":
+                intensity = self.effect_params["contour"]["intensity"]
+                
+                if intensity < 0.05:
+                    pass  # Skip for minimal effect
+                else:
+                    # More efficient contour implementation
+                    img_array = np.array(img)
+                    gray = cv2.cvtColor(img_array, cv2.COLOR_RGB2GRAY)
+                    
+                    # Apply Laplacian for edge detection
+                    laplacian = cv2.Laplacian(gray, cv2.CV_8U)
+                    
+                    # Adjust contour strength by threshold
+                    threshold = int(255 * (1 - intensity))
+                    _, contour = cv2.threshold(laplacian, threshold, 255, cv2.THRESH_BINARY_INV)
+                    
+                    # Convert back to RGB
+                    img = Image.fromarray(cv2.cvtColor(contour, cv2.COLOR_GRAY2RGB))
+                    
+            elif effect_name == "emboss":
+                intensity = self.effect_params["emboss"]["intensity"]
+                
+                if intensity < 0.05:
+                    pass  # Skip for minimal effect
+                else:
+                    # Use more efficient emboss filter
+                    img_array = np.array(img).astype(np.float32)
+                    
+                    # Create emboss kernel with adjustable intensity
+                    strength = intensity * 2
+                    kernel = np.array([
+                        [-strength, -strength, 0],
+                        [-strength, 1, strength],
+                        [0, strength, strength]
+                    ])
+                    
+                    # Apply kernel
+                    embossed = cv2.filter2D(img_array, -1, kernel)
+                    
+                    # Normalize and convert
+                    img = Image.fromarray(np.clip(embossed + 128, 0, 255).astype(np.uint8))
+                    
+            elif effect_name == "bw":
+                threshold = self.effect_params["bw"]["threshold"]
+                
+                # Convert to grayscale
+                img = img.convert("L")
+                
+                # Apply threshold
+                threshold_value = int(threshold * 255)
+                img = img.point(lambda x: 255 if x > threshold_value else 0, mode='1')
+                
+                # Convert back to RGB
+                img = img.convert("RGB")
+                
+            elif effect_name == "invert":
+                intensity = self.effect_params["invert"]["intensity"]
+                
+                if intensity < 0.05:
+                    pass  # Skip for minimal effect
+                else:
+                    # Use numpy for faster inversion
+                    img_array = np.array(img)
+                    
+                    if intensity >= 0.95:
+                        # Full inversion
+                        img_array = 255 - img_array
+                    else:
+                        # Partial inversion
+                        inverted = 255 - img_array
+                        img_array = img_array * (1 - intensity) + inverted * intensity
+                    
+                    img = Image.fromarray(np.clip(img_array, 0, 255).astype(np.uint8))
+                    
+            # Calculate and log processing time
+            end_time = time.time()
+            if hasattr(self, 'debug') and self.debug:
+                print(f"Effect '{effect_name}' preview: {end_time - start_time:.4f} seconds")
+                
+            # Update the preview image
+            self.preview_image = img
+            self.display_image(img, update_canvas=True)
+                
+        except Exception as e:
+            # Log errors but don't crash
+            print(f"Error applying effect {effect_name}: {str(e)}")
+            import traceback
+            traceback.print_exc()
     
     def hide_all_effect_controls(self):
         """Hide all effect controls"""
@@ -1927,8 +2299,8 @@ class ImageEditor(ctk.CTk):
         
         # If preview is active, update the preview
         if hasattr(self, 'preview_var') and self.preview_var.get():
-            # Önizlemeyi yeniden oluştur
-            self.apply_effect(is_preview=True)
+            # Use the optimized preview_effect method
+            self.preview_effect(effect)
 
     def show_effect_controls(self, effect_name):
         """Belirtilen efekt için kontrolleri göster"""
