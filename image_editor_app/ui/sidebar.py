@@ -5,6 +5,7 @@ import customtkinter as ctk
 from image_editor_app.utils.constants import *
 from image_editor_app.widgets.tooltip import ToolTip
 from image_editor_app.widgets.toggle_button import ToggleButton
+from image_editor_app.widgets.effect_intensity import EffectIntensityFrame
 
 def create_sidebar(self):
     """Create the sidebar with control panels"""
@@ -24,7 +25,7 @@ def create_sidebar(self):
     # Add canvas and scrollbar for scrolling
     self.sidebar_canvas = ctk.CTkCanvas(
         self.scrollable_container,
-        bg=ctk.ThemeManager.theme["CTkFrame"]["fg_color"],
+        bg="#242424",
         highlightthickness=0
     )
     self.sidebar_canvas.pack(side="left", fill="both", expand=True)

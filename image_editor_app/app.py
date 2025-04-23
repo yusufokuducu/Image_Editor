@@ -19,9 +19,8 @@ from image_editor_app.widgets.tooltip import ToolTip
 from image_editor_app.widgets.toggle_button import ToggleButton
 from image_editor_app.widgets.effect_intensity import EffectIntensityFrame
 
-# Import advanced filters from the original location
-import advanced_filters
-import app_icon
+# Advanced filters ve app_icon modülleri artık utils içerisine taşınmalı
+from image_editor_app.utils.advanced_effects import *
 
 # Set appearance mode and color theme
 ctk.set_appearance_mode("system")  # "system", "dark" veya "light"
@@ -92,7 +91,8 @@ class ImageEditor(ctk.CTk):
         icon_path = os.path.join('resources', 'app_icon.png')
         # Check if icon exists, create if it doesn't
         if not os.path.exists(icon_path):
-            icon_path = app_icon.create_app_icon()
+            from image_editor_app.utils.app_icon import create_app_icon
+            icon_path = create_app_icon()
         
         # Load the icon
         icon_image = Image.open(icon_path)
@@ -133,7 +133,10 @@ class ImageEditor(ctk.CTk):
                                                      reset_image)
     
     from image_editor_app.core.image_display import (display_image,
-                                                   update_canvas_size)
+                                                   update_canvas_size,
+                                                   start_pan,
+                                                   pan_image,
+                                                   zoom_image)
     
     from image_editor_app.core.effect_processing import (apply_filter,
                                                        apply_advanced_filter,

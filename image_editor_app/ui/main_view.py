@@ -21,16 +21,9 @@ def create_main_view(self):
     self.canvas_frame.grid_rowconfigure(0, weight=1)
     self.canvas_frame.grid_columnconfigure(0, weight=1)
     
-    # CTkCanvas çalışmadığı için normal Canvas kullanılıyor
-    # Sorun: ctk.ThemeManager.theme["CTkCanvas"]["fg_color"] anahtarı yok
-    # Çözüm: CTkFrame'in renk değerini kullanmak daha uygun
-    canvas_bg = ctk.ThemeManager.theme["CTkFrame"]["fg_color"]
-    if isinstance(canvas_bg, tuple):
-        # Eğer tuple ise (dark mode, light mode) formatında olacak
-        # Şu anki moda göre değeri seç
-        current_mode = ctk.get_appearance_mode().lower()
-        mode_index = 1 if current_mode == "light" else 0
-        canvas_bg = canvas_bg[mode_index]
+    # ThemeManager ile direkt renk alma sorunu yaşandığı için sabit bir koyu renk kullanıyoruz
+    # Bu renk customtkinter koyu temaya uygun
+    canvas_bg = "#242424"
     
     self.canvas = ctk.CTkCanvas(
         self.canvas_frame,
