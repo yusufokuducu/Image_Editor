@@ -1,4 +1,4 @@
-# PyxelEdit Pro
+# PyxelEdit
 
 **Gelişmiş, Katman Destekli Python Görüntü Editörü**
 
@@ -86,9 +86,6 @@ MIT Lisansı altında açık kaynak.
 
 Pull request ve issue açarak katkıda bulunabilirsiniz!
 
-Geliştirici: [Senin Adın]  
-Proje başlangıç tarihi: 2025
+Geliştirici: faust-lvii[yusufokuducu](mailto:k.yusufokuducu@gmail.com)  
 
 ---
-
-> **PyxelEdit Pro ile modern ve hızlı bir şekilde raster imaj düzenlemenin keyfini çıkarın!**
