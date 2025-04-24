@@ -86,6 +86,6 @@ MIT Lisansı altında açık kaynak.
 
 Pull request ve issue açarak katkıda bulunabilirsiniz!
 
-Geliştirici: faust-lvii[yusufokuducu](mailto:k.yusufokuducu@gmail.com)  
+Geliştirici: faust-lvii - [yusufokuducu](mailto:k.yusufokuducu@gmail.com)  
 
 ---
