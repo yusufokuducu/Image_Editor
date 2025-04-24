@@ -1,118 +1,94 @@
-# Pro Image Editor (Gelişmiş Görsel Düzenleyici)
+# PyxelEdit Pro
 
-Python ve customtkinter ile geliştirilmiş, modern tasarımlı, güçlü bir görsel düzenleme uygulaması.
+**Gelişmiş, Katman Destekli Python Görüntü Editörü**
 
-![Pro Image Editor](resources/app_icon.png)
+PyxelEdit Pro; modern arayüzü, güçlü katman yönetimi ve esnek filtre/efekt seçenekleriyle Windows için geliştirilmiş açık kaynaklı bir raster imaj editörüdür.
+
+---
 
 ## Özellikler
 
-- **Modern Karanlık Arayüz**: Customtkinter ile özelleştirilmiş, kullanıcı dostu arayüz
-- **Dosya İşlemleri**:
-  - Görsel açma (JPEG, PNG, BMP ve diğer formatlar)
-  - Düzenlenen görseli farklı formatlarda kaydetme 
-  - Orijinal görsele dönme
-  
-- **Temel Görsel Ayarları**:
-  - Parlaklık kontrolü (0.0 - 2.0)
-  - Kontrast kontrolü (0.0 - 2.0)
-  - Doygunluk kontrolü (0.0 - 2.0)
-  
-- **Dönüştürme Seçenekleri**:
-  - Sola/sağa 90° döndürme
-  - Yatay/dikey çevirme
-  
-- **Temel Filtreler**:
-  - Bulanıklaştırma (Blur)
-  - Keskinleştirme (Sharpen)
-  - Kontur (Contour)
-  - Kabartma (Emboss)
-  - Siyah-Beyaz
-  - Negatif (Renk Tersine Çevirme)
-  
-- **Gelişmiş Filtreler**:
-  - **Sepya Tonu**: Nostaljik bir görünüm için ayarlanabilir yoğunluk
-  - **Çizgi Film Efekti**: Animasyon benzeri görünüm, kenar belirginliği ve renk sadeleştirme ayarları
-  - **Vinyet Efekti**: Köşe kararma efekti ile dramatik odaklama
-  - **Pikselleştirme**: Piksel boyutu ayarlanabilir mozaik efekti
-  - **Renk Sıçratma**: Seçilen renk kanalını koruyarak diğer kanalları siyah-beyaz yapma
-  - **Yağlı Boya**: Fırça boyutu ve detay seviyesi ayarlanabilir yağlı boya efekti
-  - **Gürültü Efekti**: Çeşitli tipte (Uniform, Gaussian, Salt & Pepper) gürültü efektleri ve kanal seçimleri
-  
-- **Efekt Uygulaması**:
-  - Önizleme özelliği ile değişiklikler uygulanmadan görüntüleme
-  - Ayarlanabilir efekt parametreleri
-  - Çoklu iş parçacığı (multithreading) desteği ile yüksek performans
+- **Modern PyQt6 Arayüzü:** Hızlı, sezgisel ve ölçeklenebilir kullanıcı deneyimi.
+- **Katman Sistemi:** Sınırsız katman ekleme, silme, kopyalama, taşıma, görünürlük ve birleştirme.
+- **Gelişmiş Seçim Araçları:** Dikdörtgen, elips ve serbest (lasso) seçim modları.
+- **Katman Paneli:** Katmanları listeden seçme, sürükle-bırak ile sıralama, hızlı kopyalama/yapıştırma.
+- **Filtreler & Efektler:**
+  - Bulanıklaştır (kullanıcı ayarlı seviye)
+  - Keskinleştir
+  - Kenar Vurgula
+  - Gri Ton
+  - Noise Ekle (kullanıcı ayarlı seviye)
+- **Geri Al/Yinele (Undo/Redo):** Tüm işlemler için komut geçmişi.
+- **Kısa Yollar:** Hızlı erişim için kapsamlı klavye kısayolları.
+- **Katman Bazlı İşlem:** Efekt ve filtreler sadece seçili/aktif katmana uygulanabilir.
+- **Geliştirilebilir Altyapı:** Yeni filtre, araç veya katman özelliği kolayca eklenebilir.
 
-## Gereksinimler
-
-- Python 3.7 veya üzeri
-- Gerekli paketler:
-  - customtkinter >= 5.2.0
-  - Pillow >= 10.0.0
-  - numpy >= 1.24.0
-  - opencv-python >= 4.8.0
+---
 
 ## Kurulum
 
-1. Sisteminizde Python'un kurulu olduğundan emin olun
-2. Gerekli paketleri yükleyin:
+1. **Python 3.10+** kurulu olmalı.
+2. Bağımlılıkları yükleyin:
+   ```bash
+   pip install -r requirements.txt
+   ```
 
-```
-pip install -r requirements.txt
+---
+
+## Çalıştırma
+
+```bash
+python src/main.py
 ```
 
-3. Uygulamayı çalıştırın:
-
-```
-python run.py
-```
+---
 
 ## Kullanım
 
-1. **Görsel Açma**: "Dosya Aç" düğmesine tıklayarak bir görsel açın
-2. **Temel Ayarlar**: Parlaklık, kontrast ve doygunluk kaydırıcılarını kullanarak temel ayarları yapın
-3. **Temel Filtreler**: Filtreler bölümündeki düğmelere tıklayarak doğrudan uygulayın
-4. **Gelişmiş Filtreler**: 
-   - İstediğiniz efekti seçin (örn. "Yağlı Boya", "Gürültü" vb.)
-   - Yan panelde açılan ayarlar ile efekt parametrelerini yapılandırın
-   - Önizleme seçeneğini işaretleyerek sonucu görebilirsiniz
-   - "Efekti Uygula" düğmesine tıklayarak kalıcı olarak uygulayın
-5. **Dönüştürme İşlemleri**: Döndürme ve çevirme düğmelerini kullanarak görselin yönünü değiştirin
-6. **Kaydetme**: "Kaydet" düğmesi ile düzenlenen görseli istediğiniz formatta kaydedin
-7. **Sıfırlama**: "Sıfırla" düğmesi ile orijinal görsele geri dönün
+- **Resim Aç/Kaydet:** Dosya menüsünden veya Ctrl+O/Ctrl+S ile.
+- **Katman Ekle/Sil:** Katmanlar menüsünden veya panelden.
+- **Katmanı Taşı/Kopyala:** Katman panelinde yukarı/aşağı oklar veya kopyala/yapıştır butonları.
+- **Efekt Uygulama:** Filtreler menüsünden, bulanıklık ve noise için seviye seçimiyle.
+- **Seçim Araçları:** Seçim menüsünden dikdörtgen/elips/lasso seçimi.
+- **Undo/Redo:** Ctrl+Z / Ctrl+Y.
 
-## Modüler Yapı
+---
 
-Uygulama, bakım ve geliştirme kolaylığı için modüler bir yapıda tasarlanmıştır:
+## Kısayollar
 
-```
-image_editor_app/           # Ana paket dizini
-├── __init__.py             # Paket başlatıcı
-├── app.py                  # Ana ImageEditor sınıfı
-├── core/                   # Çekirdek işlevler
-│   ├── __init__.py
-│   ├── basic_adjustments.py
-│   ├── effect_processing.py
-│   ├── file_operations.py
-│   └── image_display.py
-├── ui/                     # Kullanıcı arayüzü bileşenleri
-│   ├── __init__.py
-│   ├── effects.py
-│   ├── main_view.py
-│   └── sidebar.py
-├── utils/                  # Yardımcı işlevler
-│   ├── __init__.py
-│   ├── constants.py
-│   ├── advanced_effects.py
-│   ├── app_icon.py
-│   └── image_effects.py
-└── widgets/                # Özel arayüz bileşenleri
-    ├── __init__.py
-    ├── effect_intensity.py
-    ├── toggle_button.py
-    └── tooltip.py
-```
+| İşlem                       | Kısayol           |
+|-----------------------------|-------------------|
+| Geri Al (Undo)              | Ctrl+Z            |
+| Yinele (Redo)               | Ctrl+Y            |
+| Yeni Katman                 | Ctrl+Shift+N      |
+| Katmanı Sil                 | Del               |
+| Katmanı Yukarı/Aşağı Taşı   | Ctrl+Up / Ctrl+Down |
+| Katmanları Birleştir        | Ctrl+M            |
+| Katman Görünürlüğü          | Ctrl+H            |
+
+---
+
+## Geliştirici Notları
+
+- Kod modülerdir: `src/` klasöründe ana bileşenler (main, layers, layer_panel, image_view, filters, transform, history, image_io) ayrı dosyalardadır.
+- Yeni filtreler veya araçlar eklemek için ilgili modülü genişletin.
+- Katman paneli ve komut altyapısı kolayca geliştirilebilir.
+
+---
 
 ## Lisans
 
-Bu yazılım açık kaynaklıdır ve MIT lisansı altında dağıtılmaktadır. 
+MIT Lisansı altında açık kaynak.
+
+---
+
+## Katkı ve Geri Bildirim
+
+Pull request ve issue açarak katkıda bulunabilirsiniz!
+
+Geliştirici: [Senin Adın]  
+Proje başlangıç tarihi: 2025
+
+---
+
+> **PyxelEdit Pro ile modern ve hızlı bir şekilde raster imaj düzenlemenin keyfini çıkarın!**
