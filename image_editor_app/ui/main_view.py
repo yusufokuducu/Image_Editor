@@ -7,27 +7,27 @@ from image_editor_app.utils.constants import *
 
 def create_main_view(self):
     """Create the main content area with canvas"""
-    # Main content container with border
-    self.content_frame = ctk.CTkFrame(self, corner_radius=0)
+    # Ana içerik çerçevesi (dark mode)
+    self.content_frame = ctk.CTkFrame(self, corner_radius=0, fg_color=BACKGROUND_COLOR)
     self.content_frame.grid(row=0, column=1, sticky="nsew", padx=0, pady=0)
     
     # Configure content frame for dynamic sizing
     self.content_frame.grid_rowconfigure(0, weight=1)
     self.content_frame.grid_columnconfigure(0, weight=1)
     
-    # Create canvas for image display
-    self.canvas_frame = ctk.CTkFrame(self.content_frame)
+    # Görseli gösterecek canvas çerçevesi (dark mode)
+    self.canvas_frame = ctk.CTkFrame(self.content_frame, fg_color=PRIMARY_COLOR)
     self.canvas_frame.grid(row=0, column=0, sticky="nsew", padx=10, pady=10)
     self.canvas_frame.grid_rowconfigure(0, weight=1)
     self.canvas_frame.grid_columnconfigure(0, weight=1)
     
     # ThemeManager ile direkt renk alma sorunu yaşandığı için sabit bir koyu renk kullanıyoruz
     # Bu renk customtkinter koyu temaya uygun
-    canvas_bg = "#242424"
+    # canvas_bg = "#242424" # Kaldırıldı - Tema arka planı kullanılsın
     
     self.canvas = ctk.CTkCanvas(
         self.canvas_frame,
-        bg=canvas_bg,
+        bg=PRIMARY_COLOR, # Canvas arka planını constants'dan al (simsiyah)
         highlightthickness=0
     )
     self.canvas.grid(row=0, column=0, sticky="nsew", padx=2, pady=2)
@@ -47,8 +47,8 @@ def create_main_view(self):
 
 def create_status_bar(self):
     """Create status bar at the bottom of the main view"""
-    # Status bar
-    self.status_bar = ctk.CTkFrame(self.content_frame, height=30, corner_radius=0)
+    # Status bar (dark mode)
+    self.status_bar = ctk.CTkFrame(self.content_frame, height=30, corner_radius=0, fg_color=SECONDARY_COLOR)
     self.status_bar.grid(row=1, column=0, sticky="ew", padx=0, pady=(0, 0))
     
     # Prevent automatic resizing of height
@@ -59,7 +59,9 @@ def create_status_bar(self):
         self.status_bar, 
         text="Hazır", 
         anchor="w",
-        font=SMALL_FONT
+        font=SMALL_FONT,
+        text_color=ACCENT_COLOR,
+        fg_color=SECONDARY_COLOR
     )
     self.status_label.grid(row=0, column=0, padx=10, pady=0, sticky="w")
     
@@ -70,6 +72,8 @@ def create_status_bar(self):
     self.image_info_label = ctk.CTkLabel(
         self.status_bar, 
         text="", 
-        font=SMALL_FONT
+        font=SMALL_FONT,
+        text_color=ACCENT_COLOR,
+        fg_color=SECONDARY_COLOR
     )
     self.image_info_label.grid(row=0, column=1, padx=10, pady=0, sticky="e") 

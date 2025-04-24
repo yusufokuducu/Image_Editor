@@ -23,8 +23,8 @@ from image_editor_app.widgets.effect_intensity import EffectIntensityFrame
 from image_editor_app.utils.advanced_effects import *
 
 # Set appearance mode and color theme
-ctk.set_appearance_mode("system")  # "system", "dark" veya "light"
-ctk.set_default_color_theme("blue")  # "blue", "green", "dark-blue"
+ctk.set_appearance_mode("dark")  # "system", "dark" veya "light" - Koyu moda ayarlandı
+ctk.set_default_color_theme("dark-blue")  # "blue", "green", "dark-blue" - Koyu mavi temaya güncellendi
 
 class ImageEditor(ctk.CTk):
     """Pro Image Editor application main class"""
@@ -118,7 +118,7 @@ class ImageEditor(ctk.CTk):
         self.create_status_bar()
     
     # Import other methods from separate files
-    from image_editor_app.ui.sidebar import create_sidebar, create_section
+    from image_editor_app.ui.sidebar import create_sidebar, create_section, create_collapsible_section, toggle_filter_tab, _create_basic_filters, _create_advanced_filters
     from image_editor_app.ui.main_view import create_main_view, create_status_bar
     from image_editor_app.ui.effects import (create_effect_controls, 
                                            hide_all_effect_controls,

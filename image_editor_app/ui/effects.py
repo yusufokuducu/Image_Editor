@@ -8,20 +8,21 @@ from image_editor_app.widgets.toggle_button import ToggleButton
 
 def create_effect_controls(self):
     """Create controls for applying effects"""
-    # Efekt kontrol çerçevesi
-    self.effect_control_frame = ctk.CTkFrame(self.content_frame)
+    # Efekt kontrol çerçevesi (dark mode)
+    self.effect_control_frame = ctk.CTkFrame(self.content_frame, fg_color=SECONDARY_COLOR)
     self.effect_control_frame.grid(row=0, column=1, sticky="nsew", padx=10, pady=10)
     self.effect_control_frame.grid_rowconfigure(0, weight=1)
     self.effect_control_frame.grid_columnconfigure(0, weight=1)
     
-    # Frame başlığı
+    # Frame başlığı (dark mode)
     self.effect_title = ctk.CTkLabel(
         self.effect_control_frame, 
         text="Efekt Ayarları", 
         font=SUBTITLE_FONT,
-        text_color=ACCENT_COLOR
+        text_color=ACCENT_COLOR,
+        fg_color=SECONDARY_COLOR
     )
-    self.effect_title.grid(row=0, column=0, padx=10, pady=(10, 5), sticky="w")
+    self.effect_title.grid(row=0, column=0, padx=10, pady=8, sticky="w")
     
     # Filtre açıklaması
     self.effect_description = ctk.CTkLabel(
@@ -32,9 +33,9 @@ def create_effect_controls(self):
     )
     self.effect_description.grid(row=1, column=0, padx=10, pady=(0, 10), sticky="w")
     
-    # Ayarlar için bir iç çerçeve
-    self.settings_frame = ctk.CTkFrame(self.effect_control_frame, fg_color="transparent")
-    self.settings_frame.grid(row=2, column=0, padx=10, pady=5, sticky="ew")
+    # Ayarlar için bir iç çerçeve (dark mode)
+    self.settings_frame = ctk.CTkFrame(self.effect_control_frame, fg_color=SECONDARY_COLOR)
+    self.settings_frame.grid(row=2, column=0, sticky="nsew", padx=5, pady=5)
     
     # Sepia efekt kontrolü
     self.sepia_frame = EffectIntensityFrame(

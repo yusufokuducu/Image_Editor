@@ -6,26 +6,25 @@ from image_editor_app.utils.constants import *
 from image_editor_app.widgets.tooltip import ToolTip
 from image_editor_app.widgets.toggle_button import ToggleButton
 from image_editor_app.widgets.effect_intensity import EffectIntensityFrame
+from PIL import Image, ImageTk
 
 def create_sidebar(self):
     """Create the sidebar with control panels"""
-    # Sidebar container
-    self.sidebar = ctk.CTkFrame(self, width=280, corner_radius=0)
+    # Sidebar container (dark mode)
+    self.sidebar = ctk.CTkFrame(self, corner_radius=0, fg_color=SECONDARY_COLOR)
     self.sidebar.grid(row=0, column=0, sticky="nsew", padx=0, pady=0)
-    self.sidebar.grid_propagate(False)  # Sabit genişliği koru
     
     # Configure sidebar
     self.sidebar.grid_columnconfigure(0, weight=1)  # Content expands horizontally
     
-    # Create scrollable frame for sidebar content
-    self.scrollable_container = ctk.CTkFrame(self.sidebar, fg_color="transparent")
+    # Create scrollable frame for sidebar content (dark mode)
+    self.scrollable_container = ctk.CTkFrame(self.sidebar, fg_color=SECONDARY_COLOR)
     self.scrollable_container.grid(row=0, column=0, sticky="nsew")
     self.sidebar.grid_rowconfigure(0, weight=1)
     
     # Add canvas and scrollbar for scrolling
     self.sidebar_canvas = ctk.CTkCanvas(
         self.scrollable_container,
-        bg="#242424",
         highlightthickness=0
     )
     self.sidebar_canvas.pack(side="left", fill="both", expand=True)
@@ -41,12 +40,13 @@ def create_sidebar(self):
     self.sidebar_canvas.configure(yscrollcommand=self.sidebar_scrollbar.set)
     self.sidebar_canvas.bind('<Configure>', lambda e: self.sidebar_canvas.configure(scrollregion=self.sidebar_canvas.bbox("all")))
     
-    # Create frame for scrollable content
-    self.scrollable_frame = ctk.CTkFrame(self.sidebar_canvas, fg_color="transparent")
-    self.sidebar_canvas.create_window((0, 0), window=self.scrollable_frame, anchor="nw", width=260)
+    # Create frame for scrollable content (dark mode)
+    self.scrollable_frame = ctk.CTkFrame(self.sidebar_canvas, fg_color=SECONDARY_COLOR)
+    self.scrollable_frame.grid_columnconfigure(0, weight=1)
+    self.sidebar_canvas.create_window((0, 0), window=self.scrollable_frame, anchor="nw")
     
     # HEADER SECTION
-    header_frame = ctk.CTkFrame(self.scrollable_frame, fg_color="transparent")
+    header_frame = ctk.CTkFrame(self.scrollable_frame, fg_color=SECONDARY_COLOR)
     header_frame.grid(row=0, column=0, padx=15, pady=(15, 5), sticky="ew")
     
     app_name = ctk.CTkLabel(
@@ -87,7 +87,7 @@ def create_sidebar(self):
         command=self.reset_image,
         font=BUTTON_FONT,
         fg_color=WARNING_COLOR,
-        hover_color="#aa7930"
+        hover_color=ERROR_COLOR
     )
     reset_btn.grid(row=2, column=0, padx=10, pady=5, sticky="ew")
     ToolTip(reset_btn, "Orijinal görüntüye geri dönün")
@@ -140,108 +140,41 @@ def create_sidebar(self):
     rotate_left_btn = ctk.CTkButton(
         rotation_frame, 
         text="↺ Sol", 
-        width=70,
         command=lambda: self.rotate_image("left")
     )
-    rotate_left_btn.grid(row=1, column=0, padx=5, pady=5)
+    rotate_left_btn.grid(row=1, column=0, padx=5, pady=5, sticky="ew")
     ToolTip(rotate_left_btn, "Görüntüyü sola 90° döndür")
     
     rotate_right_btn = ctk.CTkButton(
         rotation_frame, 
         text="↻ Sağ", 
-        width=70,
         command=lambda: self.rotate_image("right")
     )
-    rotate_right_btn.grid(row=1, column=1, padx=5, pady=5)
+    rotate_right_btn.grid(row=1, column=1, padx=5, pady=5, sticky="ew")
     ToolTip(rotate_right_btn, "Görüntüyü sağa 90° döndür")
     
     # Flip buttons
     flip_h_btn = ctk.CTkButton(
         rotation_frame, 
         text="↔ Yatay", 
-        width=70,
         command=lambda: self.flip_image("horizontal")
     )
-    flip_h_btn.grid(row=2, column=0, padx=5, pady=5)
+    flip_h_btn.grid(row=2, column=0, padx=5, pady=5, sticky="ew")
     ToolTip(flip_h_btn, "Görüntüyü yatay olarak çevir")
     
     flip_v_btn = ctk.CTkButton(
         rotation_frame, 
         text="↕ Dikey", 
-        width=70,
         command=lambda: self.flip_image("vertical")
     )
-    flip_v_btn.grid(row=2, column=1, padx=5, pady=5)
+    flip_v_btn.grid(row=2, column=1, padx=5, pady=5, sticky="ew")
     ToolTip(flip_v_btn, "Görüntüyü dikey olarak çevir")
     
-    # FILTERS SECTION
-    self.filter_section = self.create_section(self.scrollable_frame, "Filtreler", row=15)
+    # Rotation frame sütunlarını eşit ağırlıkla yapılandır
+    rotation_frame.grid_columnconfigure((0, 1), weight=1)
     
-    # Simple Filter Buttons
-    simple_filter_frame = ctk.CTkFrame(self.filter_section, fg_color="transparent")
-    simple_filter_frame.grid(row=0, column=0, padx=5, pady=5, sticky="ew")
-    simple_filter_frame.grid_columnconfigure((0, 1), weight=1)
-    
-    # Create filter buttons dynamically with icons
-    filter_configs = [
-        {"name": "blur", "text": "Bulanıklaştır", "row": 0, "col": 0},
-        {"name": "sharpen", "text": "Keskinleştir", "row": 0, "col": 1},
-        {"name": "contour", "text": "Kontur", "row": 1, "col": 0},
-        {"name": "emboss", "text": "Kabartma", "row": 1, "col": 1},
-        {"name": "bw", "text": "Siyah-Beyaz", "row": 2, "col": 0},
-        {"name": "invert", "text": "Negatif", "row": 2, "col": 1},
-    ]
-    
-    for filter_cfg in filter_configs:
-        filter_btn = ctk.CTkButton(
-            simple_filter_frame, 
-            text=filter_cfg["text"],
-            width=100,
-            height=30,
-            command=lambda f=filter_cfg["name"]: self.apply_filter(f)
-        )
-        filter_btn.grid(
-            row=filter_cfg["row"], 
-            column=filter_cfg["col"], 
-            padx=5, pady=5, 
-            sticky="ew"
-        )
-        ToolTip(filter_btn, f"{filter_cfg['text']} filtresi uygula")
-    
-    # ADVANCED FILTERS SECTION
-    self.advanced_section = self.create_section(self.scrollable_frame, "Gelişmiş Efektler", row=20)
-    
-    # Advanced Filter buttons
-    advanced_filter_frame = ctk.CTkFrame(self.advanced_section, fg_color="transparent")
-    advanced_filter_frame.grid(row=0, column=0, padx=5, pady=5, sticky="ew")
-    advanced_filter_frame.grid_columnconfigure((0, 1), weight=1)
-    
-    # Create filter buttons dynamically with icons
-    advanced_configs = [
-        {"name": "sepia", "text": "Sepya", "row": 0, "col": 0},
-        {"name": "cartoon", "text": "Çizgi Film", "row": 0, "col": 1},
-        {"name": "vignette", "text": "Vinyet", "row": 1, "col": 0},
-        {"name": "pixelate", "text": "Pikselleştir", "row": 1, "col": 1},
-        {"name": "red_splash", "text": "Renk Sıçratma", "row": 2, "col": 0},
-        {"name": "oil", "text": "Yağlı Boya", "row": 2, "col": 1},
-        {"name": "noise", "text": "Gürültü", "row": 3, "col": 0},
-    ]
-    
-    for filter_cfg in advanced_configs:
-        filter_btn = ctk.CTkButton(
-            advanced_filter_frame, 
-            text=filter_cfg["text"],
-            width=100,
-            height=30,
-            command=lambda f=filter_cfg["name"]: self.apply_advanced_filter(f)
-        )
-        filter_btn.grid(
-            row=filter_cfg["row"], 
-            column=filter_cfg["col"], 
-            padx=5, pady=5, 
-            sticky="ew"
-        )
-        ToolTip(filter_btn, f"{filter_cfg['text']} filtresi uygula")
+    # FILTERS SECTION - Using accordion style
+    self.filters_accordion = self.create_collapsible_section(self.scrollable_frame, "Filtreler", row=15)
     
     # INFO SECTION
     info_section = self.create_section(self.scrollable_frame, "Bilgi", row=30)
@@ -266,16 +199,17 @@ def create_sidebar(self):
     ToolTip(help_btn, "Yardım ve destek bilgileri")
 
 def create_section(self, parent, title, row):
-    """Create a collapsible section with title"""
+    """Create a section with title"""
     section_frame = ctk.CTkFrame(parent)
     section_frame.grid(row=row, column=0, padx=15, pady=(15, 5), sticky="ew")
     
-    # Section title
+    # Section title (dark mode)
     section_title = ctk.CTkLabel(
         section_frame, 
         text=title, 
         font=SUBTITLE_FONT,
-        text_color=ACCENT_COLOR
+        text_color=ACCENT_COLOR,
+        fg_color=SECONDARY_COLOR
     )
     section_title.grid(row=0, column=0, padx=10, pady=8, sticky="w")
     
@@ -283,9 +217,167 @@ def create_section(self, parent, title, row):
     divider = ctk.CTkFrame(section_frame, height=1, fg_color=ACCENT_COLOR)
     divider.grid(row=1, column=0, sticky="ew", padx=10, pady=(0, 8))
     
-    # Content frame
-    content_frame = ctk.CTkFrame(section_frame, fg_color="transparent")
+    # Content frame (dark mode)
+    content_frame = ctk.CTkFrame(section_frame, fg_color=SECONDARY_COLOR)
     content_frame.grid(row=2, column=0, sticky="ew")
     section_frame.grid_columnconfigure(0, weight=1)
     
-    return content_frame 
+    return content_frame
+
+def create_collapsible_section(self, parent, title, row):
+    """Create an accordion-style collapsible section with tabs"""
+    section_frame = ctk.CTkFrame(parent)
+    section_frame.grid(row=row, column=0, padx=15, pady=(15, 5), sticky="ew")
+    section_frame.grid_columnconfigure(0, weight=1)
+    
+    # Header frame with title and toggle button
+    header_frame = ctk.CTkFrame(section_frame, fg_color=SECONDARY_COLOR)
+    header_frame.grid(row=0, column=0, sticky="ew", padx=5, pady=5)
+    header_frame.grid_columnconfigure(0, weight=1)
+    
+    # Section title
+    section_title = ctk.CTkLabel(
+        header_frame, 
+        text=title, 
+        font=SUBTITLE_FONT,
+        text_color=ACCENT_COLOR
+    )
+    section_title.grid(row=0, column=0, padx=5, pady=5, sticky="w")
+    
+    # Accordion tabs container
+    tabs_container = ctk.CTkFrame(section_frame, fg_color=SECONDARY_COLOR)
+    tabs_container.grid(row=1, column=0, sticky="ew", padx=5, pady=(0, 5))
+    tabs_container.grid_columnconfigure((0, 1), weight=1)
+    
+    # Create tabs for different filter categories
+    self.filter_tabs = {}
+    self.filter_content_frames = {}
+    
+    # Create Basic Filters tab
+    basic_filters_tab = ctk.CTkButton(
+        tabs_container,
+        text="Temel Filtreler",
+        fg_color=ACCENT_COLOR,
+        command=lambda: self.toggle_filter_tab("basic")
+    )
+    basic_filters_tab.grid(row=0, column=0, padx=3, pady=3, sticky="ew")
+    self.filter_tabs["basic"] = basic_filters_tab
+    
+    # Create Advanced Filters tab
+    advanced_filters_tab = ctk.CTkButton(
+        tabs_container,
+        text="Gelişmiş Filtreler",
+        fg_color=SECONDARY_COLOR,
+        command=lambda: self.toggle_filter_tab("advanced")
+    )
+    advanced_filters_tab.grid(row=0, column=1, padx=3, pady=3, sticky="ew")
+    self.filter_tabs["advanced"] = advanced_filters_tab
+    
+    # Divider
+    divider = ctk.CTkFrame(section_frame, height=1, fg_color=ACCENT_COLOR)
+    divider.grid(row=2, column=0, sticky="ew", padx=10, pady=(0, 5))
+    
+    # Content container for filter tabs
+    content_container = ctk.CTkFrame(section_frame, fg_color=SECONDARY_COLOR)
+    content_container.grid(row=3, column=0, sticky="ew", padx=5, pady=5)
+    content_container.grid_columnconfigure(0, weight=1)
+    
+    # Basic Filters Content Frame
+    basic_content = ctk.CTkFrame(content_container, fg_color=SECONDARY_COLOR)
+    basic_content.grid(row=0, column=0, sticky="ew")
+    self.filter_content_frames["basic"] = basic_content
+    
+    # Advanced Filters Content Frame
+    advanced_content = ctk.CTkFrame(content_container, fg_color=SECONDARY_COLOR)
+    advanced_content.grid(row=0, column=0, sticky="ew")
+    self.filter_content_frames["advanced"] = advanced_content
+    advanced_content.grid_remove()  # Hide advanced filters initially
+    
+    # Create filter buttons for basic filters
+    self._create_basic_filters(basic_content)
+    
+    # Create filter buttons for advanced filters
+    self._create_advanced_filters(advanced_content)
+    
+    return section_frame
+
+def toggle_filter_tab(self, tab_name):
+    """Toggle between filter tabs"""
+    # Update tab appearance
+    for name, tab in self.filter_tabs.items():
+        if name == tab_name:
+            tab.configure(fg_color=ACCENT_COLOR)
+        else:
+            tab.configure(fg_color=SECONDARY_COLOR)
+    
+    # Show/hide content frames
+    for name, frame in self.filter_content_frames.items():
+        if name == tab_name:
+            frame.grid()
+        else:
+            frame.grid_remove()
+
+def _create_basic_filters(self, parent):
+    """Create basic filter buttons"""
+    # Simple Filter Buttons
+    simple_filter_frame = ctk.CTkFrame(parent, fg_color=SECONDARY_COLOR)
+    simple_filter_frame.grid(row=0, column=0, padx=5, pady=5, sticky="ew")
+    simple_filter_frame.grid_columnconfigure((0, 1), weight=1)
+    
+    # Create filter buttons dynamically with icons
+    filter_configs = [
+        {"name": "blur", "text": "Bulanıklaştır", "row": 0, "col": 0},
+        {"name": "sharpen", "text": "Keskinleştir", "row": 0, "col": 1},
+        {"name": "contour", "text": "Kontur", "row": 1, "col": 0},
+        {"name": "emboss", "text": "Kabartma", "row": 1, "col": 1},
+        {"name": "bw", "text": "Siyah-Beyaz", "row": 2, "col": 0},
+        {"name": "invert", "text": "Negatif", "row": 2, "col": 1},
+    ]
+    
+    for filter_cfg in filter_configs:
+        filter_btn = ctk.CTkButton(
+            simple_filter_frame, 
+            text=filter_cfg["text"],
+            height=30,
+            command=lambda f=filter_cfg["name"]: self.apply_filter(f)
+        )
+        filter_btn.grid(
+            row=filter_cfg["row"], 
+            column=filter_cfg["col"], 
+            padx=5, pady=5, 
+            sticky="ew"
+        )
+        ToolTip(filter_btn, f"{filter_cfg['text']} filtresi uygula")
+
+def _create_advanced_filters(self, parent):
+    """Create advanced filter buttons"""
+    # Advanced Filter buttons
+    advanced_filter_frame = ctk.CTkFrame(parent, fg_color=SECONDARY_COLOR)
+    advanced_filter_frame.grid(row=0, column=0, padx=5, pady=5, sticky="ew")
+    advanced_filter_frame.grid_columnconfigure((0, 1), weight=1)
+    
+    # Create filter buttons dynamically with icons
+    advanced_configs = [
+        {"name": "sepia", "text": "Sepya", "row": 0, "col": 0},
+        {"name": "cartoon", "text": "Çizgi Film", "row": 0, "col": 1},
+        {"name": "vignette", "text": "Vinyet", "row": 1, "col": 0},
+        {"name": "pixelate", "text": "Pikselleştir", "row": 1, "col": 1},
+        {"name": "red_splash", "text": "Renk Sıçratma", "row": 2, "col": 0},
+        {"name": "oil", "text": "Yağlı Boya", "row": 2, "col": 1},
+        {"name": "noise", "text": "Gürültü", "row": 3, "col": 0},
+    ]
+    
+    for filter_cfg in advanced_configs:
+        filter_btn = ctk.CTkButton(
+            advanced_filter_frame, 
+            text=filter_cfg["text"],
+            height=30,
+            command=lambda f=filter_cfg["name"]: self.apply_advanced_filter(f)
+        )
+        filter_btn.grid(
+            row=filter_cfg["row"], 
+            column=filter_cfg["col"], 
+            padx=5, pady=5, 
+            sticky="ew"
+        )
+        ToolTip(filter_btn, f"{filter_cfg['text']} filtresi uygula") 
