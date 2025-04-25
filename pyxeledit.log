@@ -24,3 +24,20 @@
 2025-04-25 17:08:19,521 [INFO] Ýþlem uygulanýyor: brightness, param: 0.46
 2025-04-25 17:08:27,649 [INFO] Ýþlem uygulanýyor: noise, param: 0.19
 2025-04-25 17:08:32,328 [INFO] Ýþlem uygulanýyor: grayscale, param: None
+2025-04-25 17:10:50,883 [INFO] PyxelEdit baþlatýldý
+2025-04-25 17:12:10,068 [INFO] PyxelEdit baþlatýldý
+2025-04-25 17:12:56,685 [INFO] Ýþlem uygulanýyor: blur, param: 2
+2025-04-25 17:13:01,047 [INFO] Ýþlem uygulanýyor: noise, param: 0.1
+2025-04-25 17:13:05,938 [INFO] Ýþlem uygulanýyor: contrast, param: 1.0
+2025-04-25 17:13:10,145 [INFO] Ýþlem uygulanýyor: brightness, param: 1.66
+2025-04-25 17:13:14,005 [INFO] Ýþlem uygulanýyor: edge, param: None
+2025-04-25 17:13:21,303 [INFO] Ýþlem uygulanýyor: saturation, param: 1.43
+2025-04-25 17:13:26,157 [INFO] Ýþlem uygulanýyor: blur, param: 9
+2025-04-25 17:21:34,536 [INFO] PyxelEdit baþlatýldý
+2025-04-25 17:29:25,675 [INFO] PyxelEdit baþlatýldý
+2025-04-25 17:30:01,781 [INFO] Filter preview cancelled: brightness. Restoring original.
+2025-04-25 17:30:09,038 [INFO] Applying final filter: contrast with value: 0.85
+2025-04-25 17:30:09,038 [INFO] Applying filter/adjustment: contrast, param: 0.85
+2025-04-25 17:30:43,806 [INFO] Applying final filter: noise with value: 0.84
+2025-04-25 17:30:43,806 [INFO] Applying filter/adjustment: noise, param: 0.84
+2025-04-25 17:30:48,522 [INFO] Applying filter/adjustment: sharpen, param: None

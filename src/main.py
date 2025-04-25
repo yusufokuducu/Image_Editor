@@ -7,7 +7,7 @@ from PyQt6.QtWidgets import (QApplication, QMainWindow, QStatusBar, QMenuBar,
                              QDialog, QVBoxLayout, QHBoxLayout, QLabel, QSlider,
                              QPushButton)
 from PyQt6.QtGui import QAction, QPainter, QPixmap
-from PyQt6.QtCore import Qt, QTimer, pyqtSignal
+from PyQt6.QtCore import Qt, QTimer, pyqtSignal, QObject # Added QObject for signals
 import logging
 from image_io import load_image, image_to_qpixmap
 from image_view import ImageView
@@ -23,7 +23,12 @@ from layer_panel import LayerPanel
 
 # --- Filter Slider Dialog ---
 class FilterSliderDialog(QDialog):
-    """A dialog with a slider to get a filter parameter."""
+    """A dialog with a slider to get a filter parameter, with preview signal."""
+    # Signal emitted when the slider value changes, sending the correctly scaled value
+    valueChangedPreview = pyqtSignal(float)
+    # Signal emitted when the dialog is closed (accepted or rejected)
+    previewFinished = pyqtSignal()
+
     def __init__(self, title, label_text, min_val, max_val, initial_val, step=1, decimals=0, parent=None):
         super().__init__(parent)
         self.setWindowTitle(title)
@@ -47,7 +52,7 @@ class FilterSliderDialog(QDialog):
         self.slider.setSingleStep(self.slider_step)
         self.slider.setTickInterval(self.slider_step * 10) # Example tick interval
         self.slider.setTickPosition(QSlider.TickPosition.TicksBelow)
-        self.slider.valueChanged.connect(self._update_label)
+        self.slider.valueChanged.connect(self._update_label_and_emit) # Connect to new method
         layout.addWidget(self.slider)
 
         button_layout = QHBoxLayout()
@@ -61,8 +66,18 @@ class FilterSliderDialog(QDialog):
         self.ok_button.clicked.connect(self.accept)
         self.cancel_button.clicked.connect(self.reject)
 
-    def _update_label(self, value):
-        self.label.setText(f"{self.label.text().split(':')[0]}: {self._format_value(value)}")
+        # Emit previewFinished when the dialog closes
+        self.finished.connect(self.previewFinished.emit) # Connect built-in finished signal
+
+    def _update_label_and_emit(self, value):
+        """Updates the label and emits the valueChangedPreview signal."""
+        formatted_value = self._format_value(value)
+        self.label.setText(f"{self.label.text().split(':')[0]}: {formatted_value}")
+        # Emit the correctly scaled value
+        if self.decimals == 0:
+            self.valueChangedPreview.emit(float(value))
+        else:
+            self.valueChangedPreview.emit(value / (10**self.decimals))
 
     def _format_value(self, value):
         """Formats the integer slider value back to the original scale."""
@@ -92,6 +107,11 @@ class MainWindow(QMainWindow):
         self.gc_timer = QTimer(self)
         self.gc_timer.timeout.connect(lambda: gc.collect())
         self.gc_timer.start(30000)  # 30 saniyede bir bellek temizliği
+
+        # Preview state
+        self.original_preview_image = None
+        self.preview_active = False
+        self.current_preview_filter_type = None # To know which filter is being previewed
 
         # UI bileşenlerini oluştur
         self._init_ui()
@@ -314,9 +334,7 @@ class MainWindow(QMainWindow):
             decimals=0, # Integer value
             parent=self
         )
-        if dialog.exec():
-            radius = dialog.get_value()
-            self.apply_filter('blur', radius)
+        self._setup_preview_dialog(dialog, 'blur')
 
     def noise_dialog(self):
         dialog = FilterSliderDialog(
@@ -329,55 +347,188 @@ class MainWindow(QMainWindow):
             decimals=2, # Float value with 2 decimals
             parent=self
         )
-        if dialog.exec():
-            amount = dialog.get_value()
-            self.apply_filter('noise', amount)
+        self._setup_preview_dialog(dialog, 'noise')
 
     def brightness_dialog(self):
         dialog = FilterSliderDialog(
             title='Parlaklık Ayarı', label_text='Faktör',
             min_val=0.1, max_val=3.0, initial_val=1.0, step=0.05, decimals=2, parent=self
         )
-        if dialog.exec():
-            self.apply_filter('brightness', dialog.get_value())
+        self._setup_preview_dialog(dialog, 'brightness')
 
     def contrast_dialog(self):
         dialog = FilterSliderDialog(
             title='Kontrast Ayarı', label_text='Faktör',
             min_val=0.1, max_val=3.0, initial_val=1.0, step=0.05, decimals=2, parent=self
         )
-        if dialog.exec():
-            self.apply_filter('contrast', dialog.get_value())
+        self._setup_preview_dialog(dialog, 'contrast')
 
     def saturation_dialog(self):
         dialog = FilterSliderDialog(
             title='Doygunluk Ayarı', label_text='Faktör',
             min_val=0.0, max_val=3.0, initial_val=1.0, step=0.05, decimals=2, parent=self
         )
-        if dialog.exec():
-            self.apply_filter('saturation', dialog.get_value())
+        self._setup_preview_dialog(dialog, 'saturation')
 
     def hue_dialog(self):
         dialog = FilterSliderDialog(
             title='Ton Ayarı', label_text='Kaydırma (-180° ile +180°)',
             min_val=-1.0, max_val=1.0, initial_val=0.0, step=0.01, decimals=2, parent=self
         )
-        if dialog.exec():
-            self.apply_filter('hue', dialog.get_value())
+        self._setup_preview_dialog(dialog, 'hue')
+
+    def _setup_preview_dialog(self, dialog, filter_type):
+        """Connects signals for a preview dialog and shows it."""
+        if not hasattr(self, 'layers') or not self.layers.get_active_layer():
+            QMessageBox.warning(self, 'Uyarı', 'Önce bir resim açın ve bir katman seçin!')
+            return
+
+        layer = self.layers.get_active_layer()
+        if layer.image is None:
+            QMessageBox.warning(self, 'Uyarı', 'Aktif katmanda görüntü yok!')
+            return
+
+        # Store original image and set preview state
+        self.original_preview_image = layer.image.copy()
+        self.preview_active = True
+        self.current_preview_filter_type = filter_type
+
+        # Connect signals
+        dialog.valueChangedPreview.connect(self._apply_preview_filter)
+        # Use finished signal which provides the result code
+        dialog.finished.connect(lambda result: self._finalize_preview(result, filter_type, dialog))
+
+        # Show the dialog (non-modal might be better for true live preview, but modal is simpler for now)
+        dialog.exec() # exec() is blocking, finalize will be called after it closes
+
+    def _apply_preview_filter(self, value):
+        """Applies the filter temporarily for preview."""
+        if not self.preview_active or self.original_preview_image is None:
+            return
+
+        layer = self.layers.get_active_layer()
+        if layer is None:
+            return # Should not happen if preview_active is true
+
+        try:
+            # Apply filter to the *original* image copy
+            img_copy = self.original_preview_image.copy()
+            preview_img = self._get_filtered_image(img_copy, self.current_preview_filter_type, value)
+
+            if preview_img:
+                # Temporarily update the layer's image *without* history
+                layer.image = preview_img
+                # Refresh display only (don't update layer panel unnecessarily during preview)
+                pixmap = self._compose_layers_pixmap()
+                if pixmap and not pixmap.isNull():
+                    self.image_view.set_image(pixmap)
+                # self.refresh_layers() # Avoid full refresh for performance
+        except Exception as e:
+            logging.error(f"Preview filter error ({self.current_preview_filter_type}): {e}")
+            # Optionally revert to original here if preview fails badly
+
+    def _finalize_preview(self, result, filter_type, dialog):
+        """Finalizes the filter operation after the dialog closes."""
+        if not self.preview_active:
+            return
+
+        layer = self.layers.get_active_layer()
+        original_image_to_restore = self.original_preview_image.copy() # Keep a copy before clearing
+
+        # Clean up preview state immediately
+        self.preview_active = False
+        self.original_preview_image = None
+        self.current_preview_filter_type = None
+
+        if layer is None: # Should not happen
+             logging.warning("Finalize preview called with no active layer.")
+             return
+
+        if result == QDialog.DialogCode.Accepted:
+            # Apply the final filter value permanently and add to history
+            final_value = dialog.get_value()
+            logging.info(f"Applying final filter: {filter_type} with value: {final_value}")
+            # Use the stored original image as the base for the final application
+            self.apply_filter(filter_type, final_value, base_image=original_image_to_restore)
+        else:
+            # Rejected: Restore the original image
+            logging.info(f"Filter preview cancelled: {filter_type}. Restoring original.")
+            layer.image = original_image_to_restore
+            self.refresh_layers() # Refresh to show the restored image
+
+        # Disconnect signals to avoid issues if dialog object persists
+        try:
+            dialog.valueChangedPreview.disconnect()
+            dialog.finished.disconnect()
+        except TypeError: # Signal already disconnected
+            pass
+        except Exception as e:
+            logging.warning(f"Error disconnecting dialog signals: {e}")
 
 
-    def apply_filter(self, filter_type, param=None):
+    def _get_filtered_image(self, img, filter_type, param):
+        """Helper function to apply a filter and return the result."""
+        # Ensure we have a valid image to work with
+        if img is None or not isinstance(img, Image.Image):
+             logging.error(f"_get_filtered_image: Invalid input image for {filter_type}")
+             return None
+
+        # Make a copy to avoid modifying the input directly during filtering
+        img_copy = img.copy()
+
+        try:
+            if filter_type == 'blur':
+                radius = param if param is not None else 2
+                new_img = apply_blur(img_copy, radius)
+            elif filter_type == 'sharpen':
+                new_img = apply_sharpen(img_copy)
+            elif filter_type == 'edge':
+                new_img = apply_edge_enhance(img_copy)
+            elif filter_type == 'grayscale':
+                new_img = apply_grayscale(img_copy)
+            elif filter_type == 'noise':
+                amount = param if param is not None else 0.1
+                new_img = apply_noise(img_copy, amount)
+            elif filter_type == 'brightness':
+                factor = param if param is not None else 1.0
+                new_img = apply_brightness(img_copy, factor)
+            elif filter_type == 'contrast':
+                factor = param if param is not None else 1.0
+                new_img = apply_contrast(img_copy, factor)
+            elif filter_type == 'saturation':
+                factor = param if param is not None else 1.0
+                new_img = apply_saturation(img_copy, factor)
+            elif filter_type == 'hue':
+                shift = param if param is not None else 0.0
+                new_img = apply_hue(img_copy, shift)
+            else:
+                logging.warning(f"Bilinmeyen filtre/ayarlama tipi: {filter_type}")
+                return None # Return None for unknown types
+
+            # Ensure RGBA output
+            if new_img and (not hasattr(new_img, 'mode') or new_img.mode != 'RGBA'):
+                new_img = new_img.convert('RGBA')
+
+            return new_img
+        except Exception as e:
+            logging.error(f"Error applying filter {filter_type} in _get_filtered_image: {e}")
+            return None # Return None on error
+
+
+    def apply_filter(self, filter_type, param=None, base_image=None):
         """
         Seçili katmana filtre veya ayarlama uygular.
 
         Args:
-            filter_type (str): Uygulanacak işlem tipi ('blur', 'sharpen', 'edge', 'grayscale', 'noise',
-                                                     'brightness', 'contrast', 'saturation', 'hue')
-            param: İşlem parametresi (faktör, yarıçap, miktar, kaydırma vb.)
+            filter_type (str): Type of operation ('blur', 'sharpen', etc.)
+            param: Parameter for the operation (factor, radius, amount, shift, etc.)
+            base_image (Image.Image, optional): The image to apply the filter to.
+                                                If None, uses the active layer's current image.
+                                                Used by preview finalization.
         """
-        logging.info(f"İşlem uygulanıyor: {filter_type}, param: {param}")
+        logging.info(f"Applying filter/adjustment: {filter_type}, param: {param}")
 
-        # Aktif katmanı kontrol et
+        # Check active layer
         if not hasattr(self, 'layers'):
             QMessageBox.warning(self, 'Uyarı', 'Önce bir resim açmalısınız!')
             return
@@ -387,99 +538,72 @@ class MainWindow(QMainWindow):
             QMessageBox.warning(self, 'Uyarı', 'Uygulanacak katman yok!')
             return
 
-        # Orijinal görüntüyü sakla (geri alma için)
-        old_img = None
+        # Determine the starting image for the operation
+        if base_image is None:
+            # No base image provided (standard filter application), use current layer image
+            if layer.image is None:
+                 QMessageBox.warning(self, 'Uyarı', 'Aktif katmanda görüntü yok!')
+                 return
+            start_img = layer.image.copy()
+        else:
+            # Base image provided (likely from preview finalization)
+            start_img = base_image.copy() # Use the provided base image
+
+        # Store the state *before* applying the filter for undo
+        # This should be the image state *before* this specific filter application
+        # If base_image was provided, layer.image might already hold a preview state.
+        # We need the state *before* the preview started, which is base_image.
+        old_img_for_undo = start_img.copy()
+
+
+        # Apply the filter using the helper function
         try:
-            old_img = layer.image.copy()  # Orijinal görüntünün kopyasını al
-        except Exception as e:
-            logging.error(f"Orijinal görüntü kopyalanamadı: {e}")
-            QMessageBox.critical(self, 'Hata', f'Görüntü kopyalanamadı: {e}')
-            return
+            new_img = self._get_filtered_image(start_img, filter_type, param)
 
-        # Filtre uygulama işlemi
-        try:
-            # Görüntüyü kontrol et
-            if not hasattr(layer, 'image') or layer.image is None:
-                raise ValueError("Geçerli bir görüntü yok")
-
-            # Görüntünün kopyasını al
-            img = layer.image.copy()
-
-            # Filtre tipine göre işlem yap
-            if filter_type == 'blur':
-                radius = param if param is not None else 2
-                new_img = apply_blur(img, radius)
-            elif filter_type == 'sharpen':
-                new_img = apply_sharpen(img)
-            elif filter_type == 'edge':
-                new_img = apply_edge_enhance(img)
-            elif filter_type == 'grayscale':
-                new_img = apply_grayscale(img)
-            elif filter_type == 'noise':
-                amount = param if param is not None else 0.1
-                new_img = apply_noise(img, amount)
-            # Yeni ayarlamalar
-            elif filter_type == 'brightness':
-                factor = param if param is not None else 1.0
-                new_img = apply_brightness(img, factor)
-            elif filter_type == 'contrast':
-                factor = param if param is not None else 1.0
-                new_img = apply_contrast(img, factor)
-            elif filter_type == 'saturation':
-                factor = param if param is not None else 1.0
-                new_img = apply_saturation(img, factor)
-            elif filter_type == 'hue':
-                shift = param if param is not None else 0.0
-                new_img = apply_hue(img, shift)
-            else:
-                logging.warning(f"Bilinmeyen filtre/ayarlama tipi: {filter_type}")
-                return
-
-            # Sonuç görüntüsünü kontrol et
             if new_img is None:
-                raise ValueError(f"Filtre sonucu geçersiz: {filter_type}")
+                raise ValueError(f"Filter application returned None for {filter_type}")
 
-            # RGBA moduna dönüştür
-            if not hasattr(new_img, 'mode') or new_img.mode != 'RGBA':
-                new_img = new_img.convert('RGBA')
+            # --- History Command Setup ---
+            # Capture the necessary state for do/undo
+            current_layer_ref = layer
+            final_new_img = new_img.copy() # Image after filter is applied
+            # old_img_for_undo is already captured above
 
-            # Geri alma/yineleme için komut oluştur (Lambda ile yakalama)
-            current_layer_ref = layer # Avoid closure issues
-            new_img_copy = new_img.copy()
-            old_img_copy = old_img.copy()
 
-            def do():
+            def do_action():
                 try:
-                    current_layer_ref.image = new_img_copy.copy()
-                    self.refresh_layers()
+                    # Set the layer's image to the final filtered result
+                    current_layer_ref.image = final_new_img.copy()
+                    self.refresh_layers() # Update display and layer panel
                 except Exception as e:
-                    logging.error(f"Filtre uygulama (do) hatası: {e}")
+                    logging.error(f"Filter/Adjustment 'do' action error ({filter_type}): {e}")
 
-            def undo():
+            def undo_action():
                 try:
-                    current_layer_ref.image = old_img_copy.copy()
-                    self.refresh_layers()
+                    # Restore the layer's image to the state before the filter
+                    current_layer_ref.image = old_img_for_undo.copy()
+                    self.refresh_layers() # Update display and layer panel
                 except Exception as e:
-                    logging.error(f"Filtre geri alma (undo) hatası: {e}")
+                    logging.error(f"Filter/Adjustment 'undo' action error ({filter_type}): {e}")
 
-            # Komutu oluştur ve uygula
-            cmd = Command(do, undo, f'İşlem: {filter_type}') # Changed description slightly
-            cmd.do()
-            self.history.push(cmd)
+            # Create and execute the command
+            cmd = Command(do_action, undo_action, f'İşlem: {filter_type}')
+            cmd.do() # Apply the change
+            self.history.push(cmd) # Add to history
 
-            # Durum çubuğunu güncelle
-            self.status_bar.showMessage(f'{filter_type} işlemi uygulandı.') # Changed message slightly
+            # Update status bar
+            self.status_bar.showMessage(f'{filter_type} işlemi uygulandı.')
 
         except Exception as e:
-            logging.error(f'apply_filter/adjustment error: {e}')
-            QMessageBox.critical(self, 'Hata', f'İşlem uygulanırken hata oluştu: {e}')
-            # Hata durumunda orijinal görüntüyü geri yükle
-            if old_img is not None:
-                try:
-                    layer.image = old_img.copy()
-                    self.refresh_layers()
-                except Exception as restore_error:
-                    logging.error(f"Orijinal görüntü geri yüklenirken hata: {restore_error}")
+            logging.error(f'apply_filter error ({filter_type}): {e}')
+            QMessageBox.critical(self, 'Hata', f'İşlem uygulanırken hata oluştu ({filter_type}): {e}')
+            # If the operation failed, ensure the layer image is restored to the pre-operation state
+            # (which is old_img_for_undo, equivalent to start_img here)
+            try:
+                layer.image = old_img_for_undo.copy()
+                self.refresh_layers()
+            except Exception as restore_error:
+                 logging.error(f"Error restoring image after filter failure: {restore_error}")
 
     def apply_transform(self, ttype):
         # Apply transform to the active layer
