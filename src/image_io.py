@@ -17,10 +17,23 @@ def image_to_qpixmap(img):
     import io
     if img is None:
         return None
-    buf = io.BytesIO()
-    img.save(buf, format='PNG')
-    qt_img = QImage.fromData(buf.getvalue(), 'PNG')
-    return QPixmap.fromImage(qt_img)
+    try:
+        from PIL import Image
+        if not isinstance(img, Image.Image):
+            # Try to create a new RGBA image from the data
+            data = np.array(img)
+            img = Image.fromarray(data, 'RGBA')
+        if not hasattr(img, 'mode') or img.mode != 'RGBA':
+            img = img.convert('RGBA')
+        # Disk kaydını debug için kaldırdık
+        buf = io.BytesIO()
+        img.save(buf, format='PNG')
+        buf.seek(0)
+        qt_img = QImage.fromData(buf.getvalue(), 'PNG')
+        return QPixmap.fromImage(qt_img)
+    except Exception as e:
+        print(f'image_to_qpixmap error: {e}')  # Logging yerine print
+        return None
 
 
 def save_image(img, file_path):

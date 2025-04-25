@@ -1,4 +1,4 @@
-from PyQt6.QtWidgets import QGraphicsView, QGraphicsScene
+from PyQt6.QtWidgets import QGraphicsView, QGraphicsScene, QMessageBox
 from PyQt6.QtGui import QPixmap, QPainterPath, QPen, QColor, QBrush, QFont, QPainter, QFontMetrics, QImage
 from PyQt6.QtCore import Qt, QRectF, QPointF, QSize
 
@@ -23,6 +23,10 @@ class ImageView(QGraphicsView):
         self.selection_path_item = None
 
     def set_image(self, pixmap: QPixmap):
+        if pixmap is None:
+            from PyQt6.QtWidgets import QMessageBox
+            QMessageBox.critical(self, 'Hata', 'Görüntü yüklenemedi veya oluşturulamadı!')
+            return
         self.scene.clear()
         self.pixmap_item = self.scene.addPixmap(pixmap)
         # PyQt6: pixmap.rect() -> QRect, fakat setSceneRect QRectF bekler

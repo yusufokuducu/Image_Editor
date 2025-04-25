@@ -1,6 +1,6 @@
 import sys
 from PyQt6.QtWidgets import QApplication, QMainWindow, QStatusBar, QMenuBar, QFileDialog, QMessageBox, QInputDialog, QDockWidget
-from PyQt6.QtGui import QAction
+from PyQt6.QtGui import QAction, QPainter, QPixmap
 from PyQt6.QtCore import Qt
 import logging
 from image_io import load_image, image_to_qpixmap
@@ -18,7 +18,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] %(me
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle('PyxelEdit Pro')
+        self.setWindowTitle('PyxelEdit')
         self.setGeometry(100, 100, 1024, 768)
         self.history = History()
         self.layers = LayerManager()
@@ -214,24 +214,34 @@ class MainWindow(QMainWindow):
         if layer is None:
             QMessageBox.warning(self, 'Uyarı', 'Uygulanacak katman yok!')
             return
-        img = layer.image
-        if filter_type == 'blur':
-            radius = param if param is not None else 2
-            new_img = apply_blur(img, radius)
-        elif filter_type == 'sharpen':
-            new_img = apply_sharpen(img)
-        elif filter_type == 'edge':
-            new_img = apply_edge_enhance(img)
-        elif filter_type == 'grayscale':
-            new_img = apply_grayscale(img)
-        elif filter_type == 'noise':
-            amount = param if param is not None else 0.1
-            new_img = apply_noise(img, amount)
-        else:
-            return
-        layer.image = new_img
-        self.refresh_layers()
-        self.status_bar.showMessage(f'{filter_type} filtresi uygulandı.')
+        img = layer.image.copy()  # DAİMA kopya ile çalış
+        try:
+            if filter_type == 'blur':
+                radius = param if param is not None else 2
+                new_img = apply_blur(img, radius)
+            elif filter_type == 'sharpen':
+                new_img = apply_sharpen(img)
+            elif filter_type == 'edge':
+                new_img = apply_edge_enhance(img)
+            elif filter_type == 'grayscale':
+                new_img = apply_grayscale(img)
+            elif filter_type == 'noise':
+                amount = param if param is not None else 0.1
+                new_img = apply_noise(img, amount)
+            else:
+                return
+            if not hasattr(new_img, 'mode') or new_img.mode != 'RGBA':
+                new_img = new_img.convert('RGBA')
+            # Kendi kendini referans eden bir yapı olup olmadığını kontrol et
+            if hasattr(new_img, '__dict__') and any(id(new_img) == id(v) for v in new_img.__dict__.values()):
+                raise ValueError('Efekt sonrası oluşan görselde recursive referans tespit edildi!')
+            layer.image = new_img.copy()  # Katmana daima kopya ata
+            self.refresh_layers()
+            self.status_bar.showMessage(f'{filter_type} filtresi uygulandı.')
+        except Exception as e:
+            import logging
+            logging.error(f'apply_filter error: {e}')
+            QMessageBox.critical(self, 'Hata', f'Filtre uygulanırken hata oluştu: {e}')
 
     def apply_transform(self, ttype):
         if not hasattr(self, 'current_image') or self.current_image is None:
@@ -373,13 +383,39 @@ class MainWindow(QMainWindow):
             self.status_bar.showMessage('Katman aşağı taşındı.')
 
     def refresh_layers(self):
-        merged = self.layers.merge_visible()
-        if merged:
-            self.current_image = merged
-            pixmap = image_to_qpixmap(merged)
+        # Preview için Qt üzerinden katmanları birleştir
+        pixmap = self._compose_layers_pixmap()
+        if pixmap:
             self.image_view.set_image(pixmap)
         # Katman panelini de güncelle
         self.layer_panel.refresh()
+
+    def _compose_layers_pixmap(self):
+        from PyQt6.QtGui import QPainter, QPixmap
+        from PyQt6.QtCore import Qt
+        # Katmanları al
+        layers = self.layers.layers
+        if not layers:
+            return None
+        pixmaps = []
+        for layer in layers:
+            if not layer.visible:
+                continue
+            pm = image_to_qpixmap(layer.image)
+            if pm:
+                pixmaps.append(pm)
+        if not pixmaps:
+            return None
+        # Boyutları sabit kabul et
+        width = pixmaps[0].width()
+        height = pixmaps[0].height()
+        result = QPixmap(width, height)
+        result.fill(Qt.GlobalColor.transparent)
+        painter = QPainter(result)
+        for pm in pixmaps:
+            painter.drawPixmap(0, 0, pm)
+        painter.end()
+        return result
 
     # Katman değiştirme fonksiyonu (örnek, daha gelişmiş UI için geliştirilebilir)
     def set_active_layer(self, idx):
