@@ -41,3 +41,34 @@
 2025-04-25 17:30:43,806 [INFO] Applying final filter: noise with value: 0.84
 2025-04-25 17:30:43,806 [INFO] Applying filter/adjustment: noise, param: 0.84
 2025-04-25 17:30:48,522 [INFO] Applying filter/adjustment: sharpen, param: None
+2025-04-25 17:39:43,832 [INFO] PyxelEdit baþlatýldý
+2025-04-25 17:39:50,498 [INFO] Araç deðiþtirildi: text
+2025-04-25 17:40:01,194 [INFO] Text tool clicked at scene coordinates: 167.0, 163.0
+2025-04-25 17:40:01,194 [INFO] Handling text tool click at 167.0, 163.0
+2025-04-25 17:40:10,553 [INFO] Using font file: C:/Windows/Fonts\arial.ttf for family Segoe UI, size 9
+2025-04-25 17:40:13,539 [INFO] Text tool clicked at scene coordinates: 194.31424, 168.42752000000002
+2025-04-25 17:40:13,540 [INFO] Handling text tool click at 194.31424, 168.42752000000002
+2025-04-25 17:40:20,462 [INFO] Araç deðiþtirildi: select
+2025-04-25 17:52:57,137 [INFO] PyxelEdit baþlatýldý
+2025-04-25 17:53:08,741 [INFO] Araç deðiþtirildi: text
+2025-04-25 17:53:09,276 [INFO] Text tool clicked at scene coordinates: 112.0, 110.0
+2025-04-25 17:53:09,276 [INFO] Handling text tool click at 112.0, 110.0
+2025-04-25 17:53:21,844 [INFO] Using font file: C:/Windows/Fonts\arial.ttf for family Segoe UI, size 48
+2025-04-25 17:53:22,958 [INFO] Text tool clicked at scene coordinates: 144.0, 141.0
+2025-04-25 17:53:22,958 [INFO] Handling text tool click at 144.0, 141.0
+2025-04-25 17:53:29,235 [INFO] Text tool clicked at scene coordinates: 89.0, 104.0
+2025-04-25 17:53:29,235 [INFO] Handling text tool click at 89.0, 104.0
+2025-04-25 17:53:30,992 [INFO] Araç deðiþtirildi: select
+2025-04-25 17:54:03,688 [INFO] Applying final filter: contrast with value: 0.4
+2025-04-25 17:54:03,688 [INFO] Applying filter/adjustment: contrast, param: 0.4
+2025-04-25 17:54:09,522 [INFO] Applying final filter: saturation with value: 0.0
+2025-04-25 17:54:09,522 [INFO] Applying filter/adjustment: saturation, param: 0.0
+2025-04-25 17:54:13,369 [INFO] Applying filter/adjustment: grayscale, param: None
+2025-04-25 17:54:15,629 [INFO] Applying filter/adjustment: edge, param: None
+2025-04-25 17:54:21,692 [INFO] Applying final filter: saturation with value: 0.44
+2025-04-25 17:54:21,692 [INFO] Applying filter/adjustment: saturation, param: 0.44
+2025-04-25 17:54:26,560 [INFO] Applying final filter: blur with value: 1
+2025-04-25 17:54:26,560 [INFO] Applying filter/adjustment: blur, param: 1
+2025-04-25 17:54:33,189 [INFO] Applying final filter: contrast with value: 0.58
+2025-04-25 17:54:33,189 [INFO] Applying filter/adjustment: contrast, param: 0.58
+2025-04-25 17:57:07,375 [INFO] PyxelEdit baþlatýldý

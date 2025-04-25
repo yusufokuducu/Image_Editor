@@ -1,12 +1,16 @@
 from PyQt6.QtWidgets import QGraphicsView, QGraphicsScene, QMessageBox
 from PyQt6.QtGui import QPixmap, QPainterPath, QPen, QColor, QBrush, QFont, QPainter, QFontMetrics, QImage
-from PyQt6.QtCore import Qt, QRectF, QPointF, QSize
+from PyQt6.QtCore import Qt, QRectF, QPointF, QSize, pyqtSignal # Added pyqtSignal
 import numpy as np
 import logging
 
 class ImageView(QGraphicsView):
-    def __init__(self, parent=None):
+    # Signal to request text input at a specific scene point
+    textToolClicked = pyqtSignal(QPointF)
+
+    def __init__(self, main_window, parent=None): # Add main_window parameter
         super().__init__(parent)
+        self.main_window = main_window # Store reference to main window
         self.scene = QGraphicsScene(self)
         self.setScene(self.scene)
         self.pixmap_item = None
@@ -90,7 +94,19 @@ class ImageView(QGraphicsView):
             if self.selection_path_item:
                 self.scene.removeItem(self.selection_path_item)
                 self.selection_path_item = None
+
+            # Handle Text Tool click
+            if self.main_window.current_tool == 'text':
+                scene_point = self.mapToScene(event.pos())
+                logging.info(f"Text tool clicked at scene coordinates: {scene_point.x()}, {scene_point.y()}")
+                self.textToolClicked.emit(scene_point) # Emit signal with click position
+                self.selecting = False # Don't start selection
+                # Don't call super().mousePressEvent(event) for text tool to avoid ScrollHandDrag
+                return # Stop further processing for text tool click
+
+        # If not text tool, proceed with default behavior (selection or drag)
         super().mousePressEvent(event)
+
 
     def mouseMoveEvent(self, event):
         if self.selecting and self.pixmap_item:

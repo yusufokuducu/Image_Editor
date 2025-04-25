@@ -5,9 +5,9 @@ import gc
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QStatusBar, QMenuBar,
                              QFileDialog, QMessageBox, QInputDialog, QDockWidget,
                              QDialog, QVBoxLayout, QHBoxLayout, QLabel, QSlider,
-                             QPushButton)
-from PyQt6.QtGui import QAction, QPainter, QPixmap
-from PyQt6.QtCore import Qt, QTimer, pyqtSignal, QObject # Added QObject for signals
+                             QPushButton, QColorDialog, QFontDialog) # Added QColorDialog, QFontDialog
+from PyQt6.QtGui import QAction, QPainter, QPixmap, QFont, QColor # Added QFont, QColor
+from PyQt6.QtCore import Qt, QTimer, pyqtSignal, QObject, QPointF # Added QObject for signals, QPointF
 import logging
 from image_io import load_image, image_to_qpixmap
 from image_view import ImageView
@@ -18,8 +18,9 @@ from transform import rotate_image, flip_image, resize_image, crop_image
 from history import History, Command
 from layers import LayerManager
 import numpy as np
-from PIL import Image
+from PIL import Image, ImageDraw, ImageFont # Added ImageDraw, ImageFont
 from layer_panel import LayerPanel
+import platform # To find default fonts
 
 # --- Filter Slider Dialog ---
 class FilterSliderDialog(QDialog):
@@ -112,6 +113,7 @@ class MainWindow(QMainWindow):
         self.original_preview_image = None
         self.preview_active = False
         self.current_preview_filter_type = None # To know which filter is being previewed
+        self.current_tool = 'select' # Default tool ('select', 'text', etc.)
 
         # UI bileşenlerini oluştur
         self._init_ui()
@@ -211,8 +213,9 @@ class MainWindow(QMainWindow):
         transform_menu.addAction(crop_action)
 
         # Görüntü alanı (QGraphicsView tabanlı ImageView)
-        self.image_view = ImageView()
+        self.image_view = ImageView(self) # Pass main window reference
         self.setCentralWidget(self.image_view)
+        self.image_view.textToolClicked.connect(self.handle_text_tool_click) # Connect the signal
 
         # Katman panelini dock olarak ekle
         self.layer_panel = LayerPanel(self)
@@ -262,6 +265,42 @@ class MainWindow(QMainWindow):
         move_down_action.triggered.connect(self.move_layer_down)
         move_down_action.setShortcut('Ctrl+Down')
         layers_menu.addAction(move_down_action)
+
+        # Araçlar menüsü
+        tools_menu = self.menu_bar.addMenu('Araçlar')
+        text_tool_action = QAction('Metin Aracı', self)
+        text_tool_action.setCheckable(True) # Make it checkable to show active tool
+        text_tool_action.triggered.connect(lambda: self.set_tool('text'))
+        tools_menu.addAction(text_tool_action)
+        # Add selection tool action to allow switching back
+        select_tool_action = QAction('Seçim Aracı', self)
+        select_tool_action.setCheckable(True)
+        select_tool_action.setChecked(True) # Default tool
+        select_tool_action.triggered.connect(lambda: self.set_tool('select'))
+        tools_menu.addAction(select_tool_action)
+
+        # Group actions for exclusive checking (optional but good UI)
+        self.tool_actions = {
+            'select': select_tool_action,
+            'text': text_tool_action
+        }
+
+
+    def set_tool(self, tool_name):
+        """Sets the active tool and updates menu checks."""
+        if tool_name in self.tool_actions:
+            self.current_tool = tool_name
+            logging.info(f"Araç değiştirildi: {tool_name}")
+            for name, action in self.tool_actions.items():
+                action.setChecked(name == tool_name)
+            # Update status bar or cursor if needed
+            self.status_bar.showMessage(f"Aktif Araç: {tool_name.capitalize()}")
+            # Reset selection mode if switching away from selection tool?
+            # if tool_name != 'select':
+            #     self.image_view.clear_selection() # Or maybe keep selection? Decide later.
+        else:
+            logging.warning(f"Bilinmeyen araç adı: {tool_name}")
+
 
     def open_image(self):
         file_path, _ = QFileDialog.getOpenFileName(self, 'Resim Aç', '', 'Resim Dosyaları (*.png *.jpg *.jpeg *.bmp *.gif)')
@@ -967,6 +1006,189 @@ class MainWindow(QMainWindow):
         except Exception as e:
             logging.error(f"set_active_layer (MainWindow) hatası: {e}")
             # Hata durumunda sessizce devam etme, logla
+
+    def handle_text_tool_click(self, scene_pos: QPointF):
+        """Handles clicks when the text tool is active."""
+        logging.info(f"Handling text tool click at {scene_pos.x()}, {scene_pos.y()}")
+        if not hasattr(self, 'layers'):
+            QMessageBox.warning(self, 'Uyarı', 'Metin eklemek için önce bir resim açın!')
+            return
+
+        layer = self.layers.get_active_layer()
+        if layer is None or layer.image is None:
+            QMessageBox.warning(self, 'Uyarı', 'Metin eklemek için aktif bir katman seçin!')
+            return
+
+        # --- Get Text Properties ---
+        text, ok1 = QInputDialog.getText(self, 'Metin Ekle', 'Metni girin:')
+        if not ok1 or not text:
+            return # User cancelled or entered empty text
+
+        # Font Selection (Basic for now, using QFontDialog)
+        font, ok2 = QFontDialog.getFont(self)
+        if not ok2:
+            return # User cancelled font selection
+
+        # Color Selection
+        color = QColorDialog.getColor(Qt.GlobalColor.black, self, "Metin Rengi Seç")
+        if not color.isValid():
+            return # User cancelled color selection
+
+        # Convert QColor to RGBA tuple for PIL
+        text_color = (color.red(), color.green(), color.blue(), color.alpha())
+
+        # Convert scene coordinates to image coordinates (integer)
+        img_x = int(scene_pos.x())
+        img_y = int(scene_pos.y())
+
+        # --- Apply Text ---
+        old_img = layer.image.copy()
+        try:
+            # Use the selected QFont properties with PIL ImageFont
+            # Need to find a suitable font file (.ttf, .otf)
+            font_size = font.pointSize()
+            if font_size <= 0: font_size = 12 # Default size if pointSize is invalid
+            pil_font = self._get_pil_font(font.family(), font_size, font.styleName()) # Helper to find font file
+
+            new_img = self.draw_text_on_image(layer.image, text, (img_x, img_y), pil_font, text_color)
+            if new_img is None:
+                raise ValueError("Metin çizimi başarısız oldu.")
+
+            # --- History Command ---
+            current_layer_ref = layer
+            final_new_img = new_img.copy()
+            old_img_copy = old_img.copy()
+
+            def do_action():
+                try:
+                    current_layer_ref.image = final_new_img.copy()
+                    self.refresh_layers()
+                except Exception as e:
+                    logging.error(f"Metin ekleme (do) hatası: {e}")
+
+            def undo_action():
+                try:
+                    current_layer_ref.image = old_img_copy.copy()
+                    self.refresh_layers()
+                except Exception as e:
+                    logging.error(f"Metin ekleme (undo) hatası: {e}")
+
+            cmd = Command(do_action, undo_action, f'Metin Ekle: "{text[:20]}..."')
+            cmd.do()
+            self.history.push(cmd)
+            self.status_bar.showMessage('Metin eklendi.')
+
+        except Exception as e:
+            logging.error(f"Metin ekleme hatası: {e}")
+            QMessageBox.critical(self, 'Hata', f'Metin eklenirken hata oluştu: {e}')
+            # Restore original image on error
+            layer.image = old_img
+            self.refresh_layers()
+
+    def _get_pil_font(self, family, size, style="Regular"):
+        """Attempts to load a PIL ImageFont based on QFont properties."""
+        # This is a simplified and potentially fragile way to find fonts.
+        # A more robust solution would involve fontconfig (Linux), CoreText (macOS),
+        # or the Windows font directory, and better matching logic.
+        font_file = None
+        try:
+            # Try common system font locations
+            if platform.system() == "Windows":
+                font_dir = "C:/Windows/Fonts"
+                # Basic matching - improve this with style checks (Bold, Italic etc.)
+                potential_files = [f for f in os.listdir(font_dir) if f.lower().endswith(('.ttf', '.otf')) and family.lower() in f.lower()]
+                if potential_files:
+                    # Prioritize files matching style if possible
+                    style_matches = [f for f in potential_files if style.lower() in f.lower()]
+                    if style_matches:
+                        font_file = os.path.join(font_dir, style_matches[0])
+                    else:
+                        font_file = os.path.join(font_dir, potential_files[0]) # Fallback
+                else: # Fallback to Arial if family not found
+                     font_file = os.path.join(font_dir, "arial.ttf")
+            elif platform.system() == "Darwin": # macOS
+                font_dir = "/Library/Fonts" # System fonts
+                user_font_dir = os.path.expanduser("~/Library/Fonts")
+                # Simplified search - needs improvement
+                found = False
+                for d in [font_dir, user_font_dir]:
+                     if os.path.exists(d):
+                        potential_files = [f for f in os.listdir(d) if f.lower().endswith(('.ttf', '.otf', '.ttc')) and family.lower() in f.lower()]
+                        if potential_files:
+                            style_matches = [f for f in potential_files if style.lower() in f.lower()]
+                            if style_matches:
+                                font_file = os.path.join(d, style_matches[0])
+                            else:
+                                font_file = os.path.join(d, potential_files[0])
+                            found = True
+                            break
+                if not found: # Fallback
+                    font_file = "/System/Library/Fonts/Helvetica.ttc" # Common fallback
+            else: # Linux (basic guess)
+                font_dirs = ["/usr/share/fonts/truetype", "/usr/share/fonts/opentype", os.path.expanduser("~/.fonts")]
+                found = False
+                for d in font_dirs:
+                    if os.path.exists(d):
+                        for root, _, files in os.walk(d):
+                            potential_files = [f for f in files if f.lower().endswith(('.ttf', '.otf')) and family.lower() in f.lower()]
+                            if potential_files:
+                                style_matches = [f for f in potential_files if style.lower() in f.lower()]
+                                if style_matches:
+                                    font_file = os.path.join(root, style_matches[0])
+                                else:
+                                    font_file = os.path.join(root, potential_files[0])
+                                found = True
+                                break
+                    if found: break
+                if not found: # Fallback
+                    # Try finding DejaVu Sans, a common default
+                    dejavu_path = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
+                    if os.path.exists(dejavu_path):
+                        font_file = dejavu_path
+                    else: # Absolute fallback
+                        font_file = "arial.ttf" # Hope it's findable somehow
+
+            if font_file and os.path.exists(font_file):
+                 logging.info(f"Using font file: {font_file} for family {family}, size {size}")
+                 return ImageFont.truetype(font_file, size)
+            else:
+                 logging.warning(f"Font file for '{family}' not found or path invalid: {font_file}. Falling back to default.")
+                 # Load PIL default font if specific one not found
+                 return ImageFont.load_default()
+
+        except ImportError:
+            logging.error("PIL/Pillow ImageFont not found. Please install Pillow.")
+            return None
+        except Exception as e:
+            logging.error(f"Error loading font '{family}' size {size}: {e}. Falling back to default.")
+            try:
+                return ImageFont.load_default() # Fallback to PIL default
+            except:
+                 return None # Total failure
+
+    def draw_text_on_image(self, img: Image.Image, text: str, position: tuple, font: ImageFont.FreeTypeFont, color: tuple):
+        """Draws text onto a PIL image."""
+        if img is None or font is None:
+            logging.error("draw_text_on_image: Görüntü veya font geçersiz.")
+            return None
+
+        try:
+            # Ensure image is RGBA for drawing with alpha
+            if img.mode != 'RGBA':
+                img = img.convert('RGBA')
+
+            # Create a drawing context
+            draw = ImageDraw.Draw(img)
+
+            # Draw the text
+            # position is the top-left corner of the text bounding box
+            draw.text(position, text, fill=color, font=font)
+
+            return img
+        except Exception as e:
+            logging.error(f"Metin çizilirken hata: {e}")
+            return None
+
 
 def main():
     try:
