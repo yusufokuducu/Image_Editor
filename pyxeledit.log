@@ -9,3 +9,18 @@
 2025-04-25 16:45:58,041 [INFO] Filtre uygulanýyor: noise, param: 0.01
 2025-04-25 16:46:14,858 [INFO] Filtre uygulanýyor: sharpen, param: None
 2025-04-25 16:46:22,647 [INFO] Filtre uygulanýyor: noise, param: 1.0
+2025-04-25 16:51:36,503 [INFO] PyxelEdit baþlatýldý
+2025-04-25 16:51:58,195 [INFO] Filtre uygulanýyor: noise, param: 0.38
+2025-04-25 16:52:01,345 [INFO] Filtre uygulanýyor: grayscale, param: None
+2025-04-25 16:52:03,778 [INFO] Filtre uygulanýyor: edge, param: None
+2025-04-25 16:52:05,769 [INFO] Filtre uygulanýyor: sharpen, param: None
+2025-04-25 16:52:17,987 [INFO] Filtre uygulanýyor: blur, param: 8
+2025-04-25 16:52:20,718 [INFO] Filtre uygulanýyor: sharpen, param: None
+2025-04-25 16:52:23,608 [INFO] Filtre uygulanýyor: noise, param: 0.43
+2025-04-25 16:52:52,941 [INFO] Filtre uygulanýyor: sharpen, param: None
+2025-04-25 16:52:54,493 [INFO] Filtre uygulanýyor: sharpen, param: None
+2025-04-25 16:53:04,065 [INFO] Filtre uygulanýyor: blur, param: 5
+2025-04-25 17:07:59,398 [INFO] PyxelEdit baþlatýldý
+2025-04-25 17:08:19,521 [INFO] Ýþlem uygulanýyor: brightness, param: 0.46
+2025-04-25 17:08:27,649 [INFO] Ýþlem uygulanýyor: noise, param: 0.19
+2025-04-25 17:08:32,328 [INFO] Ýþlem uygulanýyor: grayscale, param: None

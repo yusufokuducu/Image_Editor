@@ -2,13 +2,18 @@ import sys
 import os
 import traceback
 import gc
-from PyQt6.QtWidgets import QApplication, QMainWindow, QStatusBar, QMenuBar, QFileDialog, QMessageBox, QInputDialog, QDockWidget
+from PyQt6.QtWidgets import (QApplication, QMainWindow, QStatusBar, QMenuBar,
+                             QFileDialog, QMessageBox, QInputDialog, QDockWidget,
+                             QDialog, QVBoxLayout, QHBoxLayout, QLabel, QSlider,
+                             QPushButton)
 from PyQt6.QtGui import QAction, QPainter, QPixmap
-from PyQt6.QtCore import Qt, QTimer
+from PyQt6.QtCore import Qt, QTimer, pyqtSignal
 import logging
 from image_io import load_image, image_to_qpixmap
 from image_view import ImageView
-from filters import apply_blur, apply_sharpen, apply_edge_enhance, apply_grayscale, apply_noise
+from filters import (apply_blur, apply_sharpen, apply_edge_enhance, apply_grayscale,
+                     apply_noise, apply_brightness, apply_contrast, apply_saturation,
+                     apply_hue)
 from transform import rotate_image, flip_image, resize_image, crop_image
 from history import History, Command
 from layers import LayerManager
@@ -16,8 +21,63 @@ import numpy as np
 from PIL import Image
 from layer_panel import LayerPanel
 
-# Ana logging yapılandırması main() fonksiyonuna taşındı
+# --- Filter Slider Dialog ---
+class FilterSliderDialog(QDialog):
+    """A dialog with a slider to get a filter parameter."""
+    def __init__(self, title, label_text, min_val, max_val, initial_val, step=1, decimals=0, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle(title)
+        self.decimals = decimals
+        self.step = step # Store step for potential float conversion
 
+        # Determine slider range based on decimals
+        self.slider_min = int(min_val * (10**decimals))
+        self.slider_max = int(max_val * (10**decimals))
+        self.slider_initial = int(initial_val * (10**decimals))
+        self.slider_step = int(step * (10**decimals)) # Slider step is always integer
+
+        layout = QVBoxLayout(self)
+
+        self.label = QLabel(f"{label_text}: {self._format_value(self.slider_initial)}")
+        layout.addWidget(self.label)
+
+        self.slider = QSlider(Qt.Orientation.Horizontal)
+        self.slider.setRange(self.slider_min, self.slider_max)
+        self.slider.setValue(self.slider_initial)
+        self.slider.setSingleStep(self.slider_step)
+        self.slider.setTickInterval(self.slider_step * 10) # Example tick interval
+        self.slider.setTickPosition(QSlider.TickPosition.TicksBelow)
+        self.slider.valueChanged.connect(self._update_label)
+        layout.addWidget(self.slider)
+
+        button_layout = QHBoxLayout()
+        self.ok_button = QPushButton("Tamam")
+        self.cancel_button = QPushButton("İptal")
+        button_layout.addStretch()
+        button_layout.addWidget(self.ok_button)
+        button_layout.addWidget(self.cancel_button)
+        layout.addLayout(button_layout)
+
+        self.ok_button.clicked.connect(self.accept)
+        self.cancel_button.clicked.connect(self.reject)
+
+    def _update_label(self, value):
+        self.label.setText(f"{self.label.text().split(':')[0]}: {self._format_value(value)}")
+
+    def _format_value(self, value):
+        """Formats the integer slider value back to the original scale."""
+        float_value = value / (10**self.decimals)
+        return f"{float_value:.{self.decimals}f}"
+
+    def get_value(self):
+        """Returns the selected value in the original scale (float or int)."""
+        slider_value = self.slider.value()
+        if self.decimals == 0:
+            return slider_value # Return as integer
+        else:
+            return slider_value / (10**self.decimals) # Return as float
+
+# --- Main Window ---
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -88,6 +148,22 @@ class MainWindow(QMainWindow):
         noise_action = QAction('Gelişmiş Noise Ekle', self)
         noise_action.triggered.connect(self.noise_dialog)
         filters_menu.addAction(noise_action)
+
+        # Ayarlamalar menüsü
+        adjust_menu = self.menu_bar.addMenu('Ayarlamalar')
+        bright_action = QAction('Parlaklık', self)
+        bright_action.triggered.connect(self.brightness_dialog)
+        adjust_menu.addAction(bright_action)
+        contrast_action = QAction('Kontrast', self)
+        contrast_action.triggered.connect(self.contrast_dialog)
+        adjust_menu.addAction(contrast_action)
+        sat_action = QAction('Doygunluk', self)
+        sat_action.triggered.connect(self.saturation_dialog)
+        adjust_menu.addAction(sat_action)
+        hue_action = QAction('Ton', self)
+        hue_action.triggered.connect(self.hue_dialog)
+        adjust_menu.addAction(hue_action)
+
 
         # Dönüşümler menüsü
         transform_menu = self.menu_bar.addMenu('Dönüşümler')
@@ -228,24 +304,78 @@ class MainWindow(QMainWindow):
         self.layer_panel.refresh() # Clear layer panel
 
     def blur_dialog(self):
-        val, ok = QInputDialog.getInt(self, 'Bulanıklık Yarıçapı', 'Yarıçap (1-20):', value=2, min=1, max=20)
-        if ok:
-            self.apply_filter('blur', val)
+        dialog = FilterSliderDialog(
+            title='Bulanıklık Ayarı',
+            label_text='Yarıçap',
+            min_val=1,
+            max_val=20,
+            initial_val=2,
+            step=1,
+            decimals=0, # Integer value
+            parent=self
+        )
+        if dialog.exec():
+            radius = dialog.get_value()
+            self.apply_filter('blur', radius)
 
     def noise_dialog(self):
-        val, ok = QInputDialog.getDouble(self, 'Noise Seviyesi', 'Noise (0.0-1.0):', value=0.1, min=0.01, max=1.0, decimals=2)
-        if ok:
-            self.apply_filter('noise', val)
+        dialog = FilterSliderDialog(
+            title='Noise Ayarı',
+            label_text='Miktar',
+            min_val=0.01,
+            max_val=1.0,
+            initial_val=0.1,
+            step=0.01,
+            decimals=2, # Float value with 2 decimals
+            parent=self
+        )
+        if dialog.exec():
+            amount = dialog.get_value()
+            self.apply_filter('noise', amount)
+
+    def brightness_dialog(self):
+        dialog = FilterSliderDialog(
+            title='Parlaklık Ayarı', label_text='Faktör',
+            min_val=0.1, max_val=3.0, initial_val=1.0, step=0.05, decimals=2, parent=self
+        )
+        if dialog.exec():
+            self.apply_filter('brightness', dialog.get_value())
+
+    def contrast_dialog(self):
+        dialog = FilterSliderDialog(
+            title='Kontrast Ayarı', label_text='Faktör',
+            min_val=0.1, max_val=3.0, initial_val=1.0, step=0.05, decimals=2, parent=self
+        )
+        if dialog.exec():
+            self.apply_filter('contrast', dialog.get_value())
+
+    def saturation_dialog(self):
+        dialog = FilterSliderDialog(
+            title='Doygunluk Ayarı', label_text='Faktör',
+            min_val=0.0, max_val=3.0, initial_val=1.0, step=0.05, decimals=2, parent=self
+        )
+        if dialog.exec():
+            self.apply_filter('saturation', dialog.get_value())
+
+    def hue_dialog(self):
+        dialog = FilterSliderDialog(
+            title='Ton Ayarı', label_text='Kaydırma (-180° ile +180°)',
+            min_val=-1.0, max_val=1.0, initial_val=0.0, step=0.01, decimals=2, parent=self
+        )
+        if dialog.exec():
+            self.apply_filter('hue', dialog.get_value())
+
 
     def apply_filter(self, filter_type, param=None):
         """
-        Seçili katmana filtre uygular.
+        Seçili katmana filtre veya ayarlama uygular.
 
         Args:
-            filter_type (str): Uygulanacak filtre tipi ('blur', 'sharpen', 'edge', 'grayscale', 'noise')
-            param: Filtre parametresi (blur için radius, noise için amount)
+            filter_type (str): Uygulanacak işlem tipi ('blur', 'sharpen', 'edge', 'grayscale', 'noise',
+                                                     'brightness', 'contrast', 'saturation', 'hue')
+            param: İşlem parametresi (faktör, yarıçap, miktar, kaydırma vb.)
         """
-        logging.info(f"Filtre uygulanıyor: {filter_type}, param: {param}")
+        logging.info(f"İşlem uygulanıyor: {filter_type}, param: {param}")
 
         # Aktif katmanı kontrol et
         if not hasattr(self, 'layers'):
@@ -288,8 +418,21 @@ class MainWindow(QMainWindow):
             elif filter_type == 'noise':
                 amount = param if param is not None else 0.1
                 new_img = apply_noise(img, amount)
+            # Yeni ayarlamalar
+            elif filter_type == 'brightness':
+                factor = param if param is not None else 1.0
+                new_img = apply_brightness(img, factor)
+            elif filter_type == 'contrast':
+                factor = param if param is not None else 1.0
+                new_img = apply_contrast(img, factor)
+            elif filter_type == 'saturation':
+                factor = param if param is not None else 1.0
+                new_img = apply_saturation(img, factor)
+            elif filter_type == 'hue':
+                shift = param if param is not None else 0.0
+                new_img = apply_hue(img, shift)
             else:
-                logging.warning(f"Bilinmeyen filtre tipi: {filter_type}")
+                logging.warning(f"Bilinmeyen filtre/ayarlama tipi: {filter_type}")
                 return
 
             # Sonuç görüntüsünü kontrol et
@@ -320,16 +463,16 @@ class MainWindow(QMainWindow):
                     logging.error(f"Filtre geri alma (undo) hatası: {e}")
 
             # Komutu oluştur ve uygula
-            cmd = Command(do, undo, f'Filtre: {filter_type}')
+            cmd = Command(do, undo, f'İşlem: {filter_type}') # Changed description slightly
             cmd.do()
             self.history.push(cmd)
 
             # Durum çubuğunu güncelle
-            self.status_bar.showMessage(f'{filter_type} filtresi uygulandı.')
+            self.status_bar.showMessage(f'{filter_type} işlemi uygulandı.') # Changed message slightly
 
         except Exception as e:
-            logging.error(f'apply_filter error: {e}')
-            QMessageBox.critical(self, 'Hata', f'Filtre uygulanırken hata oluştu: {e}')
+            logging.error(f'apply_filter/adjustment error: {e}')
+            QMessageBox.critical(self, 'Hata', f'İşlem uygulanırken hata oluştu: {e}')
             # Hata durumunda orijinal görüntüyü geri yükle
             if old_img is not None:
                 try:

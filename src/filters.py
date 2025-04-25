@@ -1,6 +1,6 @@
 import numpy as np
-from PIL import Image, ImageFilter
-import cv2
+from PIL import Image, ImageFilter, ImageEnhance, ImageChops
+import colorsys
 import logging
 
 def apply_blur(img, radius=2):
@@ -142,4 +142,105 @@ def apply_noise(img, amount=0.1):
             return img
     except Exception as e:
         logging.error(f'apply_noise error: {e}')
+        return img
+
+# --- Image Adjustments ---
+
+def apply_brightness(img, factor=1.0):
+    """Adjusts image brightness."""
+    try:
+        if img is None: return None
+        if not isinstance(img, Image.Image): return img
+        # Ensure RGBA for consistency, but enhancer works on RGB
+        img_rgb = img.convert('RGB')
+        enhancer = ImageEnhance.Brightness(img_rgb)
+        img_enhanced_rgb = enhancer.enhance(factor)
+        # Restore alpha channel if it existed
+        if 'A' in img.getbands():
+            alpha = img.getchannel('A')
+            img_enhanced = img_enhanced_rgb.convert('RGBA')
+            img_enhanced.putalpha(alpha)
+            return img_enhanced
+        else:
+            return img_enhanced_rgb.convert('RGBA') # Convert back to RGBA
+    except Exception as e:
+        logging.error(f"apply_brightness error: {e}")
+        return img
+
+def apply_contrast(img, factor=1.0):
+    """Adjusts image contrast."""
+    try:
+        if img is None: return None
+        if not isinstance(img, Image.Image): return img
+        img_rgb = img.convert('RGB')
+        enhancer = ImageEnhance.Contrast(img_rgb)
+        img_enhanced_rgb = enhancer.enhance(factor)
+        if 'A' in img.getbands():
+            alpha = img.getchannel('A')
+            img_enhanced = img_enhanced_rgb.convert('RGBA')
+            img_enhanced.putalpha(alpha)
+            return img_enhanced
+        else:
+            return img_enhanced_rgb.convert('RGBA')
+    except Exception as e:
+        logging.error(f"apply_contrast error: {e}")
+        return img
+
+def apply_saturation(img, factor=1.0):
+    """Adjusts image saturation (color intensity)."""
+    try:
+        if img is None: return None
+        if not isinstance(img, Image.Image): return img
+        img_rgb = img.convert('RGB')
+        enhancer = ImageEnhance.Color(img_rgb) # Color enhancer adjusts saturation
+        img_enhanced_rgb = enhancer.enhance(factor)
+        if 'A' in img.getbands():
+            alpha = img.getchannel('A')
+            img_enhanced = img_enhanced_rgb.convert('RGBA')
+            img_enhanced.putalpha(alpha)
+            return img_enhanced
+        else:
+            return img_enhanced_rgb.convert('RGBA')
+    except Exception as e:
+        logging.error(f"apply_saturation error: {e}")
+        return img
+
+def apply_hue(img, shift=0.0):
+    """Adjusts image hue. shift is -1.0 to 1.0 (representing -180 to +180 degrees)."""
+    try:
+        if img is None: return None
+        if not isinstance(img, Image.Image): return img
+
+        # Ensure shift is within a reasonable range, e.g., -1.0 to 1.0
+        shift = max(-1.0, min(shift, 1.0))
+
+        img_rgba = img.convert('RGBA')
+        img_arr = np.array(img_rgba).astype(np.float32) / 255.0
+
+        # Separate RGB and Alpha
+        rgb = img_arr[:, :, :3]
+        alpha = img_arr[:, :, 3]
+
+        # Convert RGB to HSV
+        # Apply colorsys.rgb_to_hsv pixel by pixel (vectorization is complex)
+        hsv = np.array([colorsys.rgb_to_hsv(p[0], p[1], p[2]) for row in rgb for p in row])
+        hsv = hsv.reshape(rgb.shape) # Reshape back to (height, width, 3)
+
+        # Apply hue shift (H is in range [0, 1])
+        hsv[:, :, 0] = (hsv[:, :, 0] + shift) % 1.0
+
+        # Convert HSV back to RGB
+        rgb_shifted = np.array([colorsys.hsv_to_rgb(p[0], p[1], p[2]) for row in hsv for p in row])
+        rgb_shifted = rgb_shifted.reshape(rgb.shape) # Reshape back
+
+        # Combine RGB and Alpha
+        rgba_shifted = np.dstack((rgb_shifted, alpha))
+
+        # Clip and convert back to uint8
+        rgba_shifted = np.clip(rgba_shifted * 255.0, 0, 255).astype(np.uint8)
+
+        return Image.fromarray(rgba_shifted, 'RGBA')
+
+    except Exception as e:
+        logging.error(f"apply_hue error: {e}")
         return img
