@@ -72,3 +72,41 @@
 2025-04-25 17:54:33,189 [INFO] Applying final filter: contrast with value: 0.58
 2025-04-25 17:54:33,189 [INFO] Applying filter/adjustment: contrast, param: 0.58
 2025-04-25 17:57:07,375 [INFO] PyxelEdit baþlatýldý
+2025-04-25 18:18:44,915 [INFO] PyxelEdit baþlatýldý
+2025-04-25 18:19:07,779 [INFO] Applying final filter: brightness with value: 0.78
+2025-04-25 18:19:07,779 [INFO] Applying filter/adjustment: brightness, param: 0.78
+2025-04-25 18:19:11,049 [INFO] Applying filter/adjustment: edge, param: None
+2025-04-25 18:19:15,400 [INFO] Applying filter/adjustment: edge, param: None
+2025-04-25 18:19:20,167 [INFO] Applying filter/adjustment: sharpen, param: None
+2025-04-25 18:19:25,231 [INFO] Applying filter/adjustment: sharpen, param: None
+2025-04-25 18:19:26,459 [INFO] Applying filter/adjustment: sharpen, param: None
+2025-04-25 18:19:32,288 [INFO] Applying final filter: blur with value: 1
+2025-04-25 18:19:32,289 [INFO] Applying filter/adjustment: blur, param: 1
+2025-04-25 18:19:38,500 [INFO] Aktif katman deðiþtirildi: 0
+2025-04-25 18:19:38,909 [INFO] Aktif katman deðiþtirildi: 1
+2025-04-25 18:19:39,520 [INFO] Aktif katman deðiþtirildi: 0
+2025-04-25 18:19:40,029 [INFO] Aktif katman deðiþtirildi: 1
+2025-04-25 18:19:43,137 [INFO] Araç deðiþtirildi: text
+2025-04-25 18:19:43,803 [INFO] Text tool clicked at scene coordinates: 121.0, 116.0
+2025-04-25 18:19:43,804 [INFO] Handling text tool click at 121.0, 116.0
+2025-04-25 18:20:27,684 [INFO] Using font file: C:/Windows/Fonts\arial.ttf for family Segoe UI, size 24
+2025-04-25 18:20:32,961 [INFO] Text tool clicked at scene coordinates: 378.0, 141.0
+2025-04-25 18:20:32,962 [INFO] Handling text tool click at 378.0, 141.0
+2025-04-25 18:20:34,874 [INFO] Araç deðiþtirildi: select
+2025-04-25 18:21:12,394 [INFO] Katman kopyalandý: Katman 2
+2025-04-25 18:21:12,981 [INFO] Katman yapýþtýrýldý: Katman 2 (Kopya)
+2025-04-25 18:21:22,002 [INFO] Katman kopyalandý: Katman 2 (Kopya)
+2025-04-25 18:21:22,385 [INFO] Katman yapýþtýrýldý: Katman 2 (Kopya) (Kopya)
+2025-04-25 18:21:29,153 [INFO] Katman kopyalandý: Katman 2 (Kopya) (Kopya)
+2025-04-25 18:21:29,633 [INFO] Katman yapýþtýrýldý: Katman 2 (Kopya) (Kopya) (Kopya)
+2025-04-25 18:21:50,976 [INFO] Filter preview cancelled: brightness. Restoring original.
+2025-04-25 18:21:53,456 [INFO] Katman yukarý taþýndý: 4 -> 3
+2025-04-25 18:21:53,920 [INFO] Katman yukarý taþýndý: 3 -> 2
+2025-04-25 18:21:54,094 [INFO] Katman yukarý taþýndý: 2 -> 1
+2025-04-25 18:21:54,243 [INFO] Katman yukarý taþýndý: 1 -> 0
+2025-04-25 18:21:54,766 [INFO] Katman aþaðý taþýndý: 0 -> 1
+2025-04-25 18:21:54,933 [INFO] Katman aþaðý taþýndý: 1 -> 2
+2025-04-25 18:21:55,082 [INFO] Katman aþaðý taþýndý: 2 -> 3
+2025-04-25 18:21:55,216 [INFO] Katman aþaðý taþýndý: 3 -> 4
+2025-04-25 18:21:57,701 [INFO] Aktif katman deðiþtirildi: 3
+2025-04-25 18:21:57,723 [INFO] Aktif katman deðiþtirildi: 2
