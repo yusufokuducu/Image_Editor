@@ -1,7 +1,10 @@
 import sys
+import os
+import traceback
+import gc
 from PyQt6.QtWidgets import QApplication, QMainWindow, QStatusBar, QMenuBar, QFileDialog, QMessageBox, QInputDialog, QDockWidget
 from PyQt6.QtGui import QAction, QPainter, QPixmap
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, QTimer
 import logging
 from image_io import load_image, image_to_qpixmap
 from image_view import ImageView
@@ -13,16 +16,27 @@ import numpy as np
 from PIL import Image
 from layer_panel import LayerPanel
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] %(message)s')
+# Ana logging yapılandırması main() fonksiyonuna taşındı
 
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle('PyxelEdit')
         self.setGeometry(100, 100, 1024, 768)
+
+        # Temel bileşenleri oluştur
         self.history = History()
         self.layers = LayerManager()
+
+        # Bellek temizleme zamanlayıcısı
+        self.gc_timer = QTimer(self)
+        self.gc_timer.timeout.connect(lambda: gc.collect())
+        self.gc_timer.start(30000)  # 30 saniyede bir bellek temizliği
+
+        # UI bileşenlerini oluştur
         self._init_ui()
+
+        logging.info("PyxelEdit başlatıldı")
 
     def _init_ui(self):
         self.status_bar = QStatusBar()
@@ -163,40 +177,55 @@ class MainWindow(QMainWindow):
                 merged = self.layers.merge_visible()
                 pixmap = image_to_qpixmap(merged)
                 self.image_view.set_image(pixmap)
-                self.status_bar.showMessage(f'{file_path} | {img.width}x{img.height}')
-                self.current_image = merged
-                self.current_image_path = file_path
-            else:
-                QMessageBox.critical(self, 'Hata', 'Resim yüklenemedi!')
+            self.status_bar.showMessage(f'{file_path} | {img.width}x{img.height}')
+            # self.current_image = merged # Removed: Rely on layers as source of truth
+            self.current_image_path = file_path
+            self.refresh_layers() # Update display and layer panel
+        else:
+            QMessageBox.critical(self, 'Hata', 'Resim yüklenemedi!')
 
     def save_image(self):
-        if not hasattr(self, 'current_image') or self.current_image is None or not hasattr(self, 'current_image_path'):
-            QMessageBox.warning(self, 'Uyarı', 'Kaydedilecek bir resim yok!')
+        # Save the merged image from layers
+        if not hasattr(self, 'layers') or not self.layers.layers or not hasattr(self, 'current_image_path'):
+            QMessageBox.warning(self, 'Uyarı', 'Kaydedilecek bir resim veya yol yok!')
             return
+        merged_image = self.layers.merge_visible()
+        if merged_image is None:
+             QMessageBox.warning(self, 'Uyarı', 'Görünür katman bulunamadı!')
+             return
         try:
-            self.current_image.save(self.current_image_path)
+            merged_image.save(self.current_image_path)
             self.status_bar.showMessage(f'Resim kaydedildi: {self.current_image_path}')
         except Exception as e:
+            logging.error(f"Save error: {e}")
             QMessageBox.critical(self, 'Hata', f'Resim kaydedilemedi!\n{e}')
 
     def save_image_as(self):
-        if not hasattr(self, 'current_image') or self.current_image is None:
+        # Save the merged image from layers to a new path
+        if not hasattr(self, 'layers') or not self.layers.layers:
             QMessageBox.warning(self, 'Uyarı', 'Kaydedilecek bir resim yok!')
             return
+        merged_image = self.layers.merge_visible()
+        if merged_image is None:
+             QMessageBox.warning(self, 'Uyarı', 'Görünür katman bulunamadı!')
+             return
         file_path, _ = QFileDialog.getSaveFileName(self, 'Farklı Kaydet', '', 'Resim Dosyaları (*.png *.jpg *.jpeg *.bmp *.gif)')
         if file_path:
             try:
-                self.current_image.save(file_path)
-                self.current_image_path = file_path
+                merged_image.save(file_path)
+                self.current_image_path = file_path # Update path if saved successfully
                 self.status_bar.showMessage(f'Resim farklı kaydedildi: {file_path}')
             except Exception as e:
+                logging.error(f"Save As error: {e}")
                 QMessageBox.critical(self, 'Hata', f'Resim kaydedilemedi!\n{e}')
 
     def close_image(self):
         self.image_view.scene.clear()
-        self.current_image = None
+        self.layers = LayerManager() # Reset layers
+        self.history = History() # Reset history
         self.current_image_path = None
         self.status_bar.clearMessage()
+        self.layer_panel.refresh() # Clear layer panel
 
     def blur_dialog(self):
         val, ok = QInputDialog.getInt(self, 'Bulanıklık Yarıçapı', 'Yarıçap (1-20):', value=2, min=1, max=20)
@@ -209,13 +238,44 @@ class MainWindow(QMainWindow):
             self.apply_filter('noise', val)
 
     def apply_filter(self, filter_type, param=None):
-        # Aktif katmana uygula
+        """
+        Seçili katmana filtre uygular.
+
+        Args:
+            filter_type (str): Uygulanacak filtre tipi ('blur', 'sharpen', 'edge', 'grayscale', 'noise')
+            param: Filtre parametresi (blur için radius, noise için amount)
+        """
+        logging.info(f"Filtre uygulanıyor: {filter_type}, param: {param}")
+
+        # Aktif katmanı kontrol et
+        if not hasattr(self, 'layers'):
+            QMessageBox.warning(self, 'Uyarı', 'Önce bir resim açmalısınız!')
+            return
+
         layer = self.layers.get_active_layer()
         if layer is None:
             QMessageBox.warning(self, 'Uyarı', 'Uygulanacak katman yok!')
             return
-        img = layer.image.copy()  # DAİMA kopya ile çalış
+
+        # Orijinal görüntüyü sakla (geri alma için)
+        old_img = None
         try:
+            old_img = layer.image.copy()  # Orijinal görüntünün kopyasını al
+        except Exception as e:
+            logging.error(f"Orijinal görüntü kopyalanamadı: {e}")
+            QMessageBox.critical(self, 'Hata', f'Görüntü kopyalanamadı: {e}')
+            return
+
+        # Filtre uygulama işlemi
+        try:
+            # Görüntüyü kontrol et
+            if not hasattr(layer, 'image') or layer.image is None:
+                raise ValueError("Geçerli bir görüntü yok")
+
+            # Görüntünün kopyasını al
+            img = layer.image.copy()
+
+            # Filtre tipine göre işlem yap
             if filter_type == 'blur':
                 radius = param if param is not None else 2
                 new_img = apply_blur(img, radius)
@@ -229,26 +289,67 @@ class MainWindow(QMainWindow):
                 amount = param if param is not None else 0.1
                 new_img = apply_noise(img, amount)
             else:
+                logging.warning(f"Bilinmeyen filtre tipi: {filter_type}")
                 return
+
+            # Sonuç görüntüsünü kontrol et
+            if new_img is None:
+                raise ValueError(f"Filtre sonucu geçersiz: {filter_type}")
+
+            # RGBA moduna dönüştür
             if not hasattr(new_img, 'mode') or new_img.mode != 'RGBA':
                 new_img = new_img.convert('RGBA')
-            # Kendi kendini referans eden bir yapı olup olmadığını kontrol et
-            if hasattr(new_img, '__dict__') and any(id(new_img) == id(v) for v in new_img.__dict__.values()):
-                raise ValueError('Efekt sonrası oluşan görselde recursive referans tespit edildi!')
-            layer.image = new_img.copy()  # Katmana daima kopya ata
-            self.refresh_layers()
+
+            # Geri alma/yineleme için komut oluştur (Lambda ile yakalama)
+            current_layer_ref = layer # Avoid closure issues
+            new_img_copy = new_img.copy()
+            old_img_copy = old_img.copy()
+
+            def do():
+                try:
+                    current_layer_ref.image = new_img_copy.copy()
+                    self.refresh_layers()
+                except Exception as e:
+                    logging.error(f"Filtre uygulama (do) hatası: {e}")
+
+            def undo():
+                try:
+                    current_layer_ref.image = old_img_copy.copy()
+                    self.refresh_layers()
+                except Exception as e:
+                    logging.error(f"Filtre geri alma (undo) hatası: {e}")
+
+            # Komutu oluştur ve uygula
+            cmd = Command(do, undo, f'Filtre: {filter_type}')
+            cmd.do()
+            self.history.push(cmd)
+
+            # Durum çubuğunu güncelle
             self.status_bar.showMessage(f'{filter_type} filtresi uygulandı.')
+
         except Exception as e:
-            import logging
             logging.error(f'apply_filter error: {e}')
             QMessageBox.critical(self, 'Hata', f'Filtre uygulanırken hata oluştu: {e}')
+            # Hata durumunda orijinal görüntüyü geri yükle
+            if old_img is not None:
+                try:
+                    layer.image = old_img.copy()
+                    self.refresh_layers()
+                except Exception as restore_error:
+                    logging.error(f"Orijinal görüntü geri yüklenirken hata: {restore_error}")
 
     def apply_transform(self, ttype):
-        if not hasattr(self, 'current_image') or self.current_image is None:
-            QMessageBox.warning(self, 'Uyarı', 'Dönüştürülecek bir resim yok!')
+        # Apply transform to the active layer
+        if not hasattr(self, 'layers'):
+             QMessageBox.warning(self, 'Uyarı', 'Önce bir resim açmalısınız!')
+             return
+        layer = self.layers.get_active_layer()
+        if layer is None or layer.image is None:
+            QMessageBox.warning(self, 'Uyarı', 'Dönüştürülecek aktif katman yok!')
             return
-        old_img = self.current_image.copy()
-        img = self.current_image
+
+        old_img = layer.image.copy()
+        img = layer.image # Operate on the layer's image
         if ttype == 'rotate90':
             img = rotate_image(img, 90)
         elif ttype == 'rotate180':
@@ -259,85 +360,173 @@ class MainWindow(QMainWindow):
             img = flip_image(img, 'horizontal')
         elif ttype == 'flip_v':
             img = flip_image(img, 'vertical')
-        else:
-            return
+            return # Unknown transform type
+
+        if img is None:
+             QMessageBox.critical(self, 'Hata', 'Dönüşüm başarısız oldu!')
+             return
+
+        # Ensure RGBA
+        if img.mode != 'RGBA':
+            img = img.convert('RGBA')
+
+        # Create command for undo/redo (capture copies)
+        current_layer_ref = layer
+        new_img_copy = img.copy()
+        old_img_copy = old_img.copy()
+
         def do():
-            self.current_image = img
-            pixmap = image_to_qpixmap(img)
-            self.image_view.set_image(pixmap)
+            try:
+                current_layer_ref.image = new_img_copy.copy()
+                self.refresh_layers() # Update display
+            except Exception as e:
+                logging.error(f"Dönüşüm uygulama (do) hatası: {e}")
         def undo():
-            self.current_image = old_img
-            pixmap = image_to_qpixmap(old_img)
-            self.image_view.set_image(pixmap)
+            try:
+                current_layer_ref.image = old_img_copy.copy()
+                self.refresh_layers() # Update display
+            except Exception as e:
+                logging.error(f"Dönüşüm geri alma (undo) hatası: {e}")
+
         cmd = Command(do, undo, f'Dönüşüm: {ttype}')
-        cmd.do()
+        cmd.do() # Apply the change
         self.history.push(cmd)
         self.status_bar.showMessage('Dönüşüm uygulandı: ' + ttype)
 
     def resize_dialog(self):
-        if not hasattr(self, 'current_image') or self.current_image is None:
-            QMessageBox.warning(self, 'Uyarı', 'Boyutlandırılacak bir resim yok!')
+        # Resize the active layer
+        if not hasattr(self, 'layers'):
+             QMessageBox.warning(self, 'Uyarı', 'Önce bir resim açmalısınız!')
+             return
+        layer = self.layers.get_active_layer()
+        if layer is None or layer.image is None:
+            QMessageBox.warning(self, 'Uyarı', 'Boyutlandırılacak aktif katman yok!')
             return
-        w, h = self.current_image.width, self.current_image.height
+
+        w, h = layer.image.width, layer.image.height
         width, ok1 = QInputDialog.getInt(self, 'Yeniden Boyutlandır', 'Yeni genişlik:', w, 1, 10000)
-        if not ok1:
-            return
+        if not ok1: return
         height, ok2 = QInputDialog.getInt(self, 'Yeniden Boyutlandır', 'Yeni yükseklik:', h, 1, 10000)
-        if not ok2:
-            return
+        if not ok2: return
         keep_aspect, _ = QInputDialog.getItem(self, 'Oran Koru', 'Oran korunsun mu?', ['Evet', 'Hayır'], 0, False)
-        old_img = self.current_image.copy()
-        img = resize_image(self.current_image, width, height, keep_aspect == 'Evet')
+
+        old_img = layer.image.copy()
+        try:
+            img = resize_image(layer.image, width, height, keep_aspect == 'Evet')
+            if img is None: raise ValueError("Resize returned None")
+            # Ensure RGBA
+            if img.mode != 'RGBA': img = img.convert('RGBA')
+        except Exception as e:
+            logging.error(f"Resize error: {e}")
+            QMessageBox.critical(self, 'Hata', f'Yeniden boyutlandırma başarısız: {e}')
+            return
+
+        # Create command for undo/redo (capture copies)
+        current_layer_ref = layer
+        new_img_copy = img.copy()
+        old_img_copy = old_img.copy()
+
         def do():
-            self.current_image = img
-            pixmap = image_to_qpixmap(img)
-            self.image_view.set_image(pixmap)
+            try:
+                current_layer_ref.image = new_img_copy.copy()
+                self.refresh_layers() # Update display
+            except Exception as e:
+                logging.error(f"Resize uygulama (do) hatası: {e}")
         def undo():
-            self.current_image = old_img
-            pixmap = image_to_qpixmap(old_img)
-            self.image_view.set_image(pixmap)
+            try:
+                current_layer_ref.image = old_img_copy.copy()
+                self.refresh_layers() # Update display
+            except Exception as e:
+                logging.error(f"Resize geri alma (undo) hatası: {e}")
+
         cmd = Command(do, undo, 'Yeniden Boyutlandır')
-        cmd.do()
+        cmd.do() # Apply the change
         self.history.push(cmd)
-        self.status_bar.showMessage(f'Yeniden boyutlandırıldı: {width}x{height} (Oran Koru: {keep_aspect})')
+        self.status_bar.showMessage(f'Aktif katman yeniden boyutlandırıldı: {width}x{height} (Oran Koru: {keep_aspect})')
 
     def crop_selected(self):
-        if not hasattr(self, 'current_image') or self.current_image is None:
-            QMessageBox.warning(self, 'Uyarı', 'Kırpılacak bir resim yok!')
+        # Crop the active layer based on selection
+        if not hasattr(self, 'layers'):
+             QMessageBox.warning(self, 'Uyarı', 'Önce bir resim açmalısınız!')
+             return
+        layer = self.layers.get_active_layer()
+        if layer is None or layer.image is None:
+            QMessageBox.warning(self, 'Uyarı', 'Kırpılacak aktif katman yok!')
             return
+
         box = self.image_view.get_selected_box()
         if not box:
             QMessageBox.warning(self, 'Uyarı', 'Kırpma için bir alan seçmelisiniz!')
             return
-        old_img = self.current_image.copy()
-        img = crop_image(self.current_image, box)
+
+        old_img = layer.image.copy()
+        try:
+            img = crop_image(layer.image, box)
+            if img is None: raise ValueError("Crop returned None")
+             # Ensure RGBA
+            if img.mode != 'RGBA': img = img.convert('RGBA')
+        except Exception as e:
+            logging.error(f"Crop error: {e}")
+            QMessageBox.critical(self, 'Hata', f'Kırpma başarısız: {e}')
+            return
+
+        # Create command for undo/redo (capture copies)
+        current_layer_ref = layer
+        new_img_copy = img.copy()
+        old_img_copy = old_img.copy()
+
         def do():
-            self.current_image = img
-            pixmap = image_to_qpixmap(img)
-            self.image_view.set_image(pixmap)
+            try:
+                current_layer_ref.image = new_img_copy.copy()
+                # After cropping, the layer size changes, potentially affecting other layers.
+                # Option 1: Resize other layers (complex)
+                # Option 2: Keep original canvas size, fill outside crop with transparent (simpler)
+                # Implementing Option 2 for now: Create a new transparent image of the original size
+                # and paste the cropped image onto it.
+                new_canvas = Image.new('RGBA', old_img_copy.size, (0,0,0,0))
+                paste_x = box[0] # Use the top-left corner of the crop box
+                paste_y = box[1]
+                new_canvas.paste(current_layer_ref.image, (paste_x, paste_y))
+                current_layer_ref.image = new_canvas # Update layer with the new canvas
+
+                self.refresh_layers() # Update display
+                self.image_view.clear_selection() # Clear selection after crop
+            except Exception as e:
+                logging.error(f"Kırpma uygulama (do) hatası: {e}")
         def undo():
-            self.current_image = old_img
-            pixmap = image_to_qpixmap(old_img)
-            self.image_view.set_image(pixmap)
+            try:
+                current_layer_ref.image = old_img_copy.copy()
+                self.refresh_layers() # Update display
+            except Exception as e:
+                logging.error(f"Kırpma geri alma (undo) hatası: {e}")
+
         cmd = Command(do, undo, 'Kırp')
-        cmd.do()
+        cmd.do() # Apply the change
         self.history.push(cmd)
-        self.status_bar.showMessage('Seçili alan kırpıldı.')
-        self.image_view.clear_selection()
+        self.status_bar.showMessage('Aktif katman kırpıldı.')
+        # Selection is cleared within the 'do' function now
 
     def undo(self):
-        self.history.undo()
-        self.status_bar.showMessage('Geri alındı.')
+        if self.history.undo():
+            self.status_bar.showMessage('Geri alındı.')
+            self.refresh_layers() # Ensure display updates after undo
+        else:
+            self.status_bar.showMessage('Geri alınacak işlem yok.')
 
     def redo(self):
-        self.history.redo()
-        self.status_bar.showMessage('Yinele uygulandı.')
+        if self.history.redo():
+            self.status_bar.showMessage('Yinele uygulandı.')
+            self.refresh_layers() # Ensure display updates after redo
+        else:
+            self.status_bar.showMessage('Yinelenecek işlem yok.')
 
     def add_layer(self):
-        if not hasattr(self, 'current_image') or self.current_image is None:
-            QMessageBox.warning(self, 'Uyarı', 'Önce bir resim açmalısınız!')
-            return
-        img = self.current_image.copy()
+        # Add a new layer based on the size of the first layer, filled with transparency
+        if not hasattr(self, 'layers') or not self.layers.layers:
+             QMessageBox.warning(self, 'Uyarı', 'Yeni katman eklemek için önce bir resim açın veya mevcut bir katman olmalı!')
+             return
+        base_size = self.layers.layers[0].image.size
+        img = Image.new('RGBA', base_size, (0,0,0,0)) # Create transparent layer
         self.layers.add_layer(img, f'Katman {len(self.layers.layers)+1}')
         self.refresh_layers()
         self.status_bar.showMessage('Yeni katman eklendi.')
@@ -352,12 +541,37 @@ class MainWindow(QMainWindow):
         self.status_bar.showMessage('Katman silindi.')
 
     def merge_layers(self):
-        merged = self.layers.merge_visible()
-        if merged:
-            self.current_image = merged
-            pixmap = image_to_qpixmap(merged)
-            self.image_view.set_image(pixmap)
-            self.status_bar.showMessage('Katmanlar birleştirildi.')
+        # Merge visible layers into a single new layer
+        if not hasattr(self, 'layers') or len(self.layers.layers) < 2:
+            QMessageBox.warning(self, 'Uyarı', 'Birleştirmek için en az 2 katman olmalı.')
+            return
+
+        merged_img = self.layers.merge_visible()
+        if merged_img:
+            # Keep track of old layers and indices for undo
+            old_layers_list = list(self.layers.layers) # Shallow copy is enough
+            old_active_index = self.layers.active_index
+
+            def do():
+                # Remove all existing layers
+                self.layers.layers.clear()
+                # Add the merged layer
+                self.layers.add_layer(merged_img.copy(), 'Birleştirilmiş Katman')
+                self.refresh_layers()
+                self.status_bar.showMessage('Görünür katmanlar birleştirildi.')
+
+            def undo():
+                # Restore old layers
+                self.layers.layers = list(old_layers_list) # Restore from copy
+                self.layers.active_index = old_active_index
+                self.refresh_layers()
+                self.status_bar.showMessage('Katman birleştirme geri alındı.')
+
+            cmd = Command(do, undo, 'Katmanları Birleştir')
+            cmd.do()
+            self.history.push(cmd)
+        else:
+            QMessageBox.warning(self, 'Uyarı', 'Birleştirilecek görünür katman bulunamadı.')
 
     def toggle_layer_visibility(self):
         idx = self.layers.active_index
@@ -383,50 +597,138 @@ class MainWindow(QMainWindow):
             self.status_bar.showMessage('Katman aşağı taşındı.')
 
     def refresh_layers(self):
-        # Preview için Qt üzerinden katmanları birleştir
-        pixmap = self._compose_layers_pixmap()
-        if pixmap:
-            self.image_view.set_image(pixmap)
-        # Katman panelini de güncelle
-        self.layer_panel.refresh()
+        """Katmanları birleştirip görüntüyü günceller ve katman panelini yeniler."""
+        try:
+            # Katmanlar var mı kontrol et
+            if not hasattr(self, 'layers') or not self.layers.layers:
+                logging.warning("refresh_layers: Katman yok")
+                return
+
+            # Katmanları birleştirip pixmap oluştur (display için)
+            pixmap = self._compose_layers_pixmap()
+            if pixmap and not pixmap.isNull():
+                self.image_view.set_image(pixmap)
+            elif not self.layers.layers: # Handle case where all layers are deleted
+                 self.image_view.scene.clear()
+            # else: # Handle case where there are layers but none are visible or valid
+            #     # Optionally display a blank canvas or message
+            #     # For now, do nothing, leaving the view as is or empty
+            #     pass
+
+            # Katman panelini güncelle
+            self.layer_panel.refresh()
+        except Exception as e:
+            logging.error(f"refresh_layers error: {e}")
+            QMessageBox.critical(self, 'Hata', f'Katmanlar güncellenirken hata oluştu: {e}')
 
     def _compose_layers_pixmap(self):
-        from PyQt6.QtGui import QPainter, QPixmap
-        from PyQt6.QtCore import Qt
-        # Katmanları al
-        layers = self.layers.layers
-        if not layers:
-            return None
-        pixmaps = []
-        for layer in layers:
-            if not layer.visible:
-                continue
-            pm = image_to_qpixmap(layer.image)
-            if pm:
-                pixmaps.append(pm)
-        if not pixmaps:
-            return None
-        # Boyutları sabit kabul et
-        width = pixmaps[0].width()
-        height = pixmaps[0].height()
-        result = QPixmap(width, height)
-        result.fill(Qt.GlobalColor.transparent)
-        painter = QPainter(result)
-        for pm in pixmaps:
-            painter.drawPixmap(0, 0, pm)
-        painter.end()
-        return result
+        """Görünür katmanları birleştirerek bir QPixmap oluşturur."""
+        try:
+            from PyQt6.QtGui import QPainter, QPixmap
+            from PyQt6.QtCore import Qt
 
-    # Katman değiştirme fonksiyonu (örnek, daha gelişmiş UI için geliştirilebilir)
+            # Katmanları kontrol et
+            if not hasattr(self, 'layers') or not self.layers.layers:
+                return None
+
+            # Görünür katmanları al
+            visible_layers = [layer for layer in self.layers.layers if layer.visible]
+            if not visible_layers:
+                logging.warning("_compose_layers_pixmap: Görünür katman yok")
+                return None
+
+            # Katmanları pixmap'e dönüştür
+            pixmaps = []
+            for layer in visible_layers:
+                try:
+                    if not hasattr(layer, 'image') or layer.image is None:
+                        continue
+
+                    pm = image_to_qpixmap(layer.image)
+                    if pm and not pm.isNull():
+                        pixmaps.append(pm)
+                except Exception as e:
+                    logging.error(f"Katman pixmap'e dönüştürülürken hata: {e}")
+                    continue
+
+            if not pixmaps:
+                return None
+
+            # Boyutları al
+            width = pixmaps[0].width()
+            height = pixmaps[0].height()
+
+            # Sonuç pixmap'i oluştur
+            result = QPixmap(width, height)
+            result.fill(Qt.GlobalColor.transparent)
+
+            # Katmanları çiz
+            painter = QPainter(result)
+            for pm in pixmaps:
+                if not pm.isNull():
+                    painter.drawPixmap(0, 0, pm)
+            painter.end()
+
+            return result
+        except Exception as e:
+            logging.error(f"_compose_layers_pixmap error: {e}")
+            return None
+
     def set_active_layer(self, idx):
-        self.layers.set_active_layer(idx)
-        self.refresh_layers()
+        """Aktif katmanı değiştirir. Özyinelemeli referans sorunlarını önlemek için optimize edilmiştir."""
+        try:
+            # Katman kontrolü
+            if not hasattr(self, 'layers'):
+                logging.warning("set_active_layer: Katman yok")
+                return
+
+            # İndeks kontrolü
+            if not (0 <= idx < len(self.layers.layers)):
+                logging.warning(f"set_active_layer: Geçersiz indeks: {idx}")
+                return
+
+            # Aktif katmanı LayerManager üzerinden değiştir
+            self.layers.set_active_layer(idx) # Use LayerManager's method
+
+            # Katman panelini güncelle (LayerManager değişikliği tetiklemeli veya burada yapılmalı)
+            # LayerPanel'in refresh'i zaten set_active_layer içinde çağrılıyor olmalı
+            # Eğer LayerPanel refresh'i MainWindow'dan bağımsız değilse, burada çağır:
+            self.layer_panel.refresh()
+
+            logging.info(f"Aktif katman değiştirildi: {idx}")
+
+        except Exception as e:
+            logging.error(f"set_active_layer (MainWindow) hatası: {e}")
+            # Hata durumunda sessizce devam etme, logla
 
 def main():
-    app = QApplication(sys.argv)
-    window = MainWindow()
-    window.show()
-    sys.exit(app.exec())
+    try:
+        # Hata ayıklama seviyesini ayarla
+        logging.basicConfig(level=logging.INFO,
+                           format='%(asctime)s [%(levelname)s] %(message)s',
+                           handlers=[
+                               logging.FileHandler("pyxeledit.log"),
+                               logging.StreamHandler()
+                           ])
+
+        # Uygulama başlatma
+        app = QApplication(sys.argv)
+
+        # Ana pencereyi oluştur
+        window = MainWindow()
+        window.show()
+
+        # Uygulama döngüsünü başlat
+        sys.exit(app.exec())
+    except Exception as e:
+        logging.critical(f"Uygulama başlatılırken kritik hata: {e}")
+        # Hata mesajını göster
+        if 'app' in locals():
+            QMessageBox.critical(None, 'Kritik Hata',
+                               f'Uygulama başlatılırken beklenmeyen bir hata oluştu:\n{e}\n\n'
+                               f'Lütfen pyxeledit.log dosyasını kontrol edin.')
+
+
 
 if __name__ == '__main__':
     main()

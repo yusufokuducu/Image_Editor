@@ -1,0 +1,11 @@
+2025-04-25 14:30:13,447 [CRITICAL] Uygulama baþlatýlýrken kritik hata: 'MainWindow' object has no attribute 'clean_memory'
+2025-04-25 14:30:55,072 [INFO] PyxelEdit baþlatýldý
+2025-04-25 14:31:07,800 [INFO] Filtre uygulanýyor: blur, param: 9
+2025-04-25 14:34:15,383 [INFO] PyxelEdit baþlatýldý
+2025-04-25 14:37:06,795 [INFO] PyxelEdit baþlatýldý
+2025-04-25 16:30:42,571 [INFO] PyxelEdit baþlatýldý
+2025-04-25 16:45:21,077 [INFO] PyxelEdit baþlatýldý
+2025-04-25 16:45:39,732 [INFO] Filtre uygulanýyor: blur, param: 11
+2025-04-25 16:45:58,041 [INFO] Filtre uygulanýyor: noise, param: 0.01
+2025-04-25 16:46:14,858 [INFO] Filtre uygulanýyor: sharpen, param: None
+2025-04-25 16:46:22,647 [INFO] Filtre uygulanýyor: noise, param: 1.0

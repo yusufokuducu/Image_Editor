@@ -1,5 +1,6 @@
-from PyQt6.QtWidgets import QWidget, QVBoxLayout, QListWidget, QPushButton, QHBoxLayout, QLabel
+from PyQt6.QtWidgets import QWidget, QVBoxLayout, QListWidget, QPushButton, QHBoxLayout, QLabel, QMessageBox
 from PyQt6.QtCore import Qt
+import logging
 
 class LayerPanel(QWidget):
     def __init__(self, main_window):
@@ -30,39 +31,129 @@ class LayerPanel(QWidget):
         self.refresh()
 
     def refresh(self):
-        self.list_widget.clear()
-        for idx, layer in enumerate(self.main_window.layers.layers):
-            text = f"{'👁️' if layer.visible else '❌'} {layer.name}"
-            self.list_widget.addItem(text)
-        self.list_widget.setCurrentRow(self.main_window.layers.active_index)
+        try:
+            self.list_widget.clear()
+
+            # Katman listesi boşsa uyarı göster
+            if not hasattr(self.main_window, 'layers') or not self.main_window.layers.layers:
+                self.list_widget.addItem("Katman yok - Önce bir resim açın")
+                return
+
+            # Katmanları listele
+            for idx, layer in enumerate(self.main_window.layers.layers):
+                text = f"{'👁️' if layer.visible else '❌'} {layer.name}"
+                self.list_widget.addItem(text)
+
+            # Aktif katmanı seç
+            active_idx = self.main_window.layers.active_index
+            if 0 <= active_idx < len(self.main_window.layers.layers):
+                # Programatik olarak satır değiştirirken sinyalleri engelle
+                self.list_widget.blockSignals(True)
+                self.list_widget.setCurrentRow(active_idx)
+                self.list_widget.blockSignals(False)
+        except Exception as e:
+            logging.error(f"Katman paneli güncellenirken hata: {e}")
 
     def set_active_layer(self, idx):
-        self.main_window.set_active_layer(idx)
+        """Aktif katmanı değiştirir. Özyinelemeli referans sorunlarını önlemek için optimize edilmiştir."""
+        try:
+            # Geçersiz indeks kontrolü
+            if idx < 0:
+                return
+
+            # Katman listesi kontrolü
+            if not hasattr(self.main_window, 'layers') or not self.main_window.layers.layers:
+                return
+
+            # İndeks sınırları kontrolü
+            if idx >= len(self.main_window.layers.layers):
+                return
+
+            # Aktif katmanı MainWindow üzerinden değiştir
+            # Bu, hem LayerManager'daki indeksi günceller hem de
+            # MainWindow.refresh_layers() çağrısını tetikler (gerekirse).
+            self.main_window.set_active_layer(idx)
+            # Panel refresh'i MainWindow.set_active_layer tarafından tetiklenmeli
+            # (çünkü o da LayerPanel.refresh çağırıyor).
+            # Bu yüzden buradaki self.refresh() çağrısı kaldırılabilir veya
+            # MainWindow.set_active_layer'ın bunu yapması sağlanabilir.
+            # Şimdilik bırakalım, en kötü ihtimalle çift refresh olur.
+            # self.refresh() # Bu satır gereksiz, MainWindow.set_active_layer zaten refresh tetikliyor.
+            logging.debug(f"Aktif katman değiştirme isteği gönderildi: {idx}")
+
+        except Exception as e:
+            logging.error(f"set_active_layer (LayerPanel) hatası: {e}")
+            # Hata durumunda logla
 
     def move_up(self):
-        idx = self.list_widget.currentRow()
-        if idx > 0:
-            self.main_window.layers.move_layer(idx, idx-1)
-            self.refresh()
-            self.main_window.refresh_layers()
+        try:
+            idx = self.list_widget.currentRow()
+            if not hasattr(self.main_window, 'layers') or not self.main_window.layers.layers:
+                QMessageBox.warning(self, 'Uyarı', 'Taşınacak katman yok!')
+                return
+
+            if idx > 0:
+                self.main_window.layers.move_layer(idx, idx-1)
+                self.refresh()
+                self.main_window.refresh_layers()
+                logging.info(f"Katman yukarı taşındı: {idx} -> {idx-1}")
+        except Exception as e:
+            logging.error(f"move_up error: {e}")
+            QMessageBox.warning(self, 'Uyarı', f'Katman taşınırken hata: {e}')
 
     def move_down(self):
-        idx = self.list_widget.currentRow()
-        if idx < len(self.main_window.layers.layers)-1:
-            self.main_window.layers.move_layer(idx, idx+1)
-            self.refresh()
-            self.main_window.refresh_layers()
+        try:
+            idx = self.list_widget.currentRow()
+            if not hasattr(self.main_window, 'layers') or not self.main_window.layers.layers:
+                QMessageBox.warning(self, 'Uyarı', 'Taşınacak katman yok!')
+                return
+
+            if idx < len(self.main_window.layers.layers)-1:
+                self.main_window.layers.move_layer(idx, idx+1)
+                self.refresh()
+                self.main_window.refresh_layers()
+                logging.info(f"Katman aşağı taşındı: {idx} -> {idx+1}")
+        except Exception as e:
+            logging.error(f"move_down error: {e}")
+            QMessageBox.warning(self, 'Uyarı', f'Katman taşınırken hata: {e}')
 
     def copy_layer(self):
-        idx = self.list_widget.currentRow()
-        if 0 <= idx < len(self.main_window.layers.layers):
-            import copy
-            self.copied_layer = copy.deepcopy(self.main_window.layers.layers[idx])
+        try:
+            idx = self.list_widget.currentRow()
+            if not hasattr(self.main_window, 'layers') or not self.main_window.layers.layers:
+                QMessageBox.warning(self, 'Uyarı', 'Kopyalanacak katman yok!')
+                return
+
+            if 0 <= idx < len(self.main_window.layers.layers):
+                import copy
+                try:
+                    self.copied_layer = copy.deepcopy(self.main_window.layers.layers[idx])
+                    logging.info(f"Katman kopyalandı: {self.copied_layer.name}")
+                except Exception as e:
+                    logging.error(f"Katman kopyalanırken hata: {e}")
+                    QMessageBox.warning(self, 'Uyarı', f'Katman kopyalanırken hata: {e}')
+        except Exception as e:
+            logging.error(f"copy_layer error: {e}")
 
     def paste_layer(self):
-        if self.copied_layer:
+        try:
+            if not self.copied_layer:
+                QMessageBox.warning(self, 'Uyarı', 'Yapıştırılacak katman yok! Önce bir katman kopyalayın.')
+                return
+
+            if not hasattr(self.main_window, 'layers'):
+                QMessageBox.warning(self, 'Uyarı', 'Önce bir resim açmalısınız!')
+                return
+
             import copy
-            new_layer = copy.deepcopy(self.copied_layer)
-            self.main_window.layers.add_layer(new_layer.image, new_layer.name + ' (Kopya)')
-            self.refresh()
-            self.main_window.refresh_layers()
+            try:
+                new_layer = copy.deepcopy(self.copied_layer)
+                self.main_window.layers.add_layer(new_layer.image, new_layer.name + ' (Kopya)')
+                self.refresh()
+                self.main_window.refresh_layers()
+                logging.info(f"Katman yapıştırıldı: {new_layer.name} (Kopya)")
+            except Exception as e:
+                logging.error(f"Katman yapıştırılırken hata: {e}")
+                QMessageBox.warning(self, 'Uyarı', f'Katman yapıştırılırken hata: {e}')
+        except Exception as e:
+            logging.error(f"paste_layer error: {e}")

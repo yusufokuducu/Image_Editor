@@ -1,10 +1,31 @@
 import PIL.Image as pil_image
+import logging
 
 class Layer:
     def __init__(self, image: pil_image.Image, name: str = 'Layer', visible: bool = True):
-        self.image = image.copy()
-        self.name = name
-        self.visible = visible
+        try:
+            if image is None:
+                raise ValueError("Layer oluşturulurken görüntü None olamaz")
+
+            # Görüntünün geçerli bir PIL görüntüsü olduğundan emin ol
+            if not isinstance(image, pil_image.Image):
+                raise TypeError(f"Görüntü PIL.Image türünde olmalı, alınan: {type(image)}")
+
+            # Görüntünün kopyasını al
+            self.image = image.copy()
+
+            # Görüntünün RGBA modunda olduğundan emin ol
+            if self.image.mode != 'RGBA':
+                self.image = self.image.convert('RGBA')
+
+            self.name = name
+            self.visible = visible
+        except Exception as e:
+            logging.error(f"Layer oluşturulurken hata: {e}")
+            # Hata durumunda boş bir görüntü oluştur
+            self.image = pil_image.new('RGBA', (100, 100), (0, 0, 0, 0))
+            self.name = name
+            self.visible = visible
 
 class LayerManager:
     def __init__(self):
@@ -32,29 +53,62 @@ class LayerManager:
         if 0 <= index < len(self.layers):
             self.active_index = index
     def merge_visible(self):
-        import logging
-        if not self.layers:
-            return None
-        base_size = self.layers[0].image.size  # (width, height)
-        # PIL ile boş RGBA görüntü
-        merged = pil_image.new('RGBA', base_size, (0, 0, 0, 0))
-        for idx, l in enumerate(self.layers):
-            img = l.image
-            logging.debug(f'Layer {idx}: mode={getattr(img, "mode", None)}, size={getattr(img, "size", None)}')
-            if img.mode != 'RGBA':
-                img = img.convert('RGBA')
-            if img.size != base_size:
-                img = img.resize(base_size)
-            # Recursive referans kontrolü
-            if hasattr(img, '__dict__') and any(id(img) == id(v) for v in img.__dict__.values()):
-                logging.error(f'Layer {idx} image recursive referans içeriyor!')
-                continue
-            if l.visible:
-                # Alpha kompozisyon
-                merged = pil_image.alpha_composite(merged, img)
-        if merged.mode != 'RGBA':
-            merged = merged.convert('RGBA')
-        return merged
+        """
+        Görünür katmanları birleştirerek tek bir görüntü oluşturur.
+        Özyinelemeli referans sorunlarını önlemek için optimize edilmiştir.
+        """
+        try:
+            # Katman yoksa None döndür
+            if not self.layers:
+                logging.warning("Birleştirilecek katman yok")
+                return None
+
+            # Görünür katmanları filtrele
+            visible_layers = [l for l in self.layers if l.visible]
+            if not visible_layers:
+                logging.warning("Görünür katman yok")
+                return pil_image.new('RGBA', (100, 100), (0, 0, 0, 0))
+
+            # Temel boyutu belirle
+            base_size = self.layers[0].image.size  # (width, height)
+
+            # Boş RGBA görüntü oluştur
+            merged = pil_image.new('RGBA', base_size, (0, 0, 0, 0))
+
+            # Görünür katmanları birleştir
+            for idx, layer in enumerate(visible_layers):
+                try:
+                    # Katman görüntüsünün kopyasını al (özyinelemeli referansları önlemek için)
+                    img_copy = layer.image.copy()
+
+                    # Görüntü modunu kontrol et
+                    if img_copy.mode != 'RGBA':
+                        img_copy = img_copy.convert('RGBA')
+
+                    # Görüntü boyutunu kontrol et
+                    if img_copy.size != base_size:
+                        img_copy = img_copy.resize(base_size, pil_image.Resampling.LANCZOS)
+
+                    # Alpha kompozisyon
+                    merged = pil_image.alpha_composite(merged, img_copy)
+
+                    # Ara referansları temizle
+                    img_copy = None
+                except Exception as e:
+                    logging.error(f"Katman {idx} birleştirilirken hata: {e}")
+                    continue
+
+            # Sonuç görüntüsünün kopyasını döndür (özyinelemeli referansları önlemek için)
+            result = merged.copy()
+
+            # Ara referansları temizle
+            merged = None
+
+            return result
+        except Exception as e:
+            logging.error(f"Katmanlar birleştirilirken hata: {e}")
+            # Hata durumunda boş bir görüntü döndür
+            return pil_image.new('RGBA', (100, 100), (0, 0, 0, 0))
     def toggle_visibility(self, index):
         if 0 <= index < len(self.layers):
             self.layers[index].visible = not self.layers[index].visible

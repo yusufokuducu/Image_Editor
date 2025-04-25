@@ -1,6 +1,8 @@
 from PyQt6.QtWidgets import QGraphicsView, QGraphicsScene, QMessageBox
 from PyQt6.QtGui import QPixmap, QPainterPath, QPen, QColor, QBrush, QFont, QPainter, QFontMetrics, QImage
 from PyQt6.QtCore import Qt, QRectF, QPointF, QSize
+import numpy as np
+import logging
 
 class ImageView(QGraphicsView):
     def __init__(self, parent=None):
@@ -23,18 +25,33 @@ class ImageView(QGraphicsView):
         self.selection_path_item = None
 
     def set_image(self, pixmap: QPixmap):
-        if pixmap is None:
-            from PyQt6.QtWidgets import QMessageBox
-            QMessageBox.critical(self, 'Hata', 'Görüntü yüklenemedi veya oluşturulamadı!')
-            return
-        self.scene.clear()
-        self.pixmap_item = self.scene.addPixmap(pixmap)
-        # PyQt6: pixmap.rect() -> QRect, fakat setSceneRect QRectF bekler
-        rect = pixmap.rect()
-        self.setSceneRect(QRectF(rect))
-        self._zoom = 0
-        self.resetTransform()
-        self.clear_selection()
+        try:
+            if pixmap is None:
+                QMessageBox.critical(self, 'Hata', 'Görüntü yüklenemedi veya oluşturulamadı!')
+                return
+
+            # Mevcut seçimleri temizle
+            self.clear_selection()
+
+            # Sahneyi temizle
+            self.scene.clear()
+
+            # Pixmap'i ekle
+            self.pixmap_item = self.scene.addPixmap(pixmap)
+
+            # Sahne boyutunu ayarla
+            rect = pixmap.rect()
+            self.setSceneRect(QRectF(rect))
+
+            # Zoom'u sıfırla
+            self._zoom = 0
+            self.resetTransform()
+
+            # Görünümü ortala
+            self.centerOn(self.pixmap_item)
+        except Exception as e:
+            logging.error(f"Görüntü ayarlanırken hata: {e}")
+            QMessageBox.critical(self, 'Hata', f'Görüntü ayarlanırken hata oluştu: {e}')
 
     def set_selection_mode(self, mode):
         self.selection_mode = mode
@@ -129,32 +146,65 @@ class ImageView(QGraphicsView):
         return None
 
     def get_selection_mask(self, img_shape):
-        import numpy as np
-        mask = np.zeros((img_shape[1], img_shape[0]), dtype=np.uint8)
-        if self.selection_mode == 'rectangle':
-            box = self.get_selected_box()
-            if box:
-                x1, y1, x2, y2 = box
-                mask[y1:y2, x1:x2] = 1
-        elif self.selection_mode == 'ellipse':
-            box = self.get_selected_box()
-            if box:
-                x1, y1, x2, y2 = box
-                cy, cx = (y1 + y2) // 2, (x1 + x2) // 2
-                ry, rx = abs(y2 - y1) // 2, abs(x2 - x1) // 2
-                yy, xx = np.ogrid[:img_shape[1], :img_shape[0]]
-                ellipse = ((yy - y1) / (y2 - y1) - 0.5) ** 2 + ((xx - x1) / (x2 - x1) - 0.5) ** 2 <= 0.25
-                mask[ellipse] = 1
-        elif self.selection_mode == 'lasso' and self.lasso_points:
-            from matplotlib.path import Path
-            import numpy as np
-            pts = [(pt.x(), pt.y()) for pt in self.lasso_points]
-            poly = Path(pts)
-            yy, xx = np.mgrid[:img_shape[1], :img_shape[0]]
-            points = np.vstack((xx.flatten(), yy.flatten())).T
-            mask_flat = poly.contains_points(points)
-            mask = mask_flat.reshape(mask.shape)
-        return mask
+        try:
+            mask = np.zeros((img_shape[1], img_shape[0]), dtype=np.uint8)
+            if self.selection_mode == 'rectangle':
+                box = self.get_selected_box()
+                if box:
+                    x1, y1, x2, y2 = box
+                    # Sınırları kontrol et
+                    x1 = max(0, min(x1, img_shape[0]-1))
+                    y1 = max(0, min(y1, img_shape[1]-1))
+                    x2 = max(0, min(x2, img_shape[0]))
+                    y2 = max(0, min(y2, img_shape[1]))
+                    if x2 > x1 and y2 > y1:
+                        mask[y1:y2, x1:x2] = 1
+            elif self.selection_mode == 'ellipse':
+                box = self.get_selected_box()
+                if box:
+                    x1, y1, x2, y2 = box
+                    # Sınırları kontrol et
+                    if x2 <= x1 or y2 <= y1:
+                        return mask
+                    try:
+                        cy, cx = (y1 + y2) // 2, (x1 + x2) // 2
+                        ry, rx = max(1, abs(y2 - y1) // 2), max(1, abs(x2 - x1) // 2)
+                        yy, xx = np.ogrid[:img_shape[1], :img_shape[0]]
+                        ellipse = ((yy - cy) / ry) ** 2 + ((xx - cx) / rx) ** 2 <= 1
+                        mask[ellipse] = 1
+                    except Exception as e:
+                        logging.error(f"Elips maskesi oluşturulurken hata: {e}")
+            elif self.selection_mode == 'lasso' and len(self.lasso_points) > 2:
+                try:
+                    # Matplotlib Path kullanarak lasso seçimi
+                    try:
+                        from matplotlib.path import Path
+                    except ImportError:
+                        logging.error("Lasso seçimi için matplotlib kütüphanesi gerekli")
+                        return mask
+
+                    pts = [(pt.x(), pt.y()) for pt in self.lasso_points]
+                    poly = Path(pts)
+
+                    # Büyük görüntüler için optimize edilmiş yaklaşım
+                    # Tüm pikselleri kontrol etmek yerine, sınırlayıcı kutuyu kullan
+                    x_min = max(0, int(min(pt[0] for pt in pts)))
+                    y_min = max(0, int(min(pt[1] for pt in pts)))
+                    x_max = min(img_shape[0], int(max(pt[0] for pt in pts)) + 1)
+                    y_max = min(img_shape[1], int(max(pt[1] for pt in pts)) + 1)
+
+                    if x_max > x_min and y_max > y_min:
+                        # Sadece sınırlayıcı kutu içindeki pikselleri kontrol et
+                        y, x = np.mgrid[y_min:y_max, x_min:x_max]
+                        points = np.vstack((x.flatten(), y.flatten())).T
+                        mask_region = poly.contains_points(points).reshape(y_max-y_min, x_max-x_min)
+                        mask[y_min:y_max, x_min:x_max] = mask_region
+                except Exception as e:
+                    logging.error(f"Lasso maskesi oluşturulurken hata: {e}")
+            return mask
+        except Exception as e:
+            logging.error(f"Seçim maskesi oluşturulurken hata: {e}")
+            return np.zeros((img_shape[1], img_shape[0]), dtype=np.uint8)
 
     def clear_selection(self):
         if self.selection_rect_item:
