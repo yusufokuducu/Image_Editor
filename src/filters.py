@@ -244,3 +244,27 @@ def apply_hue(img, shift=0.0):
     except Exception as e:
         logging.error(f"apply_hue error: {e}")
         return img
+
+
+# --- Filter Discovery ---
+
+def get_available_filters():
+    """
+    Returns a dictionary of available filters/adjustments suitable for the Effects Panel.
+    Keys are identifiers/names, values are the corresponding functions.
+    Filters requiring parameters might need special handling later.
+    """
+    # TODO: Differentiate between filters needing dialogs (like blur, noise)
+    # and those that can be applied directly (like sharpen, grayscale).
+    # For now, list ones that *could* be applied directly or have simple dialogs.
+    return {
+        'blur': apply_blur, # Needs dialog
+        'sharpen': apply_sharpen,
+        'edge_enhance': apply_edge_enhance,
+        'grayscale': apply_grayscale,
+        'noise': apply_noise, # Needs dialog
+        'brightness': apply_brightness, # Needs dialog
+        'contrast': apply_contrast, # Needs dialog
+        'saturation': apply_saturation, # Needs dialog
+        'hue': apply_hue, # Needs dialog
+    }

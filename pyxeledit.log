@@ -110,3 +110,17 @@
 2025-04-25 18:21:55,216 [INFO] Katman aþaðý taþýndý: 3 -> 4
 2025-04-25 18:21:57,701 [INFO] Aktif katman deðiþtirildi: 3
 2025-04-25 18:21:57,723 [INFO] Aktif katman deðiþtirildi: 2
+2025-04-26 17:14:57,211 [INFO] 9 efekt panele eklendi.
+2025-04-26 17:14:57,217 [INFO] PyxelEdit baþlatýldý
+2025-04-26 17:16:18,251 [INFO] Applying final filter: blur with value: 4
+2025-04-26 17:16:18,252 [INFO] Applying filter/adjustment: blur, param: 4
+2025-04-26 17:16:32,580 [INFO] Katman sürükle-býrak ile taþýndý: 1 -> 0
+2025-04-26 17:16:34,419 [INFO] Katman sürükle-býrak ile taþýndý: 0 -> 1
+2025-04-26 17:16:50,562 [INFO] Applying filter/adjustment: grayscale, param: None
+2025-04-26 17:16:50,650 [INFO] Doðrudan efekt baþarýyla uygulandý: grayscale
+2025-04-26 17:17:03,684 [INFO] Applying final filter: noise with value: 0.74
+2025-04-26 17:17:03,684 [INFO] Applying filter/adjustment: noise, param: 0.74
+2025-04-26 17:17:11,793 [INFO] Applying final filter: hue with value: 0.0
+2025-04-26 17:17:11,794 [INFO] Applying filter/adjustment: hue, param: 0.0
+2025-04-26 17:18:47,080 [INFO] 9 efekt panele eklendi.
+2025-04-26 17:18:47,082 [INFO] PyxelEdit baþlatýldý

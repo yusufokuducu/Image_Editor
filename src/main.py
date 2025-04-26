@@ -9,18 +9,19 @@ from PyQt6.QtWidgets import (QApplication, QMainWindow, QStatusBar, QMenuBar,
 from PyQt6.QtGui import QAction, QPainter, QPixmap, QFont, QColor # Added QFont, QColor
 from PyQt6.QtCore import Qt, QTimer, pyqtSignal, QObject, QPointF # Added QObject for signals, QPointF
 import logging
-from image_io import load_image, image_to_qpixmap
-from image_view import ImageView
-from filters import (apply_blur, apply_sharpen, apply_edge_enhance, apply_grayscale,
-                     apply_noise, apply_brightness, apply_contrast, apply_saturation,
-                     apply_hue)
-from transform import rotate_image, flip_image, resize_image, crop_image
-from history import History, Command
-from layers import LayerManager
+from .image_io import load_image, image_to_qpixmap
+from .image_view import ImageView
+from .filters import (apply_blur, apply_sharpen, apply_edge_enhance, apply_grayscale,
+                      apply_noise, apply_brightness, apply_contrast, apply_saturation,
+                      apply_hue)
+from .transform import rotate_image, flip_image, resize_image, crop_image
+from .history import History, Command
+from .layers import LayerManager
 import numpy as np
-from PIL import Image, ImageDraw, ImageFont # Added ImageDraw, ImageFont
-from layer_panel import LayerPanel
-import platform # To find default fonts
+from PIL import Image, ImageDraw, ImageFont
+from .layer_panel import LayerPanel
+from .effects_panel import EffectsPanel # Yeni paneli import et
+import platform
 
 # --- Filter Slider Dialog ---
 class FilterSliderDialog(QDialog):
@@ -284,6 +285,16 @@ class MainWindow(QMainWindow):
             'select': select_tool_action,
             'text': text_tool_action
         }
+
+        # Efekt panelini dock olarak ekle
+        self.effects_panel = EffectsPanel(self)
+        self.effects_dock = QDockWidget('Efektler ve Ayarlamalar', self)
+        self.effects_dock.setWidget(self.effects_panel)
+        # Katman panelinin altına ekleyelim
+        self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self.effects_dock)
+        # İki dock widget'ı yan yana değil de alt alta göstermek için (isteğe bağlı)
+        self.tabifyDockWidget(self.dock, self.effects_dock) # Katman ve Efekt panellerini sekmeli yap
+        self.dock.raise_() # Başlangıçta Katman paneli görünsün
 
 
     def set_tool(self, tool_name):
@@ -922,7 +933,11 @@ class MainWindow(QMainWindow):
             #     pass
 
             # Katman panelini güncelle
-            self.layer_panel.refresh()
+            if hasattr(self, 'layer_panel'):
+                self.layer_panel.refresh()
+            # Efekt panelini güncelle (gerekirse)
+            # if hasattr(self, 'effects_panel'):
+            #     self.effects_panel.refresh() # Şimdilik efekt paneli statik, refresh gerekmeyebilir
         except Exception as e:
             logging.error(f"refresh_layers error: {e}")
             QMessageBox.critical(self, 'Hata', f'Katmanlar güncellenirken hata oluştu: {e}')

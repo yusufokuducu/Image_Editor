@@ -1,5 +1,6 @@
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QListWidget, QPushButton, QHBoxLayout, QLabel, QMessageBox
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, QModelIndex
+from PyQt6.QtGui import QDropEvent
 import logging
 
 class LayerPanel(QWidget):
@@ -12,6 +13,14 @@ class LayerPanel(QWidget):
         self.layout.addWidget(self.label)
         self.list_widget = QListWidget()
         self.layout.addWidget(self.list_widget)
+
+        # Sürükle-bırak ayarları
+        self.list_widget.setDragDropMode(QListWidget.DragDropMode.InternalMove)
+        self.list_widget.setDefaultDropAction(Qt.DropAction.MoveAction)
+        self.list_widget.setSelectionMode(QListWidget.SelectionMode.SingleSelection) # Zaten varsayılan ama açıkça belirtmek iyi olabilir
+        self.list_widget.model().rowsMoved.connect(self.handle_rows_moved)
+
+
         btn_layout = QHBoxLayout()
         self.btn_up = QPushButton('↑')
         self.btn_down = QPushButton('↓')
@@ -157,3 +166,39 @@ class LayerPanel(QWidget):
                 QMessageBox.warning(self, 'Uyarı', f'Katman yapıştırılırken hata: {e}')
         except Exception as e:
             logging.error(f"paste_layer error: {e}")
+
+    def handle_rows_moved(self, parent: QModelIndex, start: int, end: int, destination: QModelIndex, row: int):
+        """ QListWidget içinde bir öğe taşındığında çağrılır. """
+        try:
+            # Sadece tek bir öğe taşındığını varsayıyoruz (end == start)
+            if start == end:
+                source_index = start
+                # `row` hedef indeksi belirtir (taşınan öğenin önüne ekleneceği sıra)
+                # Eğer öğe aşağı taşınıyorsa, efektif hedef indeks `row - 1` olur.
+                # Eğer öğe yukarı taşınıyorsa, efektif hedef indeks `row` olur.
+                dest_index = row
+                if dest_index > source_index:
+                    final_dest_index = dest_index - 1
+                else:
+                    # Eğer aynı yere bırakılırsa (dest_index == source_index), işlem yapma
+                    if dest_index == source_index:
+                        return
+                    final_dest_index = dest_index
+
+                logging.debug(f"Katman sürükle-bırak: Kaynak={source_index}, Hedef Sıra={row}, Son Hedef İndeks={final_dest_index}")
+
+                # Ana penceredeki katman yöneticisini güncelle
+                if hasattr(self.main_window, 'layers') and self.main_window.layers:
+                    self.main_window.layers.move_layer(source_index, final_dest_index)
+                    # Ana pencereyi yenile (bu LayerPanel'i de yenilemeli)
+                    self.main_window.refresh_layers()
+                    logging.info(f"Katman sürükle-bırak ile taşındı: {source_index} -> {final_dest_index}")
+                else:
+                     logging.warning("handle_rows_moved: Katman yöneticisi bulunamadı.")
+
+            else:
+                logging.warning(f"Beklenmeyen çoklu satır taşıma: start={start}, end={end}")
+
+        except Exception as e:
+            logging.error(f"handle_rows_moved hatası: {e}")
+            QMessageBox.warning(self, 'Hata', f'Katman taşınırken bir hata oluştu: {e}')
