@@ -7,4 +7,4 @@ dist/
 *.exe
 .idea/
 .vscode/
-.pyxeledit.log
+*.pyxeledit.log
