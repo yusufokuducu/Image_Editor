@@ -166,3 +166,67 @@
 2025-04-26 17:44:56,442 [INFO] Applying filter/adjustment: noise, param: 0.71
 2025-04-26 17:45:14,488 [INFO] 9 efekt panele eklendi.
 2025-04-26 17:45:14,489 [INFO] PyxelEdit baþlatýldý
+2025-04-26 21:14:40,759 [INFO] 9 efekt panele eklendi.
+2025-04-26 21:14:40,760 [INFO] PyxelEdit baþlatýldý
+2025-04-26 21:15:10,094 [INFO] Aktif katman deðiþtirildi: 0
+2025-04-26 21:15:10,424 [INFO] Aktif katman deðiþtirildi: 1
+2025-04-26 21:15:10,890 [INFO] Aktif katman deðiþtirildi: 0
+2025-04-26 21:15:12,530 [INFO] Katman sürükle-býrak ile taþýndý: 0 -> 1
+2025-04-26 21:15:13,129 [INFO] Katman görünürlüðü deðiþtirildi: Arka Plan -> Gizli
+2025-04-26 21:15:15,006 [INFO] Katman görünürlüðü deðiþtirildi: Arka Plan -> Görünür
+2025-04-26 21:15:15,236 [INFO] Katman görünürlüðü deðiþtirildi: Arka Plan -> Gizli
+2025-04-26 21:15:15,996 [INFO] Katman görünürlüðü deðiþtirildi: Arka Plan -> Görünür
+2025-04-26 21:15:18,294 [INFO] Katman sürükle-býrak ile taþýndý: 1 -> 0
+2025-04-26 21:15:19,140 [INFO] Aktif katman deðiþtirildi: 1
+2025-04-26 21:15:19,507 [INFO] Katman görünürlüðü deðiþtirildi: Katman 2 -> Gizli
+2025-04-26 21:15:20,495 [INFO] Aktif katman deðiþtirildi: 0
+2025-04-26 21:15:20,870 [INFO] Katman görünürlüðü deðiþtirildi: Arka Plan -> Gizli
+2025-04-26 21:15:20,872 [WARNING] _compose_layers_pixmap: Görünür katman yok
+2025-04-26 21:15:22,250 [WARNING] _compose_layers_pixmap: Görünür katman yok
+2025-04-26 21:15:22,251 [INFO] Katman sürükle-býrak ile taþýndý: 0 -> 1
+2025-04-26 21:15:23,319 [INFO] Katman görünürlüðü deðiþtirildi: Arka Plan -> Görünür
+2025-04-26 21:15:23,467 [INFO] Katman görünürlüðü deðiþtirildi: Arka Plan -> Gizli
+2025-04-26 21:15:23,467 [WARNING] _compose_layers_pixmap: Görünür katman yok
+2025-04-26 21:15:23,608 [INFO] Katman görünürlüðü deðiþtirildi: Arka Plan -> Görünür
+2025-04-26 21:15:23,791 [INFO] Katman görünürlüðü deðiþtirildi: Arka Plan -> Gizli
+2025-04-26 21:15:23,793 [WARNING] _compose_layers_pixmap: Görünür katman yok
+2025-04-26 21:15:23,955 [INFO] Katman görünürlüðü deðiþtirildi: Arka Plan -> Görünür
+2025-04-26 21:15:24,125 [INFO] Katman görünürlüðü deðiþtirildi: Arka Plan -> Gizli
+2025-04-26 21:15:24,126 [WARNING] _compose_layers_pixmap: Görünür katman yok
+2025-04-26 21:15:24,903 [INFO] Aktif katman deðiþtirildi: 0
+2025-04-26 21:15:25,228 [INFO] Katman görünürlüðü deðiþtirildi: Katman 2 -> Görünür
+2025-04-26 21:15:25,370 [INFO] Katman görünürlüðü deðiþtirildi: Katman 2 -> Gizli
+2025-04-26 21:15:25,371 [WARNING] _compose_layers_pixmap: Görünür katman yok
+2025-04-26 21:15:26,169 [INFO] Katman görünürlüðü deðiþtirildi: Katman 2 -> Görünür
+2025-04-26 21:15:26,417 [INFO] Katman görünürlüðü deðiþtirildi: Katman 2 -> Gizli
+2025-04-26 21:15:26,417 [WARNING] _compose_layers_pixmap: Görünür katman yok
+2025-04-26 21:15:26,607 [INFO] Katman görünürlüðü deðiþtirildi: Katman 2 -> Görünür
+2025-04-26 21:15:26,771 [INFO] Katman görünürlüðü deðiþtirildi: Katman 2 -> Gizli
+2025-04-26 21:15:26,771 [WARNING] _compose_layers_pixmap: Görünür katman yok
+2025-04-26 21:15:26,992 [INFO] Katman görünürlüðü deðiþtirildi: Katman 2 -> Görünür
+2025-04-26 21:15:27,521 [INFO] Katman görünürlüðü deðiþtirildi: Katman 2 -> Gizli
+2025-04-26 21:15:27,523 [WARNING] _compose_layers_pixmap: Görünür katman yok
+2025-04-26 21:15:28,153 [INFO] Katman görünürlüðü deðiþtirildi: Katman 2 -> Görünür
+2025-04-26 21:15:29,544 [INFO] Aktif katman deðiþtirildi: 1
+2025-04-26 21:15:30,824 [INFO] Katman görünürlüðü deðiþtirildi: Arka Plan -> Görünür
+2025-04-26 21:15:31,040 [INFO] Katman görünürlüðü deðiþtirildi: Arka Plan -> Gizli
+2025-04-26 21:15:31,818 [INFO] Katman görünürlüðü deðiþtirildi: Arka Plan -> Görünür
+2025-04-26 21:15:41,498 [INFO] Applying filter/adjustment: grayscale, param: None
+2025-04-26 21:15:41,580 [INFO] Doðrudan efekt baþarýyla uygulandý: grayscale
+2025-04-26 21:15:47,904 [INFO] Applying final filter: noise with value: 0.49
+2025-04-26 21:15:47,904 [INFO] Applying filter/adjustment: noise, param: 0.49
+2025-04-26 21:15:49,380 [INFO] Applying filter/adjustment: sharpen, param: None
+2025-04-26 21:15:49,521 [INFO] Doðrudan efekt baþarýyla uygulandý: sharpen
+2025-04-26 21:15:54,421 [INFO] Applying final filter: blur with value: 7
+2025-04-26 21:15:54,422 [INFO] Applying filter/adjustment: blur, param: 7
+2025-04-26 21:16:00,451 [INFO] Applying final filter: brightness with value: 0.83
+2025-04-26 21:16:00,452 [INFO] Applying filter/adjustment: brightness, param: 0.83
+2025-04-26 21:16:07,089 [INFO] Applying final filter: contrast with value: 1.76
+2025-04-26 21:16:07,089 [INFO] Applying filter/adjustment: contrast, param: 1.76
+2025-04-26 21:16:17,054 [INFO] Applying final filter: saturation with value: 1.69
+2025-04-26 21:16:17,054 [INFO] Applying filter/adjustment: saturation, param: 1.69
+2025-04-26 21:16:28,310 [INFO] Applying final filter: hue with value: 0.86
+2025-04-26 21:16:28,310 [INFO] Applying filter/adjustment: hue, param: 0.86
+2025-04-26 21:16:33,000 [INFO] Filter preview cancelled: saturation. Restoring original.
+2025-04-26 21:16:47,873 [INFO] Applying final filter: hue with value: 1.0
+2025-04-26 21:16:47,873 [INFO] Applying filter/adjustment: hue, param: 1.0
