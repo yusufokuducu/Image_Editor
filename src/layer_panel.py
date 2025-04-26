@@ -36,6 +36,7 @@ class LayerPanel(QWidget):
         self.btn_copy.clicked.connect(self.copy_layer)
         self.btn_paste.clicked.connect(self.paste_layer)
         self.list_widget.currentRowChanged.connect(self.set_active_layer)
+        self.list_widget.itemClicked.connect(self.toggle_layer_visibility) # Katman görünürlüğünü değiştirmek için eklendi
         self.copied_layer = None
         self.refresh()
 
@@ -166,6 +167,25 @@ class LayerPanel(QWidget):
                 QMessageBox.warning(self, 'Uyarı', f'Katman yapıştırılırken hata: {e}')
         except Exception as e:
             logging.error(f"paste_layer error: {e}")
+
+    def toggle_layer_visibility(self, item):
+        """ Katmanın görünürlüğünü değiştirir. """
+        try:
+            idx = self.list_widget.row(item)
+            if not hasattr(self.main_window, 'layers') or not self.main_window.layers.layers:
+                return # Katman yoksa işlem yapma
+
+            if 0 <= idx < len(self.main_window.layers.layers):
+                layer = self.main_window.layers.layers[idx]
+                layer.visible = not layer.visible
+                logging.info(f"Katman görünürlüğü değiştirildi: {layer.name} -> {'Görünür' if layer.visible else 'Gizli'}")
+                self.refresh() # Paneldeki ikonu güncelle
+                self.main_window.refresh_layers() # Ana görünümü güncelle
+            else:
+                logging.warning(f"toggle_layer_visibility: Geçersiz indeks {idx}")
+        except Exception as e:
+            logging.error(f"toggle_layer_visibility hatası: {e}")
+            QMessageBox.warning(self, 'Hata', f'Katman görünürlüğü değiştirilirken hata: {e}')
 
     def handle_rows_moved(self, parent: QModelIndex, start: int, end: int, destination: QModelIndex, row: int):
         """ QListWidget içinde bir öğe taşındığında çağrılır. """

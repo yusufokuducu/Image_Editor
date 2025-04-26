@@ -124,3 +124,45 @@
 2025-04-26 17:17:11,794 [INFO] Applying filter/adjustment: hue, param: 0.0
 2025-04-26 17:18:47,080 [INFO] 9 efekt panele eklendi.
 2025-04-26 17:18:47,082 [INFO] PyxelEdit baþlatýldý
+2025-04-26 17:34:13,665 [INFO] 9 efekt panele eklendi.
+2025-04-26 17:34:13,667 [INFO] PyxelEdit baþlatýldý
+2025-04-26 17:35:46,280 [INFO] Aktif katman deðiþtirildi: 0
+2025-04-26 17:35:47,718 [INFO] Aktif katman deðiþtirildi: 1
+2025-04-26 17:37:26,641 [INFO] Applying final filter: blur with value: 16
+2025-04-26 17:37:26,641 [INFO] Applying filter/adjustment: blur, param: 16
+2025-04-26 17:37:36,319 [INFO] Applying filter/adjustment: grayscale, param: None
+2025-04-26 17:37:36,412 [INFO] Doðrudan efekt baþarýyla uygulandý: grayscale
+2025-04-26 17:37:43,226 [INFO] Applying final filter: noise with value: 0.6
+2025-04-26 17:37:43,226 [INFO] Applying filter/adjustment: noise, param: 0.6
+2025-04-26 17:39:56,344 [INFO] 9 efekt panele eklendi.
+2025-04-26 17:39:56,345 [INFO] PyxelEdit baþlatýldý
+2025-04-26 17:43:00,626 [INFO] 9 efekt panele eklendi.
+2025-04-26 17:43:00,628 [INFO] PyxelEdit baþlatýldý
+2025-04-26 17:43:39,566 [INFO] Katman görünürlüðü deðiþtirildi: Arka Plan -> Gizli
+2025-04-26 17:43:39,568 [WARNING] _compose_layers_pixmap: Görünür katman yok
+2025-04-26 17:43:40,578 [INFO] Katman görünürlüðü deðiþtirildi: Arka Plan -> Görünür
+2025-04-26 17:43:41,460 [INFO] Katman görünürlüðü deðiþtirildi: Arka Plan -> Gizli
+2025-04-26 17:43:41,460 [WARNING] _compose_layers_pixmap: Görünür katman yok
+2025-04-26 17:43:42,452 [INFO] Katman görünürlüðü deðiþtirildi: Arka Plan -> Görünür
+2025-04-26 17:43:49,784 [INFO] Katman görünürlüðü deðiþtirildi: Katman 2 -> Gizli
+2025-04-26 17:43:50,914 [INFO] Aktif katman deðiþtirildi: 0
+2025-04-26 17:43:51,828 [INFO] Katman görünürlüðü deðiþtirildi: Arka Plan -> Gizli
+2025-04-26 17:43:51,829 [WARNING] _compose_layers_pixmap: Görünür katman yok
+2025-04-26 17:43:52,308 [INFO] Katman görünürlüðü deðiþtirildi: Arka Plan -> Görünür
+2025-04-26 17:43:53,388 [INFO] Aktif katman deðiþtirildi: 1
+2025-04-26 17:43:54,605 [INFO] Katman görünürlüðü deðiþtirildi: Katman 2 -> Görünür
+2025-04-26 17:43:57,041 [INFO] Katman sürükle-býrak ile taþýndý: 1 -> 0
+2025-04-26 17:44:24,286 [INFO] Applying filter/adjustment: edge_enhance, param: None
+2025-04-26 17:44:24,295 [WARNING] Bilinmeyen filtre/ayarlama tipi: edge_enhance
+2025-04-26 17:44:24,297 [ERROR] apply_filter error (edge_enhance): Filter application returned None for edge_enhance
+2025-04-26 17:44:29,851 [INFO] Doðrudan efekt baþarýyla uygulandý: edge_enhance
+2025-04-26 17:44:31,216 [INFO] Applying filter/adjustment: grayscale, param: None
+2025-04-26 17:44:31,303 [INFO] Doðrudan efekt baþarýyla uygulandý: grayscale
+2025-04-26 17:44:38,449 [INFO] Applying final filter: noise with value: 0.52
+2025-04-26 17:44:38,449 [INFO] Applying filter/adjustment: noise, param: 0.52
+2025-04-26 17:44:45,321 [INFO] Applying final filter: contrast with value: 1.82
+2025-04-26 17:44:45,321 [INFO] Applying filter/adjustment: contrast, param: 1.82
+2025-04-26 17:44:56,441 [INFO] Applying final filter: noise with value: 0.71
+2025-04-26 17:44:56,442 [INFO] Applying filter/adjustment: noise, param: 0.71
+2025-04-26 17:45:14,488 [INFO] 9 efekt panele eklendi.
+2025-04-26 17:45:14,489 [INFO] PyxelEdit baþlatýldý

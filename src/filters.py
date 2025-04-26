@@ -219,22 +219,77 @@ def apply_hue(img, shift=0.0):
 
         # Separate RGB and Alpha
         rgb = img_arr[:, :, :3]
-        alpha = img_arr[:, :, 3]
+        alpha = img_arr[:, :, 3:4] # Keep shape (h, w, 1) for dstack
 
-        # Convert RGB to HSV
-        # Apply colorsys.rgb_to_hsv pixel by pixel (vectorization is complex)
-        hsv = np.array([colorsys.rgb_to_hsv(p[0], p[1], p[2]) for row in rgb for p in row])
-        hsv = hsv.reshape(rgb.shape) # Reshape back to (height, width, 3)
+        # --- Vectorized RGB to HSV ---
+        max_c = np.max(rgb, axis=2)
+        min_c = np.min(rgb, axis=2)
+        delta = max_c - min_c
+
+        # Value (V)
+        v = max_c
+
+        # Saturation (S)
+        s = np.zeros_like(max_c)
+        non_zero_max = max_c != 0
+        s[non_zero_max] = delta[non_zero_max] / max_c[non_zero_max]
+
+        # Hue (H)
+        h = np.zeros_like(max_c)
+        r, g, b = rgb[:, :, 0], rgb[:, :, 1], rgb[:, :, 2]
+
+        # Avoid division by zero where delta is zero
+        delta_is_zero = delta == 0
+        delta_not_zero = ~delta_is_zero
+
+        # Calculate hue where delta is not zero
+        idx_r = (max_c == r) & delta_not_zero
+        idx_g = (max_c == g) & delta_not_zero
+        idx_b = (max_c == b) & delta_not_zero
+
+        h[idx_r] = (((g[idx_r] - b[idx_r]) / delta[idx_r]) % 6) / 6.0
+        h[idx_g] = (((b[idx_g] - r[idx_g]) / delta[idx_g]) + 2) / 6.0
+        h[idx_b] = (((r[idx_b] - g[idx_b]) / delta[idx_b]) + 4) / 6.0
+
+        # Where delta is zero, hue is undefined (or 0)
+        h[delta_is_zero] = 0
 
         # Apply hue shift (H is in range [0, 1])
-        hsv[:, :, 0] = (hsv[:, :, 0] + shift) % 1.0
+        h = (h + shift) % 1.0
 
-        # Convert HSV back to RGB
-        rgb_shifted = np.array([colorsys.hsv_to_rgb(p[0], p[1], p[2]) for row in hsv for p in row])
-        rgb_shifted = rgb_shifted.reshape(rgb.shape) # Reshape back
+        # --- Vectorized HSV to RGB ---
+        i = np.floor(h * 6).astype(int)
+        f = h * 6 - i
+        p = v * (1 - s)
+        q = v * (1 - f * s)
+        t = v * (1 - (1 - f) * s)
+
+        # Prepare rgb_shifted array
+        rgb_shifted = np.zeros_like(rgb)
+
+        i %= 6 # Ensure i is within 0-5
+
+        # Assign values based on sector i
+        idx_0 = i == 0
+        rgb_shifted[idx_0] = np.dstack((v[idx_0], t[idx_0], p[idx_0]))
+        idx_1 = i == 1
+        rgb_shifted[idx_1] = np.dstack((q[idx_1], v[idx_1], p[idx_1]))
+        idx_2 = i == 2
+        rgb_shifted[idx_2] = np.dstack((p[idx_2], v[idx_2], t[idx_2]))
+        idx_3 = i == 3
+        rgb_shifted[idx_3] = np.dstack((p[idx_3], q[idx_3], v[idx_3]))
+        idx_4 = i == 4
+        rgb_shifted[idx_4] = np.dstack((t[idx_4], p[idx_4], v[idx_4]))
+        idx_5 = i == 5
+        rgb_shifted[idx_5] = np.dstack((v[idx_5], p[idx_5], q[idx_5]))
 
         # Combine RGB and Alpha
-        rgba_shifted = np.dstack((rgb_shifted, alpha))
+        # Ensure alpha has the same dimensions for dstack if needed
+        if alpha.shape[:2] != rgb_shifted.shape[:2]:
+             # This shouldn't happen if slicing was correct, but as a safeguard
+             alpha = np.broadcast_to(alpha, rgb_shifted.shape[:2] + (1,))
+
+        rgba_shifted = np.dstack((rgb_shifted, alpha[:,:,0])) # alpha was (h,w,1), need (h,w) for dstack
 
         # Clip and convert back to uint8
         rgba_shifted = np.clip(rgba_shifted * 255.0, 0, 255).astype(np.uint8)

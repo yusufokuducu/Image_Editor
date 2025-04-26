@@ -306,9 +306,13 @@ class MainWindow(QMainWindow):
                 action.setChecked(name == tool_name)
             # Update status bar or cursor if needed
             self.status_bar.showMessage(f"Aktif Araç: {tool_name.capitalize()}")
-            # Reset selection mode if switching away from selection tool?
-            # if tool_name != 'select':
-            #     self.image_view.clear_selection() # Or maybe keep selection? Decide later.
+            # Explicitly set ImageView mode when 'select' tool is chosen
+            if tool_name == 'select':
+                # Set the default selection shape (e.g., rectangle) when selection tool is active
+                self.image_view.set_selection_mode('rectangle')
+            # Optional: Clear selection when switching *away* from selection tool
+            # else:
+            #     self.image_view.clear_selection()
         else:
             logging.warning(f"Bilinmeyen araç adı: {tool_name}")
 
