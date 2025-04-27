@@ -27,7 +27,8 @@ def apply_blur(img, radius=2):
         logging.error(f"apply_blur error: {e}")
         return img
 
-def apply_sharpen(img):
+def apply_sharpen(img, amount=1.0):
+    """Applies sharpening with adjustable amount."""
     try:
         if img is None:
             logging.error("apply_sharpen: Görüntü None")
@@ -35,13 +36,27 @@ def apply_sharpen(img):
         if not isinstance(img, Image.Image):
             logging.error(f"apply_sharpen: Geçersiz görüntü tipi: {type(img)}")
             return None
+        if not isinstance(img, Image.Image):
+            logging.error(f"apply_sharpen: Geçersiz görüntü tipi: {type(img)}")
+            return None
 
-        # Filtreyi uygula
-        result = img.filter(ImageFilter.SHARPEN)
+        # Ensure RGBA for blending
+        if img.mode != 'RGBA':
+            img_rgba = img.convert('RGBA')
+        else:
+            img_rgba = img
 
-        # RGBA moduna dönüştür
-        if result.mode != 'RGBA':
-            result = result.convert('RGBA')
+        # Apply sharpen filter
+        sharpened_img = img_rgba.filter(ImageFilter.SHARPEN)
+
+        # Ensure sharpened image is RGBA (should be, but double-check)
+        if sharpened_img.mode != 'RGBA':
+            sharpened_img = sharpened_img.convert('RGBA')
+
+        # Blend original and sharpened based on amount
+        # amount=0.0 -> original, amount=1.0 -> fully sharpened
+        amount = max(0.0, min(amount, 1.0)) # Clamp amount
+        result = Image.blend(img_rgba, sharpened_img, amount)
 
         return result
     except Exception as e:
@@ -69,7 +84,8 @@ def apply_edge_enhance(img):
         logging.error(f"apply_edge_enhance error: {e}")
         return img
 
-def apply_grayscale(img):
+def apply_grayscale(img, amount=1.0):
+    """Applies grayscale effect with adjustable amount."""
     try:
         if img is None:
             logging.error("apply_grayscale: Görüntü None")
@@ -77,9 +93,23 @@ def apply_grayscale(img):
         if not isinstance(img, Image.Image):
             logging.error(f"apply_grayscale: Geçersiz görüntü tipi: {type(img)}")
             return None
+        if not isinstance(img, Image.Image):
+            logging.error(f"apply_grayscale: Geçersiz görüntü tipi: {type(img)}")
+            return None
 
-        # Gri tona dönüştür ve sonra RGBA'ya geri dön
-        result = img.convert('L').convert('RGBA')
+        # Ensure RGBA for blending
+        if img.mode != 'RGBA':
+            img_rgba = img.convert('RGBA')
+        else:
+            img_rgba = img
+
+        # Convert to grayscale and back to RGBA
+        grayscale_img = img_rgba.convert('L').convert('RGBA')
+
+        # Blend original and grayscale based on amount
+        # amount=0.0 -> original, amount=1.0 -> fully grayscale
+        amount = max(0.0, min(amount, 1.0)) # Clamp amount
+        result = Image.blend(img_rgba, grayscale_img, amount)
 
         return result
     except Exception as e:

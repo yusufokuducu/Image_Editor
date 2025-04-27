@@ -230,3 +230,85 @@
 2025-04-26 21:16:33,000 [INFO] Filter preview cancelled: saturation. Restoring original.
 2025-04-26 21:16:47,873 [INFO] Applying final filter: hue with value: 1.0
 2025-04-26 21:16:47,873 [INFO] Applying filter/adjustment: hue, param: 1.0
+2025-04-26 23:36:51,881 [INFO] 9 efekt panele eklendi.
+2025-04-26 23:36:51,882 [INFO] PyxelEdit baþlatýldý
+2025-04-26 23:37:12,311 [INFO] 9 efekt panele eklendi.
+2025-04-26 23:37:12,312 [INFO] PyxelEdit baþlatýldý
+2025-04-26 23:44:40,645 [INFO] 9 efekt panele eklendi.
+2025-04-26 23:44:40,646 [INFO] PyxelEdit baþlatýldý
+2025-04-27 16:28:50,465 [INFO] 9 efekt panele eklendi.
+2025-04-27 16:28:50,466 [INFO] PyxelEdit baþlatýldý
+2025-04-27 16:29:08,999 [INFO] Applying final filter: blur with value: 8
+2025-04-27 16:29:08,999 [INFO] Applying filter/adjustment: blur, param: 8
+2025-04-27 16:29:10,438 [INFO] Applying filter/adjustment: sharpen, param: None
+2025-04-27 16:29:10,555 [INFO] Doðrudan efekt baþarýyla uygulandý: sharpen
+2025-04-27 16:29:12,058 [INFO] Applying filter/adjustment: edge_enhance, param: None
+2025-04-27 16:29:12,067 [WARNING] Unknown filter/adjustment type: edge_enhance
+2025-04-27 16:29:12,068 [ERROR] apply_filter error (edge_enhance): Filter application returned None for edge_enhance
+2025-04-27 16:29:13,464 [INFO] Doðrudan efekt baþarýyla uygulandý: edge_enhance
+2025-04-27 16:31:50,149 [INFO] 9 efekt panele eklendi.
+2025-04-27 16:31:50,150 [INFO] PyxelEdit baþlatýldý
+2025-04-27 16:32:08,812 [INFO] Applying filter/adjustment: sharpen, param: None
+2025-04-27 16:32:08,933 [INFO] Doðrudan efekt baþarýyla uygulandý: sharpen
+2025-04-27 16:32:10,716 [INFO] Applying filter/adjustment: sharpen, param: None
+2025-04-27 16:32:10,865 [INFO] Doðrudan efekt baþarýyla uygulandý: sharpen
+2025-04-27 16:32:11,217 [INFO] Applying filter/adjustment: sharpen, param: None
+2025-04-27 16:32:11,384 [INFO] Doðrudan efekt baþarýyla uygulandý: sharpen
+2025-04-27 16:32:12,489 [INFO] Applying filter/adjustment: edge_enhance, param: None
+2025-04-27 16:32:12,498 [WARNING] Unknown filter/adjustment type: edge_enhance
+2025-04-27 16:32:12,499 [ERROR] apply_filter error (edge_enhance): Filter application returned None for edge_enhance
+2025-04-27 16:33:17,159 [INFO] Doðrudan efekt baþarýyla uygulandý: edge_enhance
+2025-04-27 16:33:18,324 [INFO] Applying filter/adjustment: grayscale, param: None
+2025-04-27 16:33:18,381 [INFO] Doðrudan efekt baþarýyla uygulandý: grayscale
+2025-04-27 16:33:21,549 [INFO] Filter preview cancelled: noise. Restoring original.
+2025-04-27 16:33:38,621 [INFO] Filter preview cancelled: brightness. Restoring original.
+2025-04-27 16:33:44,747 [INFO] Filter preview cancelled: brightness. Restoring original.
+2025-04-27 16:33:52,667 [INFO] Applying final filter: contrast with value: 0.17
+2025-04-27 16:33:52,667 [INFO] Applying filter/adjustment: contrast, param: 0.17
+2025-04-27 16:34:00,478 [INFO] Filter preview cancelled: saturation. Restoring original.
+2025-04-27 16:34:06,096 [INFO] Filter preview cancelled: hue. Restoring original.
+2025-04-27 16:38:52,931 [INFO] 9 efekt panele eklendi.
+2025-04-27 16:38:52,932 [INFO] PyxelEdit baþlatýldý
+2025-04-27 16:53:20,452 [INFO] 9 efekt panele eklendi.
+2025-04-27 16:53:20,454 [INFO] PyxelEdit baþlatýldý
+2025-04-27 16:53:38,428 [INFO] Applying filter/adjustment: edge_enhance, param: None
+2025-04-27 16:53:38,594 [INFO] Doðrudan efekt baþarýyla uygulandý: edge_enhance
+2025-04-27 16:53:47,309 [INFO] Applying final filter: blur with value: 7
+2025-04-27 16:53:47,310 [INFO] Applying filter/adjustment: blur, param: 7
+2025-04-27 16:53:53,121 [INFO] Applying final filter: grayscale with value: 0.25
+2025-04-27 16:53:53,121 [INFO] Applying filter/adjustment: grayscale, param: 0.25
+2025-04-27 16:53:59,824 [INFO] Applying final filter: saturation with value: 1.91
+2025-04-27 16:53:59,825 [INFO] Applying filter/adjustment: saturation, param: 1.91
+2025-04-27 16:54:10,585 [INFO] Applying final filter: hue with value: -0.85
+2025-04-27 16:54:10,585 [INFO] Applying filter/adjustment: hue, param: -0.85
+2025-04-27 16:54:19,384 [INFO] Applying final filter: blur with value: 1
+2025-04-27 16:54:19,385 [INFO] Applying filter/adjustment: blur, param: 1
+2025-04-27 16:54:27,647 [INFO] Katman görünürlüðü deðiþtirildi: Katman 2 -> Gizli
+2025-04-27 16:54:28,801 [INFO] Katman görünürlüðü deðiþtirildi: Katman 2 -> Görünür
+2025-04-27 16:54:30,014 [INFO] Aktif katman deðiþtirildi: 0
+2025-04-27 16:54:30,904 [INFO] Katman görünürlüðü deðiþtirildi: Arka Plan -> Gizli
+2025-04-27 16:54:31,373 [INFO] Katman görünürlüðü deðiþtirildi: Arka Plan -> Görünür
+2025-04-27 16:54:32,722 [INFO] Aktif katman deðiþtirildi: 1
+2025-04-27 16:54:33,543 [INFO] Katman görünürlüðü deðiþtirildi: Katman 2 -> Gizli
+2025-04-27 16:54:34,059 [INFO] Katman görünürlüðü deðiþtirildi: Katman 2 -> Görünür
+2025-04-27 16:54:36,165 [INFO] Katman sürükle-býrak ile taþýndý: 1 -> 0
+2025-04-27 16:54:41,954 [INFO] Araç deðiþtirildi: text
+2025-04-27 16:54:42,579 [INFO] Text tool clicked at scene coordinates: 941.0, 892.0
+2025-04-27 16:54:42,579 [INFO] Handling text tool click at 941.0, 892.0
+2025-04-27 16:55:20,782 [INFO] Using font file: C:/Windows/Fonts\arial.ttf for family Times New Roman, size 22
+2025-04-27 16:55:26,308 [INFO] Aktif katman deðiþtirildi: 1
+2025-04-27 16:55:27,731 [INFO] Aktif katman deðiþtirildi: 0
+2025-04-27 16:55:29,424 [INFO] Text tool clicked at scene coordinates: 934.6008300781244, 543.5943603515622
+2025-04-27 16:55:29,424 [INFO] Handling text tool click at 934.6008300781244, 543.5943603515622
+2025-04-27 16:55:34,740 [INFO] Using font file: C:/Windows/Fonts\arial.ttf for family Segoe UI, size 9
+2025-04-27 16:55:57,742 [INFO] Araç deðiþtirildi: select
+2025-04-27 16:56:03,971 [INFO] Aktif katman deðiþtirildi: 1
+2025-04-27 16:56:05,608 [INFO] Aktif katman deðiþtirildi: 0
+2025-04-27 16:56:27,575 [WARNING] _compose_layers_pixmap: Görünür katman yok
+2025-04-27 16:56:30,587 [INFO] Katman görünürlüðü deðiþtirildi: Birleþtirilmiþ Katman -> Görünür
+2025-04-27 16:56:32,839 [INFO] Katman görünürlüðü deðiþtirildi: Birleþtirilmiþ Katman -> Gizli
+2025-04-27 16:56:32,840 [WARNING] _compose_layers_pixmap: Görünür katman yok
+2025-04-27 16:56:33,552 [INFO] Katman görünürlüðü deðiþtirildi: Birleþtirilmiþ Katman -> Görünür
+2025-04-27 17:51:46,840 [CRITICAL] Uygulama baþlatýlýrken kritik hata: 'MainWindow' object has no attribute 'image_view'
+2025-04-27 17:52:02,292 [CRITICAL] Uygulama baþlatýlýrken kritik hata: 'MainWindow' object has no attribute 'image_view'
+2025-04-27 21:21:31,228 [CRITICAL] Uygulama baþlatýlýrken kritik hata: 'MainWindow' object has no attribute 'image_view'

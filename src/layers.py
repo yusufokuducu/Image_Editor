@@ -1,5 +1,22 @@
 import PIL.Image as pil_image
 import logging
+from PIL import ImageChops # Import ImageChops for blending
+
+# Define available blend modes (keys are for internal use, values are display names)
+# Map keys to potential ImageChops functions or custom logic
+BLEND_MODES = {
+    'normal': 'Normal',
+    'multiply': 'Multiply',
+    'screen': 'Screen',
+    'overlay': 'Overlay', # Requires custom implementation or approximation
+    'darken': 'Darken',
+    'lighten': 'Lighten',
+    'add': 'Add',
+    'subtract': 'Subtract',
+    'difference': 'Difference',
+    # Add more modes as needed
+}
+
 
 class Layer:
     def __init__(self, image: pil_image.Image, name: str = 'Layer', visible: bool = True):
@@ -20,6 +37,8 @@ class Layer:
 
             self.name = name
             self.visible = visible
+            self.blend_mode = 'normal' # Default blend mode
+            self.opacity = 100  # Default opacity (0-100)
         except Exception as e:
             logging.error(f"Layer oluşturulurken hata: {e}")
             # Hata durumunda boş bir görüntü oluştur
@@ -89,11 +108,67 @@ class LayerManager:
                     if img_copy.size != base_size:
                         img_copy = img_copy.resize(base_size, pil_image.Resampling.LANCZOS)
 
-                    # Alpha kompozisyon
-                    merged = pil_image.alpha_composite(merged, img_copy)
+                    # Apply opacity to the layer
+                    if layer.opacity < 100:
+                        # Create a copy of the image with adjusted alpha
+                        alpha = img_copy.getchannel('A')
+                        alpha = alpha.point(lambda x: int(x * layer.opacity / 100))
+                        img_copy.putalpha(alpha)
+
+                    # --- Apply Blend Mode ---
+                    blend_mode = layer.blend_mode
+                    if blend_mode == 'normal':
+                        # Normal blend is just alpha compositing
+                        merged = pil_image.alpha_composite(merged, img_copy)
+                    else:
+                        # For other modes, blend RGB channels first, then composite alpha
+                        # Ensure both images are RGB for ImageChops
+                        merged_rgb = merged.convert('RGB')
+                        layer_rgb = img_copy.convert('RGB')
+                        blended_rgb = merged_rgb # Default to base if mode unknown
+
+                        if blend_mode == 'multiply':
+                            blended_rgb = ImageChops.multiply(merged_rgb, layer_rgb)
+                        elif blend_mode == 'screen':
+                            blended_rgb = ImageChops.screen(merged_rgb, layer_rgb)
+                        elif blend_mode == 'darken':
+                            blended_rgb = ImageChops.darker(merged_rgb, layer_rgb)
+                        elif blend_mode == 'lighten':
+                            blended_rgb = ImageChops.lighter(merged_rgb, layer_rgb)
+                        elif blend_mode == 'add':
+                            blended_rgb = ImageChops.add(merged_rgb, layer_rgb, scale=1.0, offset=0)
+                        elif blend_mode == 'subtract':
+                            blended_rgb = ImageChops.subtract(merged_rgb, layer_rgb, scale=1.0, offset=0)
+                        elif blend_mode == 'difference':
+                            blended_rgb = ImageChops.difference(merged_rgb, layer_rgb)
+                        elif blend_mode == 'overlay':
+                            # Overlay is complex, approximate using screen/multiply
+                            # Formula: if base < 0.5: 2 * base * blend else: 1 - 2 * (1-base) * (1-blend)
+                            # Simplified: Screen for dark areas, Multiply for light areas
+                            dark = ImageChops.multiply(merged_rgb, layer_rgb.point(lambda i: i * 2))
+                            light = ImageChops.screen(merged_rgb, layer_rgb.point(lambda i: (i - 128) * 2))
+                            # Use layer's RGB as mask to choose between dark/light based on layer brightness
+                            mask = layer_rgb.convert('L').point(lambda i: 255 if i > 127 else 0)
+                            blended_rgb = pil_image.composite(light, dark, mask)
+                        else:
+                            logging.warning(f"Bilinmeyen blend modu: {blend_mode}, 'normal' kullanılıyor.")
+                            merged = pil_image.alpha_composite(merged, img_copy) # Fallback to normal
+                            continue # Skip alpha compositing below if falling back
+
+                        # Convert blended RGB back to RGBA using the *layer's* alpha as the mask
+                        blended_rgba = blended_rgb.convert('RGBA')
+                        blended_rgba.putalpha(img_copy.getchannel('A'))
+
+                        # Composite the blended layer onto the merged image using alpha compositing
+                        # This correctly handles the transparency of the blended layer itself
+                        merged = pil_image.alpha_composite(merged, blended_rgba)
 
                     # Ara referansları temizle
                     img_copy = None
+                    blended_rgb = None
+                    blended_rgba = None
+                    merged_rgb = None
+                    layer_rgb = None
                 except Exception as e:
                     logging.error(f"Katman {idx} birleştirilirken hata: {e}")
                     continue

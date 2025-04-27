@@ -10,3 +10,5 @@ dist/
 *.pyxeledit.log
 pyxeledit.log
 *.log
+debug_output.png
+pillow_test_output.png

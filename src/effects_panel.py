@@ -44,7 +44,8 @@ class EffectsPanel(QWidget):
             # TODO: Daha sonra buraya efekt parametreleri için kontroller (slider vb.) eklenebilir.
             btn = QPushButton(name.replace('_', ' ').title())
             # Butona tıklandığında hangi fonksiyonun çağrılacağını belirle
-            if name in ['blur', 'noise', 'brightness', 'contrast', 'saturation', 'hue']:
+            # Add sharpen and grayscale to the list of effects requiring dialogs
+            if name in ['blur', 'noise', 'brightness', 'contrast', 'saturation', 'hue', 'sharpen', 'grayscale']:
                 # Parametre gerektirenler için MainWindow'daki diyalog fonksiyonunu çağır
                 dialog_method_name = f"{name}_dialog"
                 if hasattr(self.main_window, dialog_method_name):

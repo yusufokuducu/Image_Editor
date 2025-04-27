@@ -1,7 +1,9 @@
-from PyQt6.QtWidgets import QWidget, QVBoxLayout, QListWidget, QPushButton, QHBoxLayout, QLabel, QMessageBox
+from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QListWidget, QPushButton, QHBoxLayout,
+                             QLabel, QMessageBox, QComboBox, QListWidgetItem, QSlider) # Added QSlider
 from PyQt6.QtCore import Qt, QModelIndex
 from PyQt6.QtGui import QDropEvent
 import logging
+from .layers import BLEND_MODES # Import blend modes
 
 class LayerPanel(QWidget):
     def __init__(self, main_window):
@@ -36,7 +38,7 @@ class LayerPanel(QWidget):
         self.btn_copy.clicked.connect(self.copy_layer)
         self.btn_paste.clicked.connect(self.paste_layer)
         self.list_widget.currentRowChanged.connect(self.set_active_layer)
-        self.list_widget.itemClicked.connect(self.toggle_layer_visibility) # Katman görünürlüğünü değiştirmek için eklendi
+        # self.list_widget.itemClicked.connect(self.toggle_layer_visibility) # Removed: Handled by label click now
         self.copied_layer = None
         self.refresh()
 
@@ -49,10 +51,55 @@ class LayerPanel(QWidget):
                 self.list_widget.addItem("Katman yok - Önce bir resim açın")
                 return
 
-            # Katmanları listele
+            # Katmanları listele (özel widget'lar kullanarak)
             for idx, layer in enumerate(self.main_window.layers.layers):
-                text = f"{'👁️' if layer.visible else '❌'} {layer.name}"
-                self.list_widget.addItem(text)
+                item = QListWidgetItem(self.list_widget) # Create item but don't set text
+                widget = QWidget()
+                layout = QHBoxLayout(widget)
+                layout.setContentsMargins(5, 2, 5, 2) # Adjust margins
+
+                # Visibility Label (clickable)
+                visibility_label = QLabel('👁️' if layer.visible else '❌')
+                # Store index in the label for click handling (alternative to itemClicked)
+                visibility_label.setProperty("layer_index", idx)
+                visibility_label.mousePressEvent = self._on_visibility_clicked # Assign click handler
+
+                # Layer Name Label
+                name_label = QLabel(layer.name)
+                name_label.setToolTip(layer.name) # Show full name on hover
+
+                # Blend Mode ComboBox
+                blend_combo = QComboBox()
+                blend_combo.setProperty("layer_index", idx) # Store index
+                for mode_key, mode_name in BLEND_MODES.items():
+                    blend_combo.addItem(mode_name, userData=mode_key) # Store key in userData
+                current_blend_key = layer.blend_mode
+                # Find the index corresponding to the layer's current blend mode key
+                combo_index = blend_combo.findData(current_blend_key)
+                if combo_index != -1:
+                    blend_combo.setCurrentIndex(combo_index)
+                blend_combo.currentTextChanged.connect(self._on_blend_mode_changed) # Connect signal
+
+                # Opacity Slider
+                opacity_slider = QSlider(Qt.Orientation.Horizontal)
+                opacity_slider.setMinimum(0)
+                opacity_slider.setMaximum(100)
+                opacity_slider.setValue(layer.opacity)
+                opacity_slider.setFixedWidth(60)  # Make it compact
+                opacity_slider.setProperty("layer_index", idx)
+                opacity_slider.valueChanged.connect(self._on_opacity_changed)
+                opacity_slider.setToolTip(f"Opaklık: {layer.opacity}%")
+
+                layout.addWidget(visibility_label)
+                layout.addWidget(name_label, 1) # Give name label stretch factor
+                layout.addWidget(opacity_slider)
+                layout.addWidget(blend_combo)
+                widget.setLayout(layout)
+
+                # Set the custom widget for the list item
+                item.setSizeHint(widget.sizeHint()) # Important for proper sizing
+                self.list_widget.addItem(item) # Add the item itself
+                self.list_widget.setItemWidget(item, widget) # Set the widget for the item
 
             # Aktif katmanı seç
             active_idx = self.main_window.layers.active_index
@@ -168,24 +215,88 @@ class LayerPanel(QWidget):
         except Exception as e:
             logging.error(f"paste_layer error: {e}")
 
-    def toggle_layer_visibility(self, item):
-        """ Katmanın görünürlüğünü değiştirir. """
-        try:
-            idx = self.list_widget.row(item)
-            if not hasattr(self.main_window, 'layers') or not self.main_window.layers.layers:
-                return # Katman yoksa işlem yapma
+    # Removed toggle_layer_visibility(self, item) as it's handled by _on_visibility_clicked
 
-            if 0 <= idx < len(self.main_window.layers.layers):
+    def _on_visibility_clicked(self, event):
+        """ Handles clicks on the visibility label. """
+        sender_label = self.sender() # Get the label that was clicked
+        if not sender_label: return
+
+        idx = sender_label.property("layer_index")
+        if idx is None or not hasattr(self.main_window, 'layers') or not self.main_window.layers.layers:
+            return
+
+        if 0 <= idx < len(self.main_window.layers.layers):
+            try:
                 layer = self.main_window.layers.layers[idx]
                 layer.visible = not layer.visible
                 logging.info(f"Katman görünürlüğü değiştirildi: {layer.name} -> {'Görünür' if layer.visible else 'Gizli'}")
-                self.refresh() # Paneldeki ikonu güncelle
-                self.main_window.refresh_layers() # Ana görünümü güncelle
-            else:
-                logging.warning(f"toggle_layer_visibility: Geçersiz indeks {idx}")
-        except Exception as e:
-            logging.error(f"toggle_layer_visibility hatası: {e}")
-            QMessageBox.warning(self, 'Hata', f'Katman görünürlüğü değiştirilirken hata: {e}')
+                # Update the specific item's widget appearance
+                item = self.list_widget.item(idx)
+                widget = self.list_widget.itemWidget(item)
+                if widget:
+                    # Find the visibility label within the widget
+                    vis_label = widget.findChild(QLabel) # Assumes first QLabel is visibility
+                    if vis_label:
+                        vis_label.setText('👁️' if layer.visible else '❌')
+                # Refresh the main canvas
+                self.main_window.refresh_layers()
+            except Exception as e:
+                 logging.error(f"_on_visibility_clicked hatası: {e}")
+                 QMessageBox.warning(self, 'Hata', f'Katman görünürlüğü değiştirilirken hata: {e}')
+        else:
+            logging.warning(f"_on_visibility_clicked: Geçersiz indeks {idx}")
+
+
+    def _on_blend_mode_changed(self, text):
+        """ Handles changes in the blend mode combo box. """
+        sender_combo = self.sender() # Get the combo box that emitted the signal
+        if not sender_combo: return
+
+        idx = sender_combo.property("layer_index")
+        if idx is None or not hasattr(self.main_window, 'layers') or not self.main_window.layers.layers:
+            return
+
+        if 0 <= idx < len(self.main_window.layers.layers):
+            try:
+                layer = self.main_window.layers.layers[idx]
+                selected_mode_key = sender_combo.currentData() # Get the key stored in userData
+
+                if layer.blend_mode != selected_mode_key:
+                    layer.blend_mode = selected_mode_key
+                    logging.info(f"Katman {idx} blend modu değiştirildi: {selected_mode_key}")
+                    # Refresh the main canvas to show the blend mode change
+                    self.main_window.refresh_layers()
+            except Exception as e:
+                logging.error(f"_on_blend_mode_changed hatası: {e}")
+                QMessageBox.warning(self, 'Hata', f'Blend modu değiştirilirken hata: {e}')
+        else:
+             logging.warning(f"_on_blend_mode_changed: Geçersiz indeks {idx}")
+
+
+    def _on_opacity_changed(self, value):
+        """ Handles changes in the opacity slider. """
+        sender_slider = self.sender()  # Get the slider that emitted the signal
+        if not sender_slider: return
+
+        idx = sender_slider.property("layer_index")
+        if idx is None or not hasattr(self.main_window, 'layers') or not self.main_window.layers.layers:
+            return
+
+        if 0 <= idx < len(self.main_window.layers.layers):
+            try:
+                layer = self.main_window.layers.layers[idx]
+                if layer.opacity != value:
+                    layer.opacity = value
+                    sender_slider.setToolTip(f"Opaklık: {value}%")
+                    logging.info(f"Katman {idx} opaklığı değiştirildi: {value}%")
+                    # Refresh the main canvas to show the opacity change
+                    self.main_window.refresh_layers()
+            except Exception as e:
+                logging.error(f"_on_opacity_changed hatası: {e}")
+                QMessageBox.warning(self, 'Hata', f'Opaklık değiştirilirken hata: {e}')
+        else:
+            logging.warning(f"_on_opacity_changed: Geçersiz indeks {idx}")
 
     def handle_rows_moved(self, parent: QModelIndex, start: int, end: int, destination: QModelIndex, row: int):
         """ QListWidget içinde bir öğe taşındığında çağrılır. """
