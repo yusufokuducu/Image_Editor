@@ -1,7 +1,8 @@
 import logging
 from PIL import Image
-from PyQt6.QtGui import QPixmap, QPainter
+from PyQt6.QtGui import QPixmap, QPainter, QColor # Added QColor
 from PyQt6.QtCore import Qt
+from .layers import BLEND_MODES # Import blend modes
 
 def compose_layers_pixmap(layers, image_to_qpixmap_func):
     """Composes visible layers into a QPixmap."""
