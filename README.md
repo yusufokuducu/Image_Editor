@@ -1,5 +1,5 @@
 # PyxelEdit
-ODTÜ de tomanın ne işi var 
+# ODTÜ de tomanın ne işi var #
 **Gelişmiş, Katman Destekli Python Görüntü Editörü**
 
 PyxelEdit; modern PyQt6 arayüzü, güçlü katman yönetimi, gelişmiş filtre/efekt altyapısı ve esnek mimarisiyle Windows için geliştirilmiş açık kaynaklı bir raster imaj editörüdür. Grafik tasarımcılar, piksel sanatçılar ve yazılım geliştiriciler için hızlı, modüler ve geliştirilebilir bir platform sunar.

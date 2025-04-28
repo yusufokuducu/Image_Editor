@@ -17,39 +17,15 @@ def compose_layers_pixmap(layers, image_to_qpixmap_func):
             logging.warning("compose_layers_pixmap: No visible layers")
             return None
 
-        # Convert layers to pixmaps
-        pixmaps = []
-        for layer in visible_layers:
-            try:
-                if not hasattr(layer, 'image') or layer.image is None:
-                    continue
-
-                pm = image_to_qpixmap_func(layer.image)
-                if pm and not pm.isNull():
-                    pixmaps.append(pm)
-            except Exception as e:
-                logging.error(f"Error converting layer to pixmap: {e}")
-                continue
-
-        if not pixmaps:
+        # First get merged PIL Image from LayerManager
+        merged_img = layers.merge_visible()
+        if merged_img is None:
+            logging.warning("compose_layers_pixmap: merge_visible returned None")
             return None
-
-        # Get dimensions from first pixmap
-        width = pixmaps[0].width()
-        height = pixmaps[0].height()
-
-        # Create result pixmap
-        result = QPixmap(width, height)
-        result.fill(Qt.GlobalColor.transparent)
-
-        # Draw layers
-        painter = QPainter(result)
-        for pm in pixmaps:
-            if not pm.isNull():
-                painter.drawPixmap(0, 0, pm)
-        painter.end()
-
-        return result
+            
+        # Convert merged result to QPixmap
+        return image_to_qpixmap_func(merged_img)
+        
     except Exception as e:
         logging.error(f"compose_layers_pixmap error: {e}")
         return None

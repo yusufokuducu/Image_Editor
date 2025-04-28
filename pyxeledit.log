@@ -365,3 +365,78 @@
 2025-04-28 17:25:51,130 [INFO] Applying filter/adjustment: saturation, param: 1.33
 2025-04-28 17:26:01,756 [INFO] Filter preview cancelled: hue. Restoring original.
 2025-04-28 17:26:11,206 [INFO] Katman 0 opaklýðý deðiþtirildi: 25%
+2025-04-28 18:40:05,352 [INFO] 9 efekt panele eklendi.
+2025-04-28 18:40:05,359 [INFO] PyxelEdit baþlatýldý
+2025-04-28 18:40:14,607 [INFO] Katman 0 opaklýðý deðiþtirildi: 98%
+2025-04-28 18:40:18,511 [INFO] Katman 0 opaklýðý deðiþtirildi: 39%
+2025-04-28 18:40:19,254 [INFO] Katman 0 opaklýðý deðiþtirildi: 20%
+2025-04-28 18:40:20,214 [INFO] Katman 0 opaklýðý deðiþtirildi: 23%
+2025-04-28 18:40:20,752 [INFO] Katman 0 opaklýðý deðiþtirildi: 39%
+2025-04-28 18:40:24,724 [INFO] Katman 0 opaklýðý deðiþtirildi: 50%
+2025-04-28 18:40:25,277 [INFO] Katman 0 opaklýðý deðiþtirildi: 89%
+2025-04-28 18:40:25,462 [INFO] Katman 0 opaklýðý deðiþtirildi: 95%
+2025-04-28 18:40:25,624 [INFO] Katman 0 opaklýðý deðiþtirildi: 100%
+2025-04-28 18:40:27,768 [INFO] Katman 0 blend modu deðiþtirildi: multiply
+2025-04-28 18:40:31,638 [INFO] Katman 0 blend modu deðiþtirildi: lighten
+2025-04-28 18:40:34,958 [INFO] Katman 0 blend modu deðiþtirildi: add
+2025-04-28 18:40:37,131 [INFO] Katman 0 blend modu deðiþtirildi: normal
+2025-04-28 18:40:44,639 [INFO] Applying final filter: brightness with value: 0.6
+2025-04-28 18:40:44,639 [INFO] Applying filter/adjustment: brightness, param: 0.6
+2025-04-28 18:40:47,073 [INFO] Filter preview cancelled: blur. Restoring original.
+2025-04-28 18:40:54,561 [INFO] Applying final filter: contrast with value: 1.68
+2025-04-28 18:40:54,561 [INFO] Applying filter/adjustment: contrast, param: 1.68
+2025-04-28 18:41:02,182 [INFO] Applying final filter: saturation with value: 1.02
+2025-04-28 18:41:02,183 [INFO] Applying filter/adjustment: saturation, param: 1.02
+2025-04-28 18:41:07,669 [INFO] Araç deðiþtirildi: select
+2025-04-28 18:41:29,025 [INFO] Katman kopyalandý: Arka Plan
+2025-04-28 18:41:29,688 [INFO] Katman yapýþtýrýldý: Arka Plan (Kopya)
+2025-04-28 18:41:30,145 [INFO] Katman yapýþtýrýldý: Arka Plan (Kopya)
+2025-04-28 18:41:30,488 [INFO] Katman yapýþtýrýldý: Arka Plan (Kopya)
+2025-04-28 18:41:30,706 [INFO] Katman yapýþtýrýldý: Arka Plan (Kopya)
+2025-04-28 18:41:36,355 [INFO] Aktif katman deðiþtirildi: 0
+2025-04-28 18:41:36,980 [INFO] Aktif katman deðiþtirildi: 1
+2025-04-28 18:41:38,060 [INFO] Katman 1 blend modu deðiþtirildi: multiply
+2025-04-28 18:41:39,098 [INFO] Katman 2 blend modu deðiþtirildi: darken
+2025-04-28 18:41:40,092 [INFO] Katman 3 blend modu deðiþtirildi: overlay
+2025-04-28 18:41:40,912 [INFO] Katman 4 blend modu deðiþtirildi: overlay
+2025-04-28 18:41:41,739 [INFO] Aktif katman deðiþtirildi: 4
+2025-04-28 18:41:43,558 [INFO] Katman sürükle-býrak ile taþýndý: 4 -> 1
+2025-04-28 18:41:44,214 [INFO] Aktif katman deðiþtirildi: 3
+2025-04-28 18:41:45,566 [INFO] Katman sürükle-býrak ile taþýndý: 3 -> 1
+2025-04-28 18:41:46,374 [INFO] Aktif katman deðiþtirildi: 2
+2025-04-28 18:41:48,172 [INFO] Katman sürükle-býrak ile taþýndý: 2 -> 0
+2025-04-28 18:41:49,720 [INFO] Aktif katman deðiþtirildi: 1
+2025-04-28 18:41:51,110 [INFO] Katman sürükle-býrak ile taþýndý: 1 -> 3
+2025-04-28 23:28:29,490 [INFO] 9 efekt panele eklendi.
+2025-04-28 23:28:29,497 [INFO] PyxelEdit baþlatýldý
+2025-04-28 23:28:49,075 [INFO] Araç deðiþtirildi: text
+2025-04-28 23:28:49,509 [INFO] Text tool clicked at scene coordinates: 585.6, 216.8
+2025-04-28 23:28:49,509 [INFO] Handling text tool click at 585.6, 216.8
+2025-04-28 23:28:55,243 [INFO] Using font file: C:/Windows/Fonts\arial.ttf for family Segoe UI, size 9
+2025-04-28 23:28:55,252 [ERROR] Metin ekleme hatasý: name 'Command' is not defined
+2025-04-28 23:29:08,372 [INFO] Text tool clicked at scene coordinates: 1123.0468749999995, 910.6445312499997
+2025-04-28 23:29:08,373 [INFO] Handling text tool click at 1123.0468749999995, 910.6445312499997
+2025-04-28 23:29:11,179 [INFO] Using font file: C:/Windows/Fonts\arial.ttf for family Segoe UI, size 9
+2025-04-28 23:29:11,188 [ERROR] Metin ekleme hatasý: name 'Command' is not defined
+2025-04-28 23:30:04,981 [INFO] 9 efekt panele eklendi.
+2025-04-28 23:30:04,982 [INFO] PyxelEdit baþlatýldý
+2025-04-28 23:30:15,142 [INFO] Araç deðiþtirildi: text
+2025-04-28 23:30:15,338 [INFO] Text tool clicked at scene coordinates: 1134.0, 894.0
+2025-04-28 23:30:15,338 [INFO] Handling text tool click at 1134.0, 894.0
+2025-04-28 23:30:17,417 [INFO] Using font file: C:/Windows/Fonts\arial.ttf for family Segoe UI, size 9
+2025-04-28 23:30:20,397 [INFO] Text tool clicked at scene coordinates: 47.68371582031248, 303.9836883544921
+2025-04-28 23:30:20,398 [INFO] Handling text tool click at 47.68371582031248, 303.9836883544921
+2025-04-28 23:30:25,902 [INFO] Using font file: C:/Windows/Fonts\arial.ttf for family Segoe UI, size 36
+2025-04-28 23:30:27,410 [INFO] Text tool clicked at scene coordinates: 592.0410156249997, 735.4736328124995
+2025-04-28 23:30:27,410 [INFO] Handling text tool click at 592.0410156249997, 735.4736328124995
+2025-04-28 23:30:29,269 [INFO] Araç deðiþtirildi: text
+2025-04-28 23:30:30,056 [INFO] Araç deðiþtirildi: select
+2025-04-28 23:30:50,227 [INFO] Katman kopyalandý: Arka Plan
+2025-04-28 23:30:50,582 [INFO] Katman yapýþtýrýldý: Arka Plan (Kopya)
+2025-04-28 23:30:53,374 [INFO] Katman 0 opaklýðý deðiþtirildi: 52%
+2025-04-28 23:30:53,681 [INFO] Katman 0 opaklýðý deðiþtirildi: 39%
+2025-04-28 23:30:54,083 [INFO] Katman 0 opaklýðý deðiþtirildi: 16%
+2025-04-28 23:30:54,395 [INFO] Katman 1 opaklýðý deðiþtirildi: 86%
+2025-04-28 23:30:54,712 [INFO] Katman 1 opaklýðý deðiþtirildi: 68%
+2025-04-28 23:30:54,803 [INFO] Katman 1 opaklýðý deðiþtirildi: 66%
+2025-04-28 23:30:55,034 [INFO] Katman 1 opaklýðý deðiþtirildi: 55%

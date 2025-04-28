@@ -142,6 +142,8 @@ class LayerPanel(QWidget):
 
                 # Visibility Label (clickable)
                 visibility_label = QLabel('☑' if layer.visible else '☐') # Use checkbox characters
+                visibility_label.setCursor(Qt.CursorShape.PointingHandCursor) # Show hand cursor to indicate clickable
+                visibility_label.setToolTip("Görünürlüğü değiştirmek için tıklayın")
                 # Store index in the label for click handling (alternative to itemClicked)
                 visibility_label.setProperty("layer_index", idx)
                 visibility_label.mousePressEvent = self._on_visibility_clicked # Assign click handler
@@ -149,6 +151,10 @@ class LayerPanel(QWidget):
                 # Layer Name Label
                 name_label = QLabel(layer.name)
                 name_label.setToolTip(layer.name) # Show full name on hover
+
+                # Opacity indicator text
+                opacity_text = QLabel(f"{layer.opacity}%")
+                opacity_text.setFixedWidth(30)
 
                 # Blend Mode ComboBox
                 blend_combo = QComboBox()
@@ -174,6 +180,7 @@ class LayerPanel(QWidget):
 
                 layout.addWidget(visibility_label)
                 layout.addWidget(name_label, 1) # Give name label stretch factor
+                layout.addWidget(opacity_text)
                 layout.addWidget(opacity_slider)
                 layout.addWidget(blend_combo)
                 widget.setLayout(layout)
@@ -311,16 +318,22 @@ class LayerPanel(QWidget):
         if 0 <= idx < len(self.main_window.layers.layers):
             try:
                 layer = self.main_window.layers.layers[idx]
+                # Toggle visibility
                 layer.visible = not layer.visible
                 logging.info(f"Katman görünürlüğü değiştirildi: {layer.name} -> {'Görünür' if layer.visible else 'Gizli'}")
+                
                 # Update the specific item's widget appearance
                 item = self.list_widget.item(idx)
-                widget = self.list_widget.itemWidget(item)
-                if widget:
-                    # Find the visibility label within the widget
-                    vis_label = widget.findChild(QLabel) # Assumes first QLabel is visibility
-                    if vis_label:
-                        vis_label.setText('☑' if layer.visible else '☐') # Use checkbox characters
+                if item:
+                    widget = self.list_widget.itemWidget(item)
+                    if widget:
+                        # Find the visibility label within the widget
+                        for child in widget.findChildren(QLabel):
+                            # Check if this label has our layer_index property
+                            if child.property("layer_index") == idx:
+                                child.setText('☑' if layer.visible else '☐')
+                                break
+                
                 # Refresh the main canvas
                 self.main_window.refresh_layers()
             except Exception as e:
@@ -371,6 +384,18 @@ class LayerPanel(QWidget):
                 if layer.opacity != value:
                     layer.opacity = value
                     sender_slider.setToolTip(f"Opaklık: {value}%")
+                    
+                    # Update the opacity text label 
+                    item = self.list_widget.item(idx)
+                    if item:
+                        widget = self.list_widget.itemWidget(item)
+                        if widget:
+                            # Find the opacity text label (should be the third QLabel)
+                            labels = widget.findChildren(QLabel)
+                            if len(labels) >= 3:
+                                opacity_label = labels[2]  # Third label should be the opacity text
+                                opacity_label.setText(f"{value}%")
+
                     logging.info(f"Katman {idx} opaklığı değiştirildi: {value}%")
                     # Refresh the main canvas to show the opacity change
                     self.main_window.refresh_layers()

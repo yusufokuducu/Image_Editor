@@ -11,7 +11,7 @@ from PyQt6.QtCore import Qt, QTimer, QPointF
 from .image_io import load_image, image_to_qpixmap
 from .image_view import ImageView
 from .transform import rotate_image, flip_image, resize_image, crop_image
-from .history import History
+from .history import History, Command
 from .layers import LayerManager
 from .layer_panel import LayerPanel
 from .effects_panel import EffectsPanel
