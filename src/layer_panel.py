@@ -1,7 +1,7 @@
 from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QListWidget, QPushButton, QHBoxLayout,
                              QLabel, QMessageBox, QComboBox, QListWidgetItem, QSlider) # Added QSlider
 from PyQt6.QtCore import Qt, QModelIndex
-from PyQt6.QtGui import QDropEvent
+from PyQt6.QtGui import QDropEvent, QDragEnterEvent, QMouseEvent
 import logging
 from .layers import BLEND_MODES # Import blend modes
 
@@ -39,8 +39,90 @@ class LayerPanel(QWidget):
         self.btn_paste.clicked.connect(self.paste_layer)
         self.list_widget.currentRowChanged.connect(self.set_active_layer)
         # self.list_widget.itemClicked.connect(self.toggle_layer_visibility) # Removed: Handled by label click now
+
+        # Trash Can Area
+        self.trash_layout = QHBoxLayout()
+        self.trash_layout.addStretch() # Push trash can to the right
+        self.trash_label = QLabel('🗑️')
+        self.trash_label.setToolTip("Katmanı silmek için buraya sürükleyin")
+        self.trash_label.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+        self.trash_layout.addWidget(self.trash_label)
+        self.layout.addLayout(self.trash_layout)
+
         self.copied_layer = None
+        self.setAcceptDrops(True) # Enable drops on the panel itself for the trash can
         self.refresh()
+
+    def dragEnterEvent(self, event: QDragEnterEvent):
+        """ Accept drags only if they come from the internal list widget. """
+        if event.source() == self.list_widget:
+            event.acceptProposedAction()
+            logging.debug("Drag entered LayerPanel from list_widget")
+        else:
+            event.ignore()
+            logging.debug("Drag entered LayerPanel from external source, ignored")
+
+    def dropEvent(self, event: QDropEvent):
+        """ Handle drops onto the trash can icon. """
+        if event.source() != self.list_widget:
+            event.ignore()
+            logging.debug("Drop ignored: Source is not list_widget")
+            return
+
+        # Check if the drop occurred over the trash label
+        trash_rect = self.trash_label.geometry()
+        # Map the drop position relative to the LayerPanel widget
+        drop_pos_in_panel = event.position().toPoint()
+
+        logging.debug(f"Drop position in panel: {drop_pos_in_panel}, Trash rect: {trash_rect}")
+
+        if trash_rect.contains(drop_pos_in_panel):
+            logging.debug("Drop detected over trash icon")
+            item = self.list_widget.currentItem() # Get the item being dragged
+            if not item:
+                logging.warning("Drop on trash: No current item found.")
+                event.ignore()
+                return
+
+            idx = self.list_widget.row(item)
+            if idx < 0:
+                logging.warning(f"Drop on trash: Invalid index {idx} for item.")
+                event.ignore()
+                return
+
+            if not hasattr(self.main_window, 'layers') or not self.main_window.layers.layers:
+                 logging.warning("Drop on trash: No layers found.")
+                 event.ignore()
+                 return
+
+            if idx >= len(self.main_window.layers.layers):
+                logging.warning(f"Drop on trash: Index {idx} out of bounds.")
+                event.ignore()
+                return
+
+            layer_to_delete = self.main_window.layers.layers[idx]
+            reply = QMessageBox.question(self, 'Katmanı Sil',
+                                         f"'{layer_to_delete.name}' katmanını silmek istediğinizden emin misiniz?",
+                                         QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                                         QMessageBox.StandardButton.No)
+
+            if reply == QMessageBox.StandardButton.Yes:
+                try:
+                    self.main_window.layers.delete_layer(idx)
+                    self.main_window.refresh_layers() # Refresh main view first
+                    self.refresh() # Then refresh the panel
+                    logging.info(f"Katman silindi (sürükle-bırak): {layer_to_delete.name} (indeks {idx})")
+                    event.acceptProposedAction() # Consume the event
+                except Exception as e:
+                    logging.error(f"Katman silinirken hata (sürükle-bırak): {e}")
+                    QMessageBox.critical(self, 'Hata', f'Katman silinirken bir hata oluştu: {e}')
+                    event.ignore()
+            else:
+                logging.debug("Katman silme iptal edildi.")
+                event.ignore() # Drop was cancelled
+        else:
+            logging.debug("Drop not on trash icon, ignoring (let list widget handle internal move)")
+            event.ignore() # Let the list widget handle the internal move if applicable
 
     def refresh(self):
         try:
@@ -59,7 +141,7 @@ class LayerPanel(QWidget):
                 layout.setContentsMargins(5, 2, 5, 2) # Adjust margins
 
                 # Visibility Label (clickable)
-                visibility_label = QLabel('👁️' if layer.visible else '❌')
+                visibility_label = QLabel('☑' if layer.visible else '☐') # Use checkbox characters
                 # Store index in the label for click handling (alternative to itemClicked)
                 visibility_label.setProperty("layer_index", idx)
                 visibility_label.mousePressEvent = self._on_visibility_clicked # Assign click handler
@@ -238,7 +320,7 @@ class LayerPanel(QWidget):
                     # Find the visibility label within the widget
                     vis_label = widget.findChild(QLabel) # Assumes first QLabel is visibility
                     if vis_label:
-                        vis_label.setText('👁️' if layer.visible else '❌')
+                        vis_label.setText('☑' if layer.visible else '☐') # Use checkbox characters
                 # Refresh the main canvas
                 self.main_window.refresh_layers()
             except Exception as e:

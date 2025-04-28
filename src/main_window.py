@@ -64,11 +64,12 @@ class MainWindow(QMainWindow):
         # Menu bar
         self.menu_bar = QMenuBar()
         self.setMenuBar(self.menu_bar)
-        self.menu_manager.create_menus()
-
-        # Image view
+        # Image view (Initialize before menus that might access it)
         self.image_view = ImageView(self)
         self.setCentralWidget(self.image_view)
+
+        # Menu bar (Create after image view)
+        self.menu_manager.create_menus()
         self.image_view.textToolClicked.connect(self.handle_text_tool_click)
 
         # Layer panel
@@ -426,7 +427,7 @@ class MainWindow(QMainWindow):
                     logging.error(f"Filter/Adjustment 'undo' action error ({filter_type}): {e}")
 
             # Create and execute the command
-            cmd = Command(do_action, undo_action, f'İşlem: {filter_type}')
+            cmd = create_command(do_action, undo_action, f'İşlem: {filter_type}')
             cmd.do() # Apply the change
             self.history.push(cmd) # Add to history
 
@@ -494,7 +495,7 @@ class MainWindow(QMainWindow):
             except Exception as e:
                 logging.error(f"Dönüşüm geri alma (undo) hatası: {e}")
 
-        cmd = Command(do, undo, f'Dönüşüm: {ttype}')
+        cmd = create_command(do, undo, f'Dönüşüm: {ttype}')
         cmd.do() # Apply the change
         self.history.push(cmd)
         self.status_bar.showMessage('Dönüşüm uygulandı: ' + ttype)
@@ -545,7 +546,7 @@ class MainWindow(QMainWindow):
             except Exception as e:
                 logging.error(f"Resize geri alma (undo) hatası: {e}")
 
-        cmd = Command(do, undo, 'Yeniden Boyutlandır')
+        cmd = create_command(do, undo, 'Yeniden Boyutlandır')
         cmd.do() # Apply the change
         self.history.push(cmd)
         self.status_bar.showMessage(f'Aktif katman yeniden boyutlandırıldı: {width}x{height} (Oran Koru: {keep_aspect})')

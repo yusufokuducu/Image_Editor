@@ -312,3 +312,56 @@
 2025-04-27 17:51:46,840 [CRITICAL] Uygulama baþlatýlýrken kritik hata: 'MainWindow' object has no attribute 'image_view'
 2025-04-27 17:52:02,292 [CRITICAL] Uygulama baþlatýlýrken kritik hata: 'MainWindow' object has no attribute 'image_view'
 2025-04-27 21:21:31,228 [CRITICAL] Uygulama baþlatýlýrken kritik hata: 'MainWindow' object has no attribute 'image_view'
+2025-04-28 17:07:49,546 [INFO] 9 efekt panele eklendi.
+2025-04-28 17:07:49,552 [INFO] PyxelEdit baþlatýldý
+2025-04-28 17:08:04,467 [INFO] Katman 0 opaklýðý deðiþtirildi: 93%
+2025-04-28 17:08:05,534 [INFO] Katman 0 opaklýðý deðiþtirildi: 50%
+2025-04-28 17:08:06,234 [INFO] Katman 0 opaklýðý deðiþtirildi: 48%
+2025-04-28 17:08:07,175 [INFO] Katman 0 opaklýðý deðiþtirildi: 30%
+2025-04-28 17:08:10,229 [INFO] Katman 0 blend modu deðiþtirildi: multiply
+2025-04-28 17:08:13,470 [INFO] Katman 0 blend modu deðiþtirildi: normal
+2025-04-28 17:08:32,125 [INFO] Applying final filter: brightness with value: 2.87
+2025-04-28 17:08:32,125 [INFO] Applying filter/adjustment: brightness, param: 2.87
+2025-04-28 17:08:32,185 [ERROR] apply_filter error (brightness): name 'Command' is not defined
+2025-04-28 17:08:42,208 [INFO] Aktif katman deðiþtirildi: 0
+2025-04-28 17:08:46,444 [INFO] Katman kopyalandý: Arka Plan
+2025-04-28 17:08:47,687 [INFO] Katman yapýþtýrýldý: Arka Plan (Kopya)
+2025-04-28 17:08:54,975 [INFO] Aktif katman deðiþtirildi: 1
+2025-04-28 17:09:06,708 [INFO] Katman sürükle-býrak ile taþýndý: 1 -> 2
+2025-04-28 17:09:09,066 [INFO] Katman sürükle-býrak ile taþýndý: 2 -> 0
+2025-04-28 17:09:12,728 [INFO] Katman 1 opaklýðý deðiþtirildi: 0%
+2025-04-28 17:09:14,270 [INFO] Katman 1 opaklýðý deðiþtirildi: 16%
+2025-04-28 17:09:15,162 [INFO] Katman 1 opaklýðý deðiþtirildi: 41%
+2025-04-28 17:09:16,895 [INFO] Katman 2 opaklýðý deðiþtirildi: 48%
+2025-04-28 17:09:18,537 [INFO] Katman 2 opaklýðý deðiþtirildi: 50%
+2025-04-28 17:09:21,605 [INFO] Katman sürükle-býrak ile taþýndý: 0 -> 1
+2025-04-28 17:09:22,615 [INFO] Aktif katman deðiþtirildi: 0
+2025-04-28 17:09:31,691 [INFO] Applying final filter: blur with value: 13
+2025-04-28 17:09:31,692 [INFO] Applying filter/adjustment: blur, param: 13
+2025-04-28 17:09:31,817 [ERROR] apply_filter error (blur): name 'Command' is not defined
+2025-04-28 17:10:18,289 [INFO] Applying final filter: brightness with value: 1.0
+2025-04-28 17:10:18,290 [INFO] Applying filter/adjustment: brightness, param: 1.0
+2025-04-28 17:10:18,329 [ERROR] apply_filter error (brightness): name 'Command' is not defined
+2025-04-28 17:23:51,636 [INFO] 9 efekt panele eklendi.
+2025-04-28 17:23:51,637 [INFO] PyxelEdit baþlatýldý
+2025-04-28 17:24:11,626 [INFO] Katman kopyalandý: Arka Plan
+2025-04-28 17:24:12,568 [INFO] Katman yapýþtýrýldý: Arka Plan (Kopya)
+2025-04-28 17:24:16,816 [INFO] Aktif katman deðiþtirildi: 0
+2025-04-28 17:24:29,884 [INFO] Aktif katman deðiþtirildi: 1
+2025-04-28 17:24:30,650 [WARNING] compose_layers_pixmap: No visible layers
+2025-04-28 17:24:36,435 [INFO] Aktif katman deðiþtirildi: 0
+2025-04-28 17:24:44,800 [INFO] Katman 0 opaklýðý deðiþtirildi: 84%
+2025-04-28 17:24:46,261 [INFO] Katman 0 opaklýðý deðiþtirildi: 11%
+2025-04-28 17:25:05,719 [INFO] Applying final filter: sharpen with value: 0.05
+2025-04-28 17:25:05,719 [INFO] Applying filter/adjustment: sharpen, param: 0.05
+2025-04-28 17:25:13,766 [INFO] Filter preview cancelled: blur. Restoring original.
+2025-04-28 17:25:15,181 [INFO] Applying filter/adjustment: edge_enhance, param: None
+2025-04-28 17:25:15,350 [INFO] Doðrudan efekt baþarýyla uygulandý: edge_enhance
+2025-04-28 17:25:24,598 [INFO] Filter preview cancelled: noise. Restoring original.
+2025-04-28 17:25:35,782 [INFO] Applying final filter: brightness with value: 0.98
+2025-04-28 17:25:35,782 [INFO] Applying filter/adjustment: brightness, param: 0.98
+2025-04-28 17:25:43,364 [INFO] Filter preview cancelled: contrast. Restoring original.
+2025-04-28 17:25:51,130 [INFO] Applying final filter: saturation with value: 1.33
+2025-04-28 17:25:51,130 [INFO] Applying filter/adjustment: saturation, param: 1.33
+2025-04-28 17:26:01,756 [INFO] Filter preview cancelled: hue. Restoring original.
+2025-04-28 17:26:11,206 [INFO] Katman 0 opaklýðý deðiþtirildi: 25%
