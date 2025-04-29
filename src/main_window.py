@@ -54,6 +54,9 @@ class MainWindow(QMainWindow):
         # Initialize UI
         self._init_ui()
 
+        # Enable Drag and Drop
+        self.setAcceptDrops(True)
+
         logging.info("PyxelEdit başlatıldı")
 
     def _init_ui(self):
@@ -104,22 +107,39 @@ class MainWindow(QMainWindow):
             logging.warning(f"Bilinmeyen araç adı: {tool_name}")
 
 
+    def _load_image_from_path(self, file_path):
+        """Loads an image from the given file path and updates the UI."""
+        try:
+            img = load_image(file_path)
+            if img is not None:
+                self.layers = LayerManager() # Reset layers for new image
+                self.history = History() # Reset history for new image
+                self.layers.add_layer(img, 'Arka Plan')
+                merged = self.layers.merge_visible() # Get initial merged view
+                if merged:
+                    pixmap = image_to_qpixmap(merged)
+                    self.image_view.set_image(pixmap)
+                    self.status_bar.showMessage(f'{file_path} | {img.width}x{img.height}')
+                    self.current_image_path = file_path
+                    self.refresh_layers() # Update display and layer panel
+                    logging.info(f"Resim yüklendi: {file_path}")
+                    return True
+                else:
+                    QMessageBox.warning(self, 'Uyarı', 'Resim katmanı oluşturulamadı.')
+                    return False
+            else:
+                QMessageBox.critical(self, 'Hata', f'Resim yüklenemedi: {file_path}')
+                return False
+        except Exception as e:
+            logging.error(f"Error loading image from path {file_path}: {e}")
+            QMessageBox.critical(self, 'Hata', f'Resim yüklenirken hata oluştu:\n{e}')
+            return False
+
     def open_image(self):
         file_path, _ = QFileDialog.getOpenFileName(self, 'Resim Aç', '', 'Resim Dosyaları (*.png *.jpg *.jpeg *.bmp *.gif)')
         if file_path:
-            img = load_image(file_path)
-            if img is not None:
-                self.layers = LayerManager()
-                self.layers.add_layer(img, 'Arka Plan')
-                merged = self.layers.merge_visible()
-                pixmap = image_to_qpixmap(merged)
-                self.image_view.set_image(pixmap)
-            self.status_bar.showMessage(f'{file_path} | {img.width}x{img.height}')
-            # self.current_image = merged # Removed: Rely on layers as source of truth
-            self.current_image_path = file_path
-            self.refresh_layers() # Update display and layer panel
-        else:
-            QMessageBox.critical(self, 'Hata', 'Resim yüklenemedi!')
+            self._load_image_from_path(file_path)
+        # No critical message here, _load_image_from_path handles errors
 
     def save_image(self):
         # Save the merged image from layers
@@ -628,108 +648,185 @@ class MainWindow(QMainWindow):
             self.status_bar.showMessage('Yinelenecek işlem yok.')
 
     def add_layer(self):
+        logging.debug("add_layer called") # Added logging
         # Add a new layer based on the size of the first layer, filled with transparency
         if not hasattr(self, 'layers') or not self.layers.layers:
              QMessageBox.warning(self, 'Uyarı', 'Yeni katman eklemek için önce bir resim açın veya mevcut bir katman olmalı!')
+             logging.warning("add_layer aborted: No layers exist.") # Added logging
              return
-        base_size = self.layers.layers[0].image.size
-        img = Image.new('RGBA', base_size, (0,0,0,0)) # Create transparent layer
-        self.layers.add_layer(img, f'Katman {len(self.layers.layers)+1}')
-        self.refresh_layers()
-        self.status_bar.showMessage('Yeni katman eklendi.')
+        try: # Added try-except
+            base_size = self.layers.layers[0].image.size
+            img = Image.new('RGBA', base_size, (0,0,0,0)) # Create transparent layer
+            self.layers.add_layer(img, f'Katman {len(self.layers.layers)+1}')
+            self.refresh_layers()
+            self.status_bar.showMessage('Yeni katman eklendi.')
+            logging.info("add_layer completed successfully.") # Added logging
+        except Exception as e:
+            logging.error(f"add_layer error: {e}")
+            QMessageBox.critical(self, 'Hata', f'Yeni katman eklenirken hata: {e}')
 
     def delete_layer(self):
+        logging.debug("delete_layer called") # Added logging
         idx = self.layers.active_index
         if idx == -1:
-            QMessageBox.warning(self, 'Uyarı', 'Silinecek katman yok!')
+            QMessageBox.warning(self, 'Uyarı', 'Silinecek katman yok! Lütfen bir katman seçin.') # Modified message
+            logging.warning("delete_layer aborted: No active layer selected.") # Added logging
             return
-        self.layers.remove_layer(idx)
-        self.refresh_layers()
-        self.status_bar.showMessage('Katman silindi.')
+        try: # Added try-except
+            layer_name = self.layers.layers[idx].name # Get name before deleting
+            self.layers.remove_layer(idx)
+            self.refresh_layers()
+            self.status_bar.showMessage(f"'{layer_name}' katmanı silindi.") # Show name
+            logging.info(f"delete_layer completed successfully for index {idx}.") # Added logging
+        except Exception as e:
+            logging.error(f"delete_layer error: {e}")
+            QMessageBox.critical(self, 'Hata', f'Katman silinirken hata: {e}')
+
 
     def merge_layers(self):
+        logging.debug("merge_layers called") # Added logging
         # Merge visible layers into a single new layer
         if not hasattr(self, 'layers') or len(self.layers.layers) < 2:
             QMessageBox.warning(self, 'Uyarı', 'Birleştirmek için en az 2 katman olmalı.')
+            logging.warning("merge_layers aborted: Less than 2 layers exist.") # Added logging
             return
 
-        merged_img = self.layers.merge_visible()
-        if merged_img:
-            # Keep track of old layers and indices for undo
-            old_layers_list = list(self.layers.layers) # Shallow copy is enough
-            old_active_index = self.layers.active_index
+        try: # Added try-except for the whole operation
+            merged_img = self.layers.merge_visible()
+            if merged_img:
+                # Keep track of old layers and indices for undo
+                old_layers_list = list(self.layers.layers) # Shallow copy is enough
+                old_active_index = self.layers.active_index
 
-            def do():
-                # Remove all existing layers
-                self.layers.layers.clear()
-                # Add the merged layer
-                self.layers.add_layer(merged_img.copy(), 'Birleştirilmiş Katman')
-                self.refresh_layers()
-                self.status_bar.showMessage('Görünür katmanlar birleştirildi.')
+                def do():
+                    logging.debug("merge_layers 'do' action executing.") # Added logging
+                    # Remove all existing layers
+                    self.layers.layers.clear()
+                    # Add the merged layer
+                    self.layers.add_layer(merged_img.copy(), 'Birleştirilmiş Katman')
+                    self.refresh_layers()
+                    self.status_bar.showMessage('Görünür katmanlar birleştirildi.')
+                    logging.info("merge_layers 'do' action completed.") # Added logging
 
-            def undo():
-                # Restore old layers
-                self.layers.layers = list(old_layers_list) # Restore from copy
-                self.layers.active_index = old_active_index
-                self.refresh_layers()
-                self.status_bar.showMessage('Katman birleştirme geri alındı.')
+                def undo():
+                    logging.debug("merge_layers 'undo' action executing.") # Added logging
+                    # Restore old layers
+                    self.layers.layers = list(old_layers_list) # Restore from copy
+                    self.layers.active_index = old_active_index
+                    self.refresh_layers()
+                    self.status_bar.showMessage('Katman birleştirme geri alındı.')
+                    logging.info("merge_layers 'undo' action completed.") # Added logging
 
-            cmd = Command(do, undo, 'Katmanları Birleştir')
-            cmd.do()
-            self.history.push(cmd)
-        else:
-            QMessageBox.warning(self, 'Uyarı', 'Birleştirilecek görünür katman bulunamadı.')
+                cmd = Command(do, undo, 'Katmanları Birleştir')
+                cmd.do()
+                self.history.push(cmd)
+                logging.info("merge_layers completed successfully and added to history.") # Added logging
+            else:
+                QMessageBox.warning(self, 'Uyarı', 'Birleştirilecek görünür katman bulunamadı.')
+                logging.warning("merge_layers aborted: merge_visible returned None.") # Added logging
+        except Exception as e:
+             logging.error(f"merge_layers error: {e}")
+             QMessageBox.critical(self, 'Hata', f'Katmanlar birleştirilirken hata: {e}')
+
 
     def toggle_layer_visibility(self):
+        logging.debug("toggle_layer_visibility called") # Added logging
         idx = self.layers.active_index
         if idx == -1:
-            QMessageBox.warning(self, 'Uyarı', 'Görünürlüğü değiştirilecek katman yok!')
+            QMessageBox.warning(self, 'Uyarı', 'Görünürlüğü değiştirilecek katman yok! Lütfen bir katman seçin.') # Modified message
+            logging.warning("toggle_layer_visibility aborted: No active layer selected.") # Added logging
             return
-        self.layers.toggle_visibility(idx)
-        self.refresh_layers()
-        self.status_bar.showMessage('Katman görünürlüğü değiştirildi.')
+        try: # Added try-except
+            self.layers.toggle_visibility(idx)
+            layer_name = self.layers.layers[idx].name
+            visibility_status = 'görünür' if self.layers.layers[idx].visible else 'gizli'
+            self.refresh_layers()
+            self.status_bar.showMessage(f"'{layer_name}' katmanı {visibility_status} yapıldı.") # Show status
+            logging.info(f"toggle_layer_visibility completed successfully for index {idx}.") # Added logging
+        except Exception as e:
+            logging.error(f"toggle_layer_visibility error: {e}")
+            QMessageBox.critical(self, 'Hata', f'Katman görünürlüğü değiştirilirken hata: {e}')
+
 
     def move_layer_up(self):
+        logging.debug("move_layer_up called") # Added logging
         idx = self.layers.active_index
+        if idx == -1:
+             QMessageBox.warning(self, 'Uyarı', 'Taşınacak katman seçili değil.')
+             logging.warning("move_layer_up aborted: No active layer.")
+             return
         if idx > 0:
-            self.layers.move_layer(idx, idx - 1)
-            self.refresh_layers()
-            self.status_bar.showMessage('Katman yukarı taşındı.')
+            try: # Added try-except
+                self.layers.move_layer(idx, idx - 1)
+                self.refresh_layers()
+                self.status_bar.showMessage('Katman yukarı taşındı.')
+                logging.info(f"move_layer_up completed successfully for index {idx}.") # Added logging
+            except Exception as e:
+                logging.error(f"move_layer_up error: {e}")
+                QMessageBox.critical(self, 'Hata', f'Katman yukarı taşınırken hata: {e}')
+        else:
+            logging.info("move_layer_up: Layer already at top.") # Added logging
 
     def move_layer_down(self):
+        logging.debug("move_layer_down called") # Added logging
         idx = self.layers.active_index
+        if idx == -1:
+             QMessageBox.warning(self, 'Uyarı', 'Taşınacak katman seçili değil.')
+             logging.warning("move_layer_down aborted: No active layer.")
+             return
         if idx < len(self.layers.layers) - 1:
-            self.layers.move_layer(idx, idx + 1)
-            self.refresh_layers()
-            self.status_bar.showMessage('Katman aşağı taşındı.')
+            try: # Added try-except
+                self.layers.move_layer(idx, idx + 1)
+                self.refresh_layers()
+                self.status_bar.showMessage('Katman aşağı taşındı.')
+                logging.info(f"move_layer_down completed successfully for index {idx}.") # Added logging
+            except Exception as e:
+                logging.error(f"move_layer_down error: {e}")
+                QMessageBox.critical(self, 'Hata', f'Katman aşağı taşınırken hata: {e}')
+        else:
+             logging.info("move_layer_down: Layer already at bottom.") # Added logging
 
     def refresh_layers(self):
         """Katmanları birleştirip görüntüyü günceller ve katman panelini yeniler."""
+        logging.debug("refresh_layers called") # Added logging
         try:
             # Katmanlar var mı kontrol et
             if not hasattr(self, 'layers') or not self.layers.layers:
-                logging.warning("refresh_layers: Katman yok")
+                logging.warning("refresh_layers: No layers object or layers list is empty.") # Modified log
+                # Clear the view if no layers exist
+                self.image_view.scene.clear()
+                # Also refresh the panel to show "No layers" message
+                if hasattr(self, 'layer_panel'):
+                    self.layer_panel.refresh()
                 return
 
+            logging.debug("refresh_layers: Composing layers...") # Added logging
             # Katmanları birleştirip pixmap oluştur (display için)
             pixmap = self._compose_layers_pixmap()
+            logging.debug(f"refresh_layers: Composition complete. Pixmap is null: {pixmap is None or pixmap.isNull()}") # Added logging
+
             if pixmap and not pixmap.isNull():
+                logging.debug("refresh_layers: Setting image view...") # Added logging
                 self.image_view.set_image(pixmap)
+                logging.debug("refresh_layers: Image view set.") # Added logging
             elif not self.layers.layers: # Handle case where all layers are deleted
+                 logging.debug("refresh_layers: Clearing image view scene (no layers).") # Added logging
                  self.image_view.scene.clear()
-            # else: # Handle case where there are layers but none are visible or valid
-            #     # Optionally display a blank canvas or message
-            #     # For now, do nothing, leaving the view as is or empty
-            #     pass
+            else: # Handle case where there are layers but none are visible or valid
+                 logging.warning("refresh_layers: Composition resulted in null pixmap, clearing scene.") # Added logging
+                 self.image_view.scene.clear() # Clear scene if composition fails
 
             # Katman panelini güncelle
             if hasattr(self, 'layer_panel'):
+                logging.debug("refresh_layers: Refreshing layer panel...") # Added logging
                 self.layer_panel.refresh()
+                logging.debug("refresh_layers: Layer panel refreshed.") # Added logging
             # Efekt panelini güncelle (gerekirse)
             # if hasattr(self, 'effects_panel'):
             #     self.effects_panel.refresh() # Şimdilik efekt paneli statik, refresh gerekmeyebilir
+            logging.debug("refresh_layers finished successfully.") # Added logging
         except Exception as e:
-            logging.error(f"refresh_layers error: {e}")
+            logging.error(f"refresh_layers error: {e}", exc_info=True) # Added exc_info for traceback
             QMessageBox.critical(self, 'Hata', f'Katmanlar güncellenirken hata oluştu: {e}')
 
     def _compose_layers_pixmap(self):
@@ -840,3 +937,66 @@ class MainWindow(QMainWindow):
             # Restore original image on error
             layer.image = old_img
             self.refresh_layers()
+# --- Drag and Drop Events ---
+    def dragEnterEvent(self, event):
+        """Handles drag enter events to accept image files."""
+        mime_data = event.mimeData()
+        # Check if the dragged data contains URLs and if they are local files
+        if mime_data.hasUrls() and all(url.isLocalFile() for url in mime_data.urls()):
+            # Check if any file has a supported image extension
+            supported_extensions = ['.png', '.jpg', '.jpeg', '.bmp', '.gif']
+            if any(url.toLocalFile().lower().endswith(tuple(supported_extensions)) for url in mime_data.urls()):
+                event.acceptProposedAction() # Accept the drop
+                logging.debug("Drag enter accepted for image file(s).")
+            else:
+                logging.debug("Drag enter rejected: Unsupported file type.")
+                event.ignore()
+        else:
+            logging.debug("Drag enter rejected: Not a local file URL.")
+            event.ignore()
+
+    def dropEvent(self, event):
+        """Handles drop events to load the dropped image file."""
+        logging.debug("Drop event received.") # Added logging
+        mime_data = event.mimeData()
+        if mime_data.hasUrls():
+            logging.debug(f"Dropped URLs: {[url.toString() for url in mime_data.urls()]}") # Added logging
+            # Process only the first valid image file found
+            supported_extensions = ['.png', '.jpg', '.jpeg', '.bmp', '.gif']
+            loaded_successfully = False # Added flag
+            for url in mime_data.urls():
+                if url.isLocalFile():
+                    file_path = url.toLocalFile()
+                    logging.debug(f"Processing local file URL: {file_path}") # Added logging
+                    if file_path.lower().endswith(tuple(supported_extensions)):
+                        logging.info(f"Attempting to load supported dropped file: {file_path}") # Modified logging
+                        if self._load_image_from_path(file_path):
+                            logging.info(f"Successfully loaded dropped file: {file_path}") # Added logging
+                            event.acceptProposedAction()
+                            loaded_successfully = True # Set flag
+                        else:
+                            logging.warning(f"Failed to load dropped file via _load_image_from_path: {file_path}") # Added logging
+                            event.ignore() # Loading failed
+                        return # Stop after processing the first valid image (success or failure)
+                    else:
+                        logging.debug(f"Skipping unsupported file type: {file_path}") # Added logging
+                else:
+                    logging.debug(f"Skipping non-local URL: {url.toString()}") # Added logging
+
+            # This part is reached only if the loop completes without finding a supported local file
+            if not loaded_successfully:
+                logging.warning("Drop event ignored: No supported image files found or loaded from dropped items.")
+                event.ignore()
+        else:
+            logging.debug("Drop event ignored: No URLs found.")
+            event.ignore()
+
+    # --- Helper Methods ---
+    def _compose_layers_pixmap(self):
+        """Composes visible layers into a single QPixmap."""
+        if not hasattr(self, 'layers') or not self.layers.layers:
+            return None
+        merged_image = self.layers.merge_visible()
+        if merged_image:
+            return image_to_qpixmap(merged_image)
+        return None
