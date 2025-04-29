@@ -1,5 +1,5 @@
 from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QListWidget, QPushButton, QHBoxLayout,
-                             QLabel, QMessageBox, QComboBox, QListWidgetItem, QSlider) # Added QSlider
+                             QLabel, QMessageBox, QComboBox, QListWidgetItem, QSlider, QInputDialog, QCheckBox) # Added QInputDialog and QCheckBox
 from PyQt6.QtCore import Qt, QModelIndex, pyqtSignal
 from PyQt6.QtGui import QDropEvent, QDragEnterEvent, QMouseEvent
 import logging
@@ -188,11 +188,19 @@ class LayerPanel(QWidget):
                 opacity_slider.valueChanged.connect(self._on_opacity_changed)
                 opacity_slider.setToolTip(f"Opaklık: {layer.opacity}%")
 
+                # Çözünürlük düğmesi
+                resolution_btn = QPushButton("📐")  # Çözünürlük için ölçek simgesi
+                resolution_btn.setFixedWidth(25)
+                resolution_btn.setToolTip("Katman çözünürlüğünü değiştir")
+                resolution_btn.setProperty("layer_index", idx)
+                resolution_btn.clicked.connect(self.change_layer_resolution)
+
                 layout.addWidget(visibility_label)
                 layout.addWidget(name_label, 1) # Give name label stretch factor
                 layout.addWidget(opacity_text)
                 layout.addWidget(opacity_slider)
                 layout.addWidget(blend_combo)
+                layout.addWidget(resolution_btn)
                 widget.setLayout(layout)
 
                 # Set the custom widget for the list item
@@ -474,3 +482,59 @@ class LayerPanel(QWidget):
         except Exception as e:
             logging.error(f"toggle_layer_visibility hatası: {e}")
             QMessageBox.warning(self, 'Hata', f'Katman görünürlüğü değiştirilirken hata: {e}')
+
+    # Yeni metod: Katman çözünürlüğünü değiştirme
+    def change_layer_resolution(self):
+        """Seçili katmanın çözünürlüğünü değiştirir."""
+        try:
+            sender_btn = self.sender()
+            if not sender_btn:
+                return
+
+            idx = sender_btn.property("layer_index")
+            if idx is None or not hasattr(self.main_window, 'layers') or not self.main_window.layers.layers:
+                return
+
+            if 0 <= idx < len(self.main_window.layers.layers):
+                layer = self.main_window.layers.layers[idx]
+                
+                # Mevcut boyut bilgisi
+                current_width, current_height = layer.image.size
+                
+                # Yeni genişlik isteme
+                new_width, ok1 = QInputDialog.getInt(
+                    self, 'Çözünürlük Değiştir', 
+                    f'Yeni genişlik (mevcut: {current_width}px):',
+                    current_width, 1, 10000, 1
+                )
+                if not ok1:
+                    return
+                
+                # Yeni yükseklik isteme
+                new_height, ok2 = QInputDialog.getInt(
+                    self, 'Çözünürlük Değiştir', 
+                    f'Yeni yükseklik (mevcut: {current_height}px):',
+                    current_height, 1, 10000, 1
+                )
+                if not ok2:
+                    return
+                
+                # En-boy oranını koruma seçeneği
+                keep_aspect = QInputDialog.getItem(
+                    self, 'Çözünürlük Değiştir',
+                    'En-boy oranını koru?',
+                    ['Evet', 'Hayır'], 0, False
+                )
+                keep_aspect_ratio = keep_aspect[0] == 'Evet'
+                
+                # Katmanı yeniden boyutlandır
+                if layer.resize(new_width, new_height, keep_aspect_ratio=keep_aspect_ratio):
+                    logging.info(f"Katman {idx} ({layer.name}) çözünürlüğü değiştirildi: {current_width}x{current_height} -> {new_width}x{new_height}")
+                    self.main_window.refresh_layers()
+                else:
+                    QMessageBox.warning(self, 'Hata', 'Katman çözünürlüğü değiştirilirken bir hata oluştu!')
+            else:
+                logging.warning(f"change_layer_resolution: Geçersiz indeks {idx}")
+        except Exception as e:
+            logging.error(f"change_layer_resolution hatası: {e}")
+            QMessageBox.warning(self, 'Hata', f'Katman çözünürlüğü değiştirilirken hata: {e}')

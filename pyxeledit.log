@@ -530,3 +530,45 @@
 2025-04-29 15:13:50,715 [INFO] Katman görünürlüðü deðiþtirildi: Arka Plan -> Gizli
 2025-04-29 15:13:50,719 [WARNING] Görünür katman yok
 2025-04-29 15:13:51,069 [INFO] Katman görünürlüðü deðiþtirildi: Arka Plan -> Görünür
+2025-04-29 16:57:08,028 [INFO] 9 efekt panele eklendi.
+2025-04-29 16:57:08,036 [INFO] PyxelEdit baþlatýldý
+2025-04-29 16:57:31,851 [INFO] Attempting to load supported dropped file: C:/Users/kyusu/Desktop/ALL/gemini images/Gemini_Generated_Image_qzb4juqzb4juqzb4.jpg
+2025-04-29 16:57:32,148 [INFO] Resim yüklendi: C:/Users/kyusu/Desktop/ALL/gemini images/Gemini_Generated_Image_qzb4juqzb4juqzb4.jpg
+2025-04-29 16:57:32,151 [INFO] Successfully loaded dropped file: C:/Users/kyusu/Desktop/ALL/gemini images/Gemini_Generated_Image_qzb4juqzb4juqzb4.jpg
+2025-04-29 16:57:34,203 [INFO] Attempting to load supported dropped file: C:/Users/kyusu/Desktop/ALL/gemini images/Gemini_Generated_Image_en8g6jen8g6jen8g.jpg
+2025-04-29 16:57:34,392 [INFO] Resim yüklendi: C:/Users/kyusu/Desktop/ALL/gemini images/Gemini_Generated_Image_en8g6jen8g6jen8g.jpg
+2025-04-29 16:57:34,395 [INFO] Successfully loaded dropped file: C:/Users/kyusu/Desktop/ALL/gemini images/Gemini_Generated_Image_en8g6jen8g6jen8g.jpg
+2025-04-29 17:06:05,044 [INFO] 9 efekt panele eklendi.
+2025-04-29 17:06:05,046 [INFO] PyxelEdit baþlatýldý
+2025-04-29 17:06:16,888 [INFO] Attempting to load supported dropped file: C:/Users/kyusu/Desktop/ALL/gemini images/Gemini_Generated_Image_5dhap25dhap25dha.jpg
+2025-04-29 17:06:17,118 [INFO] Resim yüklendi: C:/Users/kyusu/Desktop/ALL/gemini images/Gemini_Generated_Image_5dhap25dhap25dha.jpg
+2025-04-29 17:06:17,121 [INFO] Successfully loaded dropped file: C:/Users/kyusu/Desktop/ALL/gemini images/Gemini_Generated_Image_5dhap25dhap25dha.jpg
+2025-04-29 17:06:19,964 [INFO] Attempting to load supported dropped file: C:/Users/kyusu/Desktop/ALL/gemini images/Gemini_Generated_Image_9hbzb79hbzb79hbz.jpg
+2025-04-29 17:06:20,228 [INFO] Resim yüklendi: C:/Users/kyusu/Desktop/ALL/gemini images/Gemini_Generated_Image_9hbzb79hbzb79hbz.jpg
+2025-04-29 17:06:20,231 [INFO] Successfully loaded dropped file: C:/Users/kyusu/Desktop/ALL/gemini images/Gemini_Generated_Image_9hbzb79hbzb79hbz.jpg
+2025-04-29 17:06:38,524 [INFO] Katman 1 opaklýðý deðiþtirildi: 98%
+2025-04-29 17:06:39,957 [INFO] Katman 1 opaklýðý deðiþtirildi: 23%
+2025-04-29 17:06:41,049 [INFO] Katman 1 opaklýðý deðiþtirildi: 25%
+2025-04-29 17:06:42,241 [INFO] Katman 1 opaklýðý deðiþtirildi: 57%
+2025-04-29 17:06:43,602 [INFO] Katman 1 opaklýðý deðiþtirildi: 59%
+2025-04-29 17:06:55,056 [INFO] Katman 1 opaklýðý deðiþtirildi: 68%
+2025-04-29 17:06:56,971 [INFO] Katman 1 opaklýðý deðiþtirildi: 91%
+2025-04-29 17:06:57,850 [INFO] Katman 1 opaklýðý deðiþtirildi: 100%
+2025-04-29 17:07:06,251 [INFO] Katman 1 blend modu deðiþtirildi: multiply
+2025-04-29 17:07:11,299 [INFO] Katman 1 blend modu deðiþtirildi: normal
+2025-04-29 17:07:28,644 [INFO] Katman 1 (Gemini_Generated_Image_9hbzb79hbzb79hbz) çözünürlüðü deðiþtirildi: 2048x2048 -> 1024x1024
+2025-04-29 17:07:35,946 [INFO] Aktif katman deðiþtirildi: 0
+2025-04-29 17:07:38,163 [INFO] Katman görünürlüðü deðiþtirildi: Gemini_Generated_Image_9hbzb79hbzb79hbz -> Gizli
+2025-04-29 17:07:38,231 [INFO] Aktif katman deðiþtirildi: 1
+2025-04-29 17:07:41,496 [INFO] Katman görünürlüðü deðiþtirildi: Gemini_Generated_Image_9hbzb79hbzb79hbz -> Görünür
+2025-04-29 17:07:46,163 [INFO] Katman 1 opaklýðý deðiþtirildi: 39%
+2025-04-29 17:07:55,572 [INFO] Katman 1 blend modu deðiþtirildi: darken
+2025-04-29 17:07:58,404 [INFO] Katman 1 opaklýðý deðiþtirildi: 98%
+2025-04-29 17:07:59,411 [INFO] Katman 1 opaklýðý deðiþtirildi: 100%
+2025-04-29 17:08:07,980 [INFO] Katman 1 blend modu deðiþtirildi: subtract
+2025-04-29 17:08:11,521 [INFO] Katman görünürlüðü deðiþtirildi: Arka Plan -> Gizli
+2025-04-29 17:08:11,709 [INFO] Aktif katman deðiþtirildi: 0
+2025-04-29 17:08:13,598 [INFO] Katman görünürlüðü deðiþtirildi: Arka Plan -> Görünür
+2025-04-29 17:08:19,309 [INFO] Aktif katman deðiþtirildi: 1
+2025-04-29 17:08:38,615 [INFO] Applying final filter: noise with value: 0.55
+2025-04-29 17:08:38,615 [INFO] Applying filter/adjustment: noise, param: 0.55

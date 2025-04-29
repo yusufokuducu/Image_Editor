@@ -39,12 +39,43 @@ class Layer:
             self.visible = visible
             self.blend_mode = 'normal' # Default blend mode
             self.opacity = 100  # Default opacity (0-100)
+            # Orijinal boyutu sakla
+            self.original_size = self.image.size
         except Exception as e:
             logging.error(f"Layer oluşturulurken hata: {e}")
             # Hata durumunda boş bir görüntü oluştur
             self.image = pil_image.new('RGBA', (100, 100), (0, 0, 0, 0))
             self.name = name
             self.visible = visible
+            self.original_size = (100, 100)
+            
+    def resize(self, width, height, resample=pil_image.Resampling.LANCZOS, keep_aspect_ratio=True):
+        """Katman görüntüsünün çözünürlüğünü değiştirir."""
+        try:
+            if keep_aspect_ratio:
+                # En-boy oranını koru (thumbnail metodu)
+                new_img = self.image.copy()
+                new_img.thumbnail((width, height), resample)
+                self.image = new_img
+            else:
+                # En-boy oranını korumadan yeniden boyutlandır
+                self.image = self.image.resize((width, height), resample)
+            
+            return True
+        except Exception as e:
+            logging.error(f"Katman yeniden boyutlandırılırken hata: {e}")
+            return False
+            
+    def restore_original_size(self):
+        """Katmanı orijinal boyutuna geri döndürür."""
+        if hasattr(self, 'original_size') and self.original_size != self.image.size:
+            try:
+                self.image = self.image.resize(self.original_size, pil_image.Resampling.LANCZOS)
+                return True
+            except Exception as e:
+                logging.error(f"Orijinal boyut geri yüklenirken hata: {e}")
+                return False
+        return False # Zaten orijinal boyutta
 
 class LayerManager:
     def __init__(self):

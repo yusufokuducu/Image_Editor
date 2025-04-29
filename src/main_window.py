@@ -6,6 +6,7 @@ from PyQt6.QtWidgets import (QMainWindow, QStatusBar, QMenuBar,
                              QDialog, QColorDialog, QFontDialog)
 from PyQt6.QtGui import QFont, QColor
 from PyQt6.QtCore import Qt, QTimer, QPointF
+import os
 
 # Import custom modules
 from .image_io import load_image, image_to_qpixmap
@@ -112,15 +113,24 @@ class MainWindow(QMainWindow):
         try:
             img = load_image(file_path)
             if img is not None:
-                self.layers = LayerManager() # Reset layers for new image
-                self.history = History() # Reset history for new image
-                self.layers.add_layer(img, 'Arka Plan')
-                merged = self.layers.merge_visible() # Get initial merged view
+                # Eğer hiç katman yoksa, yeni bir LayerManager oluştur
+                if not hasattr(self, 'layers') or not self.layers or not self.layers.layers:
+                    self.layers = LayerManager() # Reset layers for new image
+                    self.history = History() # Reset history for new image
+                    self.layers.add_layer(img, 'Arka Plan')
+                    self.current_image_path = file_path
+                else:
+                    # Mevcut bir resim varsa, yeni görüntüyü katman olarak ekle
+                    # Dosya adını katman adı olarak kullan (dosya yolu yerine sadece dosya adı)
+                    file_name = os.path.basename(file_path)
+                    layer_name = os.path.splitext(file_name)[0]  # Uzantıyı kaldır
+                    self.layers.add_layer(img, layer_name)
+                
+                merged = self.layers.merge_visible() # Get merged view
                 if merged:
                     pixmap = image_to_qpixmap(merged)
                     self.image_view.set_image(pixmap)
                     self.status_bar.showMessage(f'{file_path} | {img.width}x{img.height}')
-                    self.current_image_path = file_path
                     self.refresh_layers() # Update display and layer panel
                     logging.info(f"Resim yüklendi: {file_path}")
                     return True
@@ -937,7 +947,31 @@ class MainWindow(QMainWindow):
             # Restore original image on error
             layer.image = old_img
             self.refresh_layers()
-# --- Drag and Drop Events ---
+
+    def restore_layer_original_size(self):
+        """Aktif katmanı orijinal çözünürlüğüne döndürür."""
+        try:
+            if not hasattr(self, 'layers') or not self.layers.layers:
+                QMessageBox.warning(self, 'Uyarı', 'Resim veya katman yok!')
+                return
+                
+            layer = self.layers.get_active_layer()
+            if layer is None:
+                QMessageBox.warning(self, 'Uyarı', 'Aktif katman yok!')
+                return
+                
+            if layer.restore_original_size():
+                logging.info(f"Katman {self.layers.active_index} ({layer.name}) orijinal çözünürlüğe döndürüldü: {layer.image.size}.")
+                self.refresh_layers()
+                self.status_bar.showMessage(f"'{layer.name}' katmanı orijinal çözünürlüğe döndürüldü: {layer.image.width}x{layer.image.height}")
+            else:
+                self.status_bar.showMessage(f"'{layer.name}' katmanı zaten orijinal çözünürlükte ({layer.image.width}x{layer.image.height})")
+                
+        except Exception as e:
+            logging.error(f"restore_layer_original_size hatası: {e}")
+            QMessageBox.critical(self, 'Hata', f'Katman orijinal çözünürlüğe döndürülürken hata oluştu: {e}')
+
+    # --- Drag and Drop Events ---
     def dragEnterEvent(self, event):
         """Handles drag enter events to accept image files."""
         mime_data = event.mimeData()

@@ -19,61 +19,39 @@ class MenuManager:
 
     def _create_file_menu(self):
         """Creates the File menu."""
-        file_menu = self.main_window.menu_bar.addMenu('Dosya')
-        
-        open_action = QAction('Aç', self.main_window)
-        open_action.triggered.connect(self.main_window.open_image)
-        file_menu.addAction(open_action)
-        
-        save_action = QAction('Kaydet', self.main_window)
-        save_action.triggered.connect(self.main_window.save_image)
-        file_menu.addAction(save_action)
-        
-        save_as_action = QAction('Farklı Kaydet', self.main_window)
-        save_as_action.triggered.connect(self.main_window.save_image_as)
-        file_menu.addAction(save_as_action)
-        
-        close_action = QAction('Kapat', self.main_window)
-        close_action.triggered.connect(self.main_window.close_image)
-        file_menu.addAction(close_action)
+        self.file_menu = self.main_window.menu_bar.addMenu('Dosya')
+        self.file_menu.addAction('Aç...', self.main_window.open_image)
+        self.file_menu.addAction('Kaydet', self.main_window.save_image)
+        self.file_menu.addAction('Farklı Kaydet...', self.main_window.save_image_as)
+        self.file_menu.addSeparator()
+        self.file_menu.addAction('Kapat', self.main_window.close_image)
+        self.file_menu.addSeparator()
+        self.file_menu.addAction('Çıkış', self.main_window.close)
 
     def _create_edit_menu(self):
         """Creates the Edit menu."""
-        edit_menu = self.main_window.menu_bar.addMenu('Düzen')
-        
-        undo_action = QAction('Geri Al', self.main_window)
-        undo_action.triggered.connect(self.main_window.undo)
-        undo_action.setShortcut('Ctrl+Z')
-        edit_menu.addAction(undo_action)
-        
-        redo_action = QAction('Yinele', self.main_window)
-        redo_action.triggered.connect(self.main_window.redo)
-        redo_action.setShortcut('Ctrl+Y')
-        edit_menu.addAction(redo_action)
+        self.edit_menu = self.main_window.menu_bar.addMenu('Düzenle')
+        self.edit_menu.addAction('Geri Al', self.main_window.undo)
+        self.edit_menu.addAction('İleri Al', self.main_window.redo)
 
     def _create_filters_menu(self):
         """Creates the Filters menu."""
-        filters_menu = self.main_window.menu_bar.addMenu('Filtreler')
+        self.filter_menu = self.main_window.menu_bar.addMenu('Filtreler')
         
-        blur_action = QAction('Bulanıklaştır', self.main_window)
-        blur_action.triggered.connect(self.main_window.blur_dialog)
-        filters_menu.addAction(blur_action)
+        # Basic filters
+        self.filter_menu.addAction('Bulanıklaştır...', self.main_window.blur_dialog)
+        self.filter_menu.addAction('Keskinleştir...', self.main_window.sharpen_dialog)
+        self.filter_menu.addAction('Gürültü Ekle...', self.main_window.noise_dialog)
+        self.filter_menu.addAction('Gri Tonlama...', self.main_window.grayscale_dialog)
         
-        sharpen_action = QAction('Keskinleştir', self.main_window)
-        sharpen_action.triggered.connect(self.main_window.sharpen_dialog)
-        filters_menu.addAction(sharpen_action)
+        # Separating color adjustments
+        self.filter_menu.addSeparator()
         
-        edge_action = QAction('Kenarları Vurgula', self.main_window)
-        edge_action.triggered.connect(lambda: self.main_window.apply_filter('edge_enhance'))
-        filters_menu.addAction(edge_action)
-        
-        gray_action = QAction('Gri Ton', self.main_window)
-        gray_action.triggered.connect(self.main_window.grayscale_dialog)
-        filters_menu.addAction(gray_action)
-        
-        noise_action = QAction('Gelişmiş Noise Ekle', self.main_window)
-        noise_action.triggered.connect(self.main_window.noise_dialog)
-        filters_menu.addAction(noise_action)
+        # Color adjustments
+        self.filter_menu.addAction('Parlaklık...', self.main_window.brightness_dialog)
+        self.filter_menu.addAction('Kontrast...', self.main_window.contrast_dialog)
+        self.filter_menu.addAction('Doygunluk...', self.main_window.saturation_dialog)
+        self.filter_menu.addAction('Ton...', self.main_window.hue_dialog)
 
     def _create_adjustments_menu(self):
         """Creates the Adjustments menu."""
@@ -97,35 +75,16 @@ class MenuManager:
 
     def _create_transform_menu(self):
         """Creates the Transform menu."""
-        transform_menu = self.main_window.menu_bar.addMenu('Dönüşümler')
-        
-        rotate90_action = QAction('90° Döndür', self.main_window)
-        rotate90_action.triggered.connect(lambda: self.main_window.apply_transform('rotate90'))
-        transform_menu.addAction(rotate90_action)
-        
-        rotate180_action = QAction('180° Döndür', self.main_window)
-        rotate180_action.triggered.connect(lambda: self.main_window.apply_transform('rotate180'))
-        transform_menu.addAction(rotate180_action)
-        
-        rotate270_action = QAction('270° Döndür', self.main_window)
-        rotate270_action.triggered.connect(lambda: self.main_window.apply_transform('rotate270'))
-        transform_menu.addAction(rotate270_action)
-        
-        flip_h_action = QAction('Yatay Çevir', self.main_window)
-        flip_h_action.triggered.connect(lambda: self.main_window.apply_transform('flip_h'))
-        transform_menu.addAction(flip_h_action)
-        
-        flip_v_action = QAction('Dikey Çevir', self.main_window)
-        flip_v_action.triggered.connect(lambda: self.main_window.apply_transform('flip_v'))
-        transform_menu.addAction(flip_v_action)
-        
-        resize_action = QAction('Yeniden Boyutlandır', self.main_window)
-        resize_action.triggered.connect(self.main_window.resize_dialog)
-        transform_menu.addAction(resize_action)
-        
-        crop_action = QAction('Kırp (Seçili Alan)', self.main_window)
-        crop_action.triggered.connect(self.main_window.crop_selected)
-        transform_menu.addAction(crop_action)
+        self.transform_menu = self.main_window.menu_bar.addMenu('Dönüştür')
+        self.transform_menu.addAction('90° Sağa Döndür', lambda: self.main_window.apply_transform('rotate_90'))
+        self.transform_menu.addAction('90° Sola Döndür', lambda: self.main_window.apply_transform('rotate_270'))
+        self.transform_menu.addAction('180° Döndür', lambda: self.main_window.apply_transform('rotate_180'))
+        self.transform_menu.addSeparator()
+        self.transform_menu.addAction('Yatay Çevir', lambda: self.main_window.apply_transform('flip_h'))
+        self.transform_menu.addAction('Dikey Çevir', lambda: self.main_window.apply_transform('flip_v'))
+        self.transform_menu.addSeparator()
+        self.transform_menu.addAction('Yeniden Boyutlandır...', self.main_window.resize_dialog)
+        self.transform_menu.addAction('Seçimi Kırp', self.main_window.crop_selected)
 
     def _create_selection_menu(self):
         """Creates the Selection menu."""
@@ -149,55 +108,33 @@ class MenuManager:
 
     def _create_layers_menu(self):
         """Creates the Layers menu."""
-        layers_menu = self.main_window.menu_bar.addMenu('Katmanlar')
-        
-        add_layer_action = QAction('Yeni Katman', self.main_window)
-        add_layer_action.triggered.connect(self.main_window.add_layer)
-        add_layer_action.setShortcut('Ctrl+Shift+N')
-        layers_menu.addAction(add_layer_action)
-        
-        del_layer_action = QAction('Katmanı Sil', self.main_window)
-        del_layer_action.triggered.connect(self.main_window.delete_layer)
-        del_layer_action.setShortcut('Del')
-        layers_menu.addAction(del_layer_action)
-        
-        merge_action = QAction('Görünür Katmanları Birleştir', self.main_window)
-        merge_action.triggered.connect(self.main_window.merge_layers)
-        merge_action.setShortcut('Ctrl+M')
-        layers_menu.addAction(merge_action)
-        
-        vis_toggle_action = QAction('Katman Görünürlüğünü Değiştir', self.main_window)
-        vis_toggle_action.triggered.connect(self.main_window.toggle_layer_visibility)
-        vis_toggle_action.setShortcut('Ctrl+H')
-        layers_menu.addAction(vis_toggle_action)
-        
-        move_up_action = QAction('Katmanı Yukarı Taşı', self.main_window)
-        move_up_action.triggered.connect(self.main_window.move_layer_up)
-        move_up_action.setShortcut('Ctrl+Up')
-        layers_menu.addAction(move_up_action)
-        
-        move_down_action = QAction('Katmanı Aşağı Taşı', self.main_window)
-        move_down_action.triggered.connect(self.main_window.move_layer_down)
-        move_down_action.setShortcut('Ctrl+Down')
-        layers_menu.addAction(move_down_action)
+        self.layer_menu = self.main_window.menu_bar.addMenu('Katman')
+        self.layer_menu.addAction('Katman Ekle', self.main_window.add_layer)
+        self.layer_menu.addAction('Katman Sil', self.main_window.delete_layer)
+        self.layer_menu.addSeparator()
+        self.layer_menu.addAction('Katmanları Birleştir', self.main_window.merge_layers)
+        self.layer_menu.addAction('Katman Görünürlüğünü Değiştir', self.main_window.toggle_layer_visibility)
+        self.layer_menu.addSeparator()
+        self.layer_menu.addAction('Katmanı Yukarı Taşı', self.main_window.move_layer_up)
+        self.layer_menu.addAction('Katmanı Aşağı Taşı', self.main_window.move_layer_down)
+        self.layer_menu.addSeparator()
+        self.layer_menu.addAction('Orijinal Çözünürlüğe Döndür', self.main_window.restore_layer_original_size)
 
     def _create_tools_menu(self):
         """Creates the Tools menu."""
-        tools_menu = self.main_window.menu_bar.addMenu('Araçlar')
+        self.tools_menu = self.main_window.menu_bar.addMenu('Araçlar')
         
-        text_tool_action = QAction('Metin Aracı', self.main_window)
-        text_tool_action.setCheckable(True)
-        text_tool_action.triggered.connect(lambda: self.main_window.set_tool('text'))
-        tools_menu.addAction(text_tool_action)
+        # Add selection tool action
+        select_action = self.tools_menu.addAction('Seçim Aracı')
+        select_action.setCheckable(True)
+        select_action.setChecked(True)  # Default tool selected
+        select_action.triggered.connect(lambda: self.main_window.set_tool('select'))
+        self.tool_actions['select'] = select_action
         
-        select_tool_action = QAction('Seçim Aracı', self.main_window)
-        select_tool_action.setCheckable(True)
-        select_tool_action.setChecked(True)
-        select_tool_action.triggered.connect(lambda: self.main_window.set_tool('select'))
-        tools_menu.addAction(select_tool_action)
-
-        # Store actions for tool management
-        self.tool_actions = {
-            'select': select_tool_action,
-            'text': text_tool_action
-        }
+        # Add text tool action
+        text_action = self.tools_menu.addAction('Metin Aracı')
+        text_action.setCheckable(True)
+        text_action.triggered.connect(lambda: self.main_window.set_tool('text'))
+        self.tool_actions['text'] = text_action
+        
+        # More tools can be added here
