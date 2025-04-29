@@ -4,6 +4,7 @@ from PyQt6.QtCore import Qt, QModelIndex, pyqtSignal
 from PyQt6.QtGui import QDropEvent, QDragEnterEvent, QMouseEvent
 import logging
 from .layers import BLEND_MODES # Import blend modes
+from .resize_dialog import ResizeDialog  # Import the new resize dialog
 
 # Tıklanabilir etiket sınıfı
 class ClickableLabel(QLabel):
@@ -498,41 +499,29 @@ class LayerPanel(QWidget):
             if 0 <= idx < len(self.main_window.layers.layers):
                 layer = self.main_window.layers.layers[idx]
                 
-                # Mevcut boyut bilgisi
-                current_width, current_height = layer.image.size
+                # Sürükleyerek boyutlandırma diyalogunu göster
+                resize_dialog = ResizeDialog(layer, self)
+                result = resize_dialog.exec()
                 
-                # Yeni genişlik isteme
-                new_width, ok1 = QInputDialog.getInt(
-                    self, 'Çözünürlük Değiştir', 
-                    f'Yeni genişlik (mevcut: {current_width}px):',
-                    current_width, 1, 10000, 1
-                )
-                if not ok1:
-                    return
-                
-                # Yeni yükseklik isteme
-                new_height, ok2 = QInputDialog.getInt(
-                    self, 'Çözünürlük Değiştir', 
-                    f'Yeni yükseklik (mevcut: {current_height}px):',
-                    current_height, 1, 10000, 1
-                )
-                if not ok2:
-                    return
-                
-                # En-boy oranını koruma seçeneği
-                keep_aspect = QInputDialog.getItem(
-                    self, 'Çözünürlük Değiştir',
-                    'En-boy oranını koru?',
-                    ['Evet', 'Hayır'], 0, False
-                )
-                keep_aspect_ratio = keep_aspect[0] == 'Evet'
-                
-                # Katmanı yeniden boyutlandır
-                if layer.resize(new_width, new_height, keep_aspect_ratio=keep_aspect_ratio):
-                    logging.info(f"Katman {idx} ({layer.name}) çözünürlüğü değiştirildi: {current_width}x{current_height} -> {new_width}x{new_height}")
-                    self.main_window.refresh_layers()
+                if result == resize_dialog.DialogCode.Accepted:
+                    # Kullanıcı Tamam'a bastı, yeni boyutları al
+                    new_width, new_height = resize_dialog.get_new_size()
+                    
+                    # Mevcut boyutları kontrol et
+                    current_width, current_height = layer.image.size
+                    
+                    # Değişiklik varsa uygula
+                    if new_width != current_width or new_height != current_height:
+                        # Katmanı yeniden boyutlandır
+                        if layer.resize(new_width, new_height, keep_aspect_ratio=False):
+                            logging.info(f"Katman {idx} ({layer.name}) çözünürlüğü değiştirildi: {current_width}x{current_height} -> {new_width}x{new_height}")
+                            self.main_window.refresh_layers()
+                        else:
+                            QMessageBox.warning(self, 'Hata', 'Katman çözünürlüğü değiştirilirken bir hata oluştu!')
                 else:
-                    QMessageBox.warning(self, 'Hata', 'Katman çözünürlüğü değiştirilirken bir hata oluştu!')
+                    # Kullanıcı İptal'e bastı, işlem yapma
+                    logging.debug(f"Katman {idx} çözünürlük değiştirme iptal edildi.")
+                    
             else:
                 logging.warning(f"change_layer_resolution: Geçersiz indeks {idx}")
         except Exception as e:
