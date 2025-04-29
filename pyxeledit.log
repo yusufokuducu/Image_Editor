@@ -512,3 +512,21 @@
 2025-04-29 14:49:20,542 [INFO] Aktif katman deðiþtirildi: 6
 2025-04-29 14:49:22,067 [INFO] Aktif katman deðiþtirildi: 5
 2025-04-29 14:49:24,174 [INFO] Katman sürükle-býrak ile taþýndý: 5 -> 4
+2025-04-29 14:55:31,450 [INFO] 9 efekt panele eklendi.
+2025-04-29 14:55:31,452 [INFO] PyxelEdit baþlatýldý
+2025-04-29 14:55:40,960 [INFO] Attempting to load supported dropped file: C:/Users/kyusu/Desktop/the-creation-of-adam-pixel-art-digital-art-artwork-hand-gesture-hd-wallpaper-preview.jpg
+2025-04-29 14:55:40,985 [INFO] Resim yüklendi: C:/Users/kyusu/Desktop/the-creation-of-adam-pixel-art-digital-art-artwork-hand-gesture-hd-wallpaper-preview.jpg
+2025-04-29 14:55:40,986 [INFO] Successfully loaded dropped file: C:/Users/kyusu/Desktop/the-creation-of-adam-pixel-art-digital-art-artwork-hand-gesture-hd-wallpaper-preview.jpg
+2025-04-29 14:55:53,299 [WARNING] Görünür katman yok
+2025-04-29 14:55:53,302 [INFO] toggle_layer_visibility completed successfully for index 0.
+2025-04-29 15:13:41,463 [INFO] 9 efekt panele eklendi.
+2025-04-29 15:13:41,465 [INFO] PyxelEdit baþlatýldý
+2025-04-29 15:13:47,624 [INFO] Attempting to load supported dropped file: C:/Users/kyusu/Desktop/the-creation-of-adam-pixel-art-digital-art-artwork-hand-gesture-hd-wallpaper-preview.jpg
+2025-04-29 15:13:47,787 [INFO] Resim yüklendi: C:/Users/kyusu/Desktop/the-creation-of-adam-pixel-art-digital-art-artwork-hand-gesture-hd-wallpaper-preview.jpg
+2025-04-29 15:13:47,788 [INFO] Successfully loaded dropped file: C:/Users/kyusu/Desktop/the-creation-of-adam-pixel-art-digital-art-artwork-hand-gesture-hd-wallpaper-preview.jpg
+2025-04-29 15:13:49,831 [INFO] Katman görünürlüðü deðiþtirildi: Arka Plan -> Gizli
+2025-04-29 15:13:49,832 [WARNING] Görünür katman yok
+2025-04-29 15:13:50,298 [INFO] Katman görünürlüðü deðiþtirildi: Arka Plan -> Görünür
+2025-04-29 15:13:50,715 [INFO] Katman görünürlüðü deðiþtirildi: Arka Plan -> Gizli
+2025-04-29 15:13:50,719 [WARNING] Görünür katman yok
+2025-04-29 15:13:51,069 [INFO] Katman görünürlüðü deðiþtirildi: Arka Plan -> Görünür

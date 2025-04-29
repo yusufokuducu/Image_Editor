@@ -1,9 +1,22 @@
 from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QListWidget, QPushButton, QHBoxLayout,
                              QLabel, QMessageBox, QComboBox, QListWidgetItem, QSlider) # Added QSlider
-from PyQt6.QtCore import Qt, QModelIndex
+from PyQt6.QtCore import Qt, QModelIndex, pyqtSignal
 from PyQt6.QtGui import QDropEvent, QDragEnterEvent, QMouseEvent
 import logging
 from .layers import BLEND_MODES # Import blend modes
+
+# Tıklanabilir etiket sınıfı
+class ClickableLabel(QLabel):
+    clicked = pyqtSignal(int)  # Tıklama sinyali
+
+    def __init__(self, text, layer_index, parent=None):
+        super().__init__(text, parent)
+        self.layer_index = layer_index
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
+
+    def mousePressEvent(self, event):
+        self.clicked.emit(self.layer_index)
+        super().mousePressEvent(event)
 
 class LayerPanel(QWidget):
     def __init__(self, main_window):
@@ -140,13 +153,10 @@ class LayerPanel(QWidget):
                 layout = QHBoxLayout(widget)
                 layout.setContentsMargins(5, 2, 5, 2) # Adjust margins
 
-                # Visibility Label (clickable)
-                visibility_label = QLabel('☑' if layer.visible else '☐') # Use checkbox characters
-                visibility_label.setCursor(Qt.CursorShape.PointingHandCursor) # Show hand cursor to indicate clickable
+                # Visibility Label (clickable) - Özel tıklanabilir etiket kullan
+                visibility_label = ClickableLabel('☑' if layer.visible else '☐', idx)
                 visibility_label.setToolTip("Görünürlüğü değiştirmek için tıklayın")
-                # Store index in the label for click handling (alternative to itemClicked)
-                visibility_label.setProperty("layer_index", idx)
-                visibility_label.mousePressEvent = self._on_visibility_clicked # Assign click handler
+                visibility_label.clicked.connect(self.toggle_layer_visibility)
 
                 # Layer Name Label
                 name_label = QLabel(layer.name)
@@ -440,3 +450,27 @@ class LayerPanel(QWidget):
         except Exception as e:
             logging.error(f"handle_rows_moved hatası: {e}")
             QMessageBox.warning(self, 'Hata', f'Katman taşınırken bir hata oluştu: {e}')
+
+    # Yeni metod: Katman görünürlüğünü değiştir
+    def toggle_layer_visibility(self, idx):
+        """Katman görünürlüğünü değiştirir."""
+        try:
+            if not hasattr(self.main_window, 'layers') or not self.main_window.layers.layers:
+                return
+
+            if 0 <= idx < len(self.main_window.layers.layers):
+                layer = self.main_window.layers.layers[idx]
+                # Görünürlüğü değiştir
+                layer.visible = not layer.visible
+                logging.info(f"Katman görünürlüğü değiştirildi: {layer.name} -> {'Görünür' if layer.visible else 'Gizli'}")
+                
+                # GUI'yi güncelle
+                self.refresh()
+                
+                # Ana kanvası yenile
+                self.main_window.refresh_layers()
+            else:
+                logging.warning(f"toggle_layer_visibility: Geçersiz indeks {idx}")
+        except Exception as e:
+            logging.error(f"toggle_layer_visibility hatası: {e}")
+            QMessageBox.warning(self, 'Hata', f'Katman görünürlüğü değiştirilirken hata: {e}')
