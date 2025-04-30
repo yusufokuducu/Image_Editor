@@ -17,11 +17,13 @@ from .layers import LayerManager
 from .layer_panel import LayerPanel
 from .effects_panel import EffectsPanel
 from .dialogs import FilterSliderDialog
+from .resize_dialog import ResizeDialog # Import ResizeDialog
 from .image_processing import get_filtered_image
 from .menu import MenuManager
 from .text_utils import get_pil_font, draw_text_on_image
 from .utils import (compose_layers_pixmap, validate_layer_operation,
                    create_command, ensure_rgba, create_transparent_image)
+from .drawing_tools import Brush, Pencil, Eraser, FillBucket  # Çizim araçlarını içe aktar
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -44,6 +46,16 @@ class MainWindow(QMainWindow):
         self.preview_active = False
         self.current_preview_filter_type = None
         self.current_tool = 'select'
+        
+        # Çizim araçları
+        self.current_brush_size = 15
+        self.current_pencil_size = 2
+        self.current_eraser_size = 20
+        self.current_color = QColor(0, 0, 0, 255)  # Varsayılan siyah renk
+        self.current_fill_tolerance = 32  # Varsayılan doldurma toleransı
+        
+        # Araç nesnelerini oluştur
+        self._create_drawing_tools()
 
         # Preview Throttling Timer
         self.preview_timer = QTimer(self)
@@ -75,6 +87,9 @@ class MainWindow(QMainWindow):
         # Menu bar (Create after image view)
         self.menu_manager.create_menus()
         self.image_view.textToolClicked.connect(self.handle_text_tool_click)
+        
+        # Çizim araçları için sinyal-yuva bağlantısı kur
+        self.image_view.drawingComplete.connect(self.handle_drawing_complete)
 
         # Layer panel
         self.layer_panel = LayerPanel(self)
@@ -90,6 +105,165 @@ class MainWindow(QMainWindow):
         self.tabifyDockWidget(self.dock, self.effects_dock)
         self.dock.raise_()
 
+    def _create_drawing_tools(self):
+        """Çizim araçlarını oluşturur."""
+        self.brush_tool = Brush(self.current_color, self.current_brush_size)
+        self.pencil_tool = Pencil(self.current_color, self.current_pencil_size)
+        self.eraser_tool = Eraser(self.current_eraser_size)
+        self.fill_tool = FillBucket(self.current_color, self.current_fill_tolerance)
+        
+    def set_drawing_color(self, color=None):
+        """Çizim rengini ayarlar."""
+        if color is None:
+            # Renk seçim diyalogu göster
+            color = QColorDialog.getColor(
+                self.current_color, 
+                self, 
+                "Çizim Rengi Seç",
+                QColorDialog.ColorDialogOption.ShowAlphaChannel
+            )
+            
+            if not color.isValid():
+                return  # Kullanıcı diyalogu iptal etti
+                
+        self.current_color = color
+        
+        # Araçların renklerini güncelle
+        self.brush_tool.set_color(color)
+        self.pencil_tool.set_color(color)
+        self.fill_tool.set_color(color)
+        
+        # Durum çubuğunu güncelle
+        self.status_bar.showMessage(f"Renk: RGB({color.red()}, {color.green()}, {color.blue()}, A:{color.alpha()})")
+        
+    def set_brush_size(self, size=None):
+        """Fırça boyutunu ayarlar."""
+        if size is None:
+            # Boyut girmesi için diyalog göster
+            size, ok = QInputDialog.getInt(
+                self, 
+                "Fırça Boyutu", 
+                "Boyut (1-100):", 
+                self.current_brush_size, 
+                1, 100
+            )
+            
+            if not ok:
+                return  # Kullanıcı diyalogu iptal etti
+                
+        self.current_brush_size = size
+        self.brush_tool.set_size(size)
+        
+        # Durum çubuğunu güncelle
+        self.status_bar.showMessage(f"Fırça Boyutu: {size}px")
+        
+    def set_pencil_size(self, size=None):
+        """Kalem boyutunu ayarlar."""
+        if size is None:
+            # Boyut girmesi için diyalog göster
+            size, ok = QInputDialog.getInt(
+                self, 
+                "Kalem Boyutu", 
+                "Boyut (1-20):", 
+                self.current_pencil_size, 
+                1, 20
+            )
+            
+            if not ok:
+                return  # Kullanıcı diyalogu iptal etti
+                
+        self.current_pencil_size = size
+        self.pencil_tool.set_size(size)
+        
+        # Durum çubuğunu güncelle
+        self.status_bar.showMessage(f"Kalem Boyutu: {size}px")
+        
+    def set_eraser_size(self, size=None):
+        """Silgi boyutunu ayarlar."""
+        if size is None:
+            # Boyut girmesi için diyalog göster
+            size, ok = QInputDialog.getInt(
+                self, 
+                "Silgi Boyutu", 
+                "Boyut (1-100):", 
+                self.current_eraser_size, 
+                1, 100
+            )
+            
+            if not ok:
+                return  # Kullanıcı diyalogu iptal etti
+                
+        self.current_eraser_size = size
+        self.eraser_tool.set_size(size)
+        
+        # Durum çubuğunu güncelle
+        self.status_bar.showMessage(f"Silgi Boyutu: {size}px")
+        
+    def set_fill_tolerance(self, tolerance=None):
+        """Doldurma toleransını ayarlar."""
+        if tolerance is None:
+            # Tolerans girmesi için diyalog göster
+            tolerance, ok = QInputDialog.getInt(
+                self, 
+                "Doldurma Toleransı", 
+                "Tolerans (0-255):", 
+                self.current_fill_tolerance, 
+                0, 255
+            )
+            
+            if not ok:
+                return  # Kullanıcı diyalogu iptal etti
+                
+        self.current_fill_tolerance = tolerance
+        self.fill_tool.tolerance = tolerance
+        
+        # Durum çubuğunu güncelle
+        self.status_bar.showMessage(f"Doldurma Toleransı: {tolerance}")
+        
+    def handle_drawing_complete(self, tool, paths):
+        """Çizim tamamlandığında çağrılır, çizimi aktif katmana uygular."""
+        # Katman kontrolü yap
+        active_layer = self.layers.get_active_layer()
+        if not active_layer:
+            QMessageBox.warning(self, "Uyarı", "Çizim yapılacak bir katman yok. Lütfen önce bir katman ekleyin.")
+            return
+            
+        # Çizimi uygulamak için Command oluştur
+        def do_draw():
+            # Orijinal görüntünün kopyasını al
+            original_image = active_layer.image.copy()
+            
+            # Çizimi uygula
+            if isinstance(tool, FillBucket):
+                # Kova aracı paths yerine point kullanır
+                success = tool.apply_to_layer(active_layer, paths[0].p1())
+            else:
+                # Fırça, kalem, silgi çizgileri
+                success = tool.apply_to_layer(active_layer, paths)
+                
+            # Değişikliği göster
+            self.refresh_layers()
+            
+            return original_image
+            
+        def undo_draw(original_image):
+            # Orijinal görüntüyü geri yükle
+            active_layer.image = original_image
+            self.refresh_layers()
+            
+        # Command oluştur ve geçmişe ekle
+        active_layer_idx = self.layers.active_index
+        command = Command(
+            do_func=do_draw,
+            undo_func=lambda img=None: undo_draw(img),
+            description=f"{type(tool).__name__} çizim işlemi (Katman {active_layer_idx+1})"
+        )
+        # Önce değişikliği uygula
+        result = do_draw()
+        # Sonra undo fonksiyonunu güncelle
+        command.undo_func = lambda: undo_draw(result)
+        # Geçmişe ekle
+        self.history.push(command)
 
     def set_tool(self, tool_name):
         """Sets the active tool and updates menu checks."""
@@ -100,13 +274,32 @@ class MainWindow(QMainWindow):
                 action.setChecked(name == tool_name)
             # Update status bar or cursor if needed
             self.status_bar.showMessage(f"Aktif Araç: {tool_name.capitalize()}")
-            # Explicitly set ImageView mode when 'select' tool is chosen
+            
+            # Seçilen araca göre ImageView'daki aracı ayarla
             if tool_name == 'select':
                 # Set the default selection shape (e.g., rectangle) when selection tool is active
                 self.image_view.set_selection_mode('rectangle')
+            elif tool_name == 'brush':
+                self.image_view.drawing_tool = self.brush_tool
+                # Fırça aracı seçildiğinde imleci değiştir
+                self.image_view.setCursor(Qt.CursorShape.CrossCursor)
+            elif tool_name == 'pencil':
+                self.image_view.drawing_tool = self.pencil_tool
+                # Kalem aracı seçildiğinde imleci değiştir
+                self.image_view.setCursor(Qt.CursorShape.CrossCursor)
+            elif tool_name == 'eraser':
+                self.image_view.drawing_tool = self.eraser_tool
+                # Silgi aracı seçildiğinde imleci değiştir
+                self.image_view.setCursor(Qt.CursorShape.CrossCursor)
+            elif tool_name == 'fill':
+                self.image_view.drawing_tool = self.fill_tool
+                # Kova aracı seçildiğinde imleci değiştir
+                self.image_view.setCursor(Qt.CursorShape.PointingHandCursor)
+            else:
+                # Başka araçlar seçildiğinde normal imleç
+                self.image_view.setCursor(Qt.CursorShape.ArrowCursor)
         else:
             logging.warning(f"Bilinmeyen araç adı: {tool_name}")
-
 
     def _load_image_from_path(self, file_path):
         """Loads an image from the given file path and updates the UI."""
@@ -1034,3 +1227,63 @@ class MainWindow(QMainWindow):
         if merged_image:
             return image_to_qpixmap(merged_image)
         return None
+
+    def toggle_resize_mode(self):
+        """Yeniden boyutlandırma modunu açıp kapatır."""
+        # This function should now open the ResizeDialog
+        try:
+            layer = self.layers.get_active_layer()
+            if layer is None or layer.image is None:
+                QMessageBox.warning(self, 'Uyarı', 'Resize işlemi için aktif bir katman gerekli!')
+                return
+
+            original_size = layer.image.size # Store original size for undo
+
+            dialog = ResizeDialog(layer, self) # Pass layer and parent window
+            if dialog.exec() == QDialog.DialogCode.Accepted:
+                # Call the correct method and unpack needed values
+                # The resample method is also returned but handled by layer.resize
+                new_width, new_height, _, _ = dialog.get_resize_parameters() 
+
+                # Check if size actually changed
+                if (new_width, new_height) == original_size:
+                    self.status_bar.showMessage("Boyut değiştirilmedi.")
+                    return
+
+                logging.info(f"Resizing layer '{layer.name}' from {original_size} to ({new_width}, {new_height})")
+
+                # --- Create command for history ---
+                def redo_func():
+                    # The actual resize happens here, using the layer's method
+                    success = layer.resize(new_width, new_height)
+                    if success:
+                        self.refresh_layers() # Update display after resize
+                        self.status_bar.showMessage(f"Katman '{layer.name}' yeniden boyutlandırıldı: {new_width}x{new_height}")
+                    else:
+                         # layer.resize might log errors, but show a message too
+                         QMessageBox.critical(self, 'Hata', 'Katman yeniden boyutlandırılamadı.')
+                    return success # Indicate success/failure for history
+
+                def undo_func():
+                    # Resize back to original size
+                    success = layer.resize(original_size[0], original_size[1])
+                    if success:
+                        self.refresh_layers()
+                        self.status_bar.showMessage(f"Yeniden boyutlandırma geri alındı: {original_size[0]}x{original_size[1]}")
+                    else:
+                         QMessageBox.critical(self, 'Hata', 'Yeniden boyutlandırma geri alınamadı.')
+                    return success
+                # --- End command definition ---
+
+                command = Command(redo_func, undo_func, f"Resize Layer '{layer.name}'")
+                # Execute the command and add to history
+                command.do() 
+                self.history.push(command)
+
+            else:
+                # Dialog was cancelled
+                self.status_bar.showMessage("Yeniden boyutlandırma iptal edildi.")
+
+        except Exception as e:
+            logging.error(f"Resize action failed: {e}", exc_info=True)
+            QMessageBox.critical(self, 'Hata', f'Yeniden boyutlandırma sırasında bir hata oluştu: {e}')

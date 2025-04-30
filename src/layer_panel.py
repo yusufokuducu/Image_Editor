@@ -1,9 +1,11 @@
 from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QListWidget, QPushButton, QHBoxLayout,
-                             QLabel, QMessageBox, QComboBox, QListWidgetItem, QSlider, QInputDialog, QCheckBox) # Added QInputDialog and QCheckBox
+                             QLabel, QMessageBox, QComboBox, QListWidgetItem, QSlider, QInputDialog, QCheckBox,
+                             QDialog) # Add QDialog import
 from PyQt6.QtCore import Qt, QModelIndex, pyqtSignal
 from PyQt6.QtGui import QDropEvent, QDragEnterEvent, QMouseEvent
 import logging
-from .layers import BLEND_MODES # Import blend modes
+from PIL import Image # Import PIL.Image for creating empty layers
+from .layers import BLEND_MODES, Layer # Import blend modes and Layer class
 from .resize_dialog import ResizeDialog  # Import the new resize dialog
 
 # Tıklanabilir etiket sınıfı
@@ -42,15 +44,18 @@ class LayerPanel(QWidget):
         self.btn_down = QPushButton('↓')
         self.btn_copy = QPushButton('Kopyala')
         self.btn_paste = QPushButton('Yapıştır')
+        self.btn_add_empty = QPushButton('Boş Katman')  # Boş katman ekleme düğmesi
         btn_layout.addWidget(self.btn_up)
         btn_layout.addWidget(self.btn_down)
         btn_layout.addWidget(self.btn_copy)
         btn_layout.addWidget(self.btn_paste)
+        btn_layout.addWidget(self.btn_add_empty)  # Düğmeyi layout'a ekle
         self.layout.addLayout(btn_layout)
         self.btn_up.clicked.connect(self.move_up)
         self.btn_down.clicked.connect(self.move_down)
         self.btn_copy.clicked.connect(self.copy_layer)
         self.btn_paste.clicked.connect(self.paste_layer)
+        self.btn_add_empty.clicked.connect(self.add_empty_layer)  # Sinyal-yuva bağlantısı
         self.list_widget.currentRowChanged.connect(self.set_active_layer)
         # self.list_widget.itemClicked.connect(self.toggle_layer_visibility) # Removed: Handled by label click now
 
@@ -122,7 +127,7 @@ class LayerPanel(QWidget):
 
             if reply == QMessageBox.StandardButton.Yes:
                 try:
-                    self.main_window.layers.delete_layer(idx)
+                    self.main_window.layers.remove_layer(idx)
                     self.main_window.refresh_layers() # Refresh main view first
                     self.refresh() # Then refresh the panel
                     logging.info(f"Katman silindi (sürükle-bırak): {layer_to_delete.name} (indeks {idx})")
@@ -503,18 +508,18 @@ class LayerPanel(QWidget):
                 resize_dialog = ResizeDialog(layer, self)
                 result = resize_dialog.exec()
                 
-                if result == resize_dialog.DialogCode.Accepted:
-                    # Kullanıcı Tamam'a bastı, yeni boyutları al
-                    new_width, new_height = resize_dialog.get_new_size()
+                if result == QDialog.DialogCode.Accepted:
+                    # Kullanıcı Tamam'a bastı, yeni parametreleri al
+                    new_width, new_height, keep_aspect, resample_method = resize_dialog.get_resize_parameters()
                     
                     # Mevcut boyutları kontrol et
                     current_width, current_height = layer.image.size
                     
                     # Değişiklik varsa uygula
                     if new_width != current_width or new_height != current_height:
-                        # Katmanı yeniden boyutlandır
-                        if layer.resize(new_width, new_height, keep_aspect_ratio=False):
-                            logging.info(f"Katman {idx} ({layer.name}) çözünürlüğü değiştirildi: {current_width}x{current_height} -> {new_width}x{new_height}")
+                        # Katmanı yeniden boyutlandır (keep_aspect ve resample_method değerlerini kullan)
+                        if layer.resize(new_width, new_height, resample=resample_method, keep_aspect_ratio=keep_aspect):
+                            logging.info(f"Katman {idx} ({layer.name}) çözünürlüğü değiştirildi: {current_width}x{current_height} -> {new_width}x{new_height}, Oran Koru: {keep_aspect}, Metod: {resample_method}")
                             self.main_window.refresh_layers()
                         else:
                             QMessageBox.warning(self, 'Hata', 'Katman çözünürlüğü değiştirilirken bir hata oluştu!')
@@ -527,3 +532,48 @@ class LayerPanel(QWidget):
         except Exception as e:
             logging.error(f"change_layer_resolution hatası: {e}")
             QMessageBox.warning(self, 'Hata', f'Katman çözünürlüğü değiştirilirken hata: {e}')
+
+    def add_empty_layer(self):
+        """Aktif proje boyutunda boş (şeffaf) bir katman ekler."""
+        try:
+            # Aktif proje yoksa uyarı göster
+            if not hasattr(self.main_window, 'layers') or not self.main_window.layers.layers:
+                QMessageBox.warning(self, 'Uyarı', 'Boş katman eklemek için önce bir proje açmalısınız.')
+                return
+
+            # Aktif projenin boyutlarını al
+            # İlk katmanın boyutunu referans alalım
+            base_size = self.main_window.layers.layers[0].image.size
+
+            # Şeffaf RGBA görüntü oluştur
+            empty_image = Image.new('RGBA', base_size, (0, 0, 0, 0))
+
+            # Varsayılan isim oluştur
+            default_name = f"Boş Katman {len(self.main_window.layers.layers) + 1}"
+
+            # Opsiyonel: İsim sormak için kullanıcı diyalogu göster
+            name, ok = QInputDialog.getText(self, 'Katman Adı', 
+                                           'Yeni katman adını girin:', 
+                                           text=default_name)
+            if not ok:  # Kullanıcı iptal ettiyse
+                return
+
+            # Geçerli isim kontrolü
+            layer_name = name if name.strip() else default_name
+
+            # Katmanı ekle
+            new_layer = Layer(empty_image, name=layer_name)
+            self.main_window.layers.layers.append(new_layer)
+            
+            # Yeni katmanı aktif yap
+            self.main_window.layers.active_index = len(self.main_window.layers.layers) - 1
+            
+            # Arayüzü güncelle
+            self.main_window.refresh_layers()
+            self.refresh()
+            
+            logging.info(f"Boş katman eklendi: {layer_name}")
+            
+        except Exception as e:
+            logging.error(f"Boş katman eklenirken hata: {e}")
+            QMessageBox.critical(self, 'Hata', f'Boş katman eklenirken bir hata oluştu: {e}')

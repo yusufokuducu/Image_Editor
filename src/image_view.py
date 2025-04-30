@@ -1,13 +1,16 @@
-from PyQt6.QtWidgets import QGraphicsView, QGraphicsScene, QMessageBox, QGraphicsPathItem
-from PyQt6.QtGui import QPixmap, QPainterPath, QPen, QColor, QBrush, QFont, QPainter, QFontMetrics, QImage, QPolygonF # Keep existing imports
+from PyQt6.QtWidgets import QGraphicsView, QGraphicsScene, QMessageBox, QGraphicsPathItem, QGraphicsRectItem
+from PyQt6.QtGui import QPixmap, QPainterPath, QPen, QColor, QBrush, QFont, QPainter, QFontMetrics, QImage, QPolygonF, QCursor
 from PyQt6.QtCore import Qt, QRectF, QPointF, QSize, pyqtSignal # Added pyqtSignal
 import numpy as np
 import logging
+from .drawing_tools import DrawingTool, Brush, Pencil, Eraser, FillBucket
 
 class ImageView(QGraphicsView):
     # Signal to request text input at a specific scene point
     textToolClicked = pyqtSignal(QPointF)
-
+    # Signal for drawing actions
+    drawingComplete = pyqtSignal(object, object)  # tool, paths list
+    
     def __init__(self, main_window, parent=None): # Add main_window parameter
         super().__init__(parent)
         self.main_window = main_window # Store reference to main window
@@ -27,13 +30,18 @@ class ImageView(QGraphicsView):
         self.selection_mode = 'rectangle'  # 'rectangle', 'ellipse', 'lasso'
         self.lasso_points = [] # List of QPointF
         self.selection_path_item = None # Temporary item for lasso drag
-        # self.selection_rect_item is already defined above
-
+        
         # Persistent selection state
         self.current_selection_path = QPainterPath() # The combined selection
         self.final_selection_item = None # The item displaying the combined path
         self.selection_operation = 'new' # 'new', 'add', 'subtract'
         self.space_pressed = False # Track if spacebar is held
+        
+        # Çizim araçları
+        self.drawing_tool = None
+        self.is_drawing = False
+        self.temp_path_item = None
+        self.current_paths = []  # Çizim yollarını tut
 
     def set_image(self, pixmap: QPixmap):
         try:
@@ -43,7 +51,7 @@ class ImageView(QGraphicsView):
 
             # Mevcut seçimleri temizle
             self.clear_selection()
-
+            
             # Sahneyi temizle
             self.scene.clear()
 
@@ -60,6 +68,10 @@ class ImageView(QGraphicsView):
 
             # Görünümü ortala
             self.centerOn(self.pixmap_item)
+            
+            # Aspect ratio'yu güncelle
+            if pixmap.height() > 0:
+                self.aspect_ratio = pixmap.width() / pixmap.height()
         except Exception as e:
             logging.error(f"Görüntü ayarlanırken hata: {e}")
             QMessageBox.critical(self, 'Hata', f'Görüntü ayarlanırken hata oluştu: {e}')
@@ -88,13 +100,19 @@ class ImageView(QGraphicsView):
         self.scale(factor, factor)
 
     def mousePressEvent(self, event):
-        is_selection_tool = self.main_window.current_tool in ['rectangle', 'ellipse', 'lasso']
+        if self.pixmap_item is None:
+            return
+            
+        is_selection_tool = self.main_window.current_tool in ['select', 'rectangle', 'ellipse', 'lasso']
         is_text_tool = self.main_window.current_tool == 'text'
+        is_drawing_tool = self.main_window.current_tool in ['brush', 'pencil', 'eraser']
+        is_fill_tool = self.main_window.current_tool == 'fill'
 
-        if event.button() == Qt.MouseButton.LeftButton and self.pixmap_item:
+        if event.button() == Qt.MouseButton.LeftButton:
             # Priority 1: Panning with Spacebar
             if self.space_pressed:
                 self.selecting = False # Ensure selection doesn't start/continue
+                self.is_drawing = False  # Çizimi durdur
                 super().mousePressEvent(event) # Allow default panning
                 return # Handled
 
@@ -104,12 +122,44 @@ class ImageView(QGraphicsView):
                 logging.info(f"Text tool clicked at scene coordinates: {scene_point.x()}, {scene_point.y()}")
                 self.textToolClicked.emit(scene_point)
                 self.selecting = False
+                self.is_drawing = False  # Çizimi durdur
                 # Don't call super() for text tool to prevent unwanted drag
                 return # Handled
+                
+            # Priority 3: Drawing Tools
+            if is_drawing_tool:
+                self.selecting = False
+                self.is_drawing = True
+                scene_point = self.mapToScene(event.pos())
+                
+                # Temp path item'i temizle
+                if self.temp_path_item:
+                    self.scene.removeItem(self.temp_path_item)
+                    self.temp_path_item = None
+                
+                # Çizim aracını başlat
+                self.drawing_tool.start(scene_point)
+                self.current_paths = []  # Yeni bir çizim başlıyor
+                return # Handled
+                
+            # Priority 4: Fill Tool
+            if is_fill_tool:
+                self.selecting = False
+                self.is_drawing = False
+                scene_point = self.mapToScene(event.pos())
+                
+                # Fill işlemi doğrudan uygulanır
+                if self.drawing_tool and isinstance(self.drawing_tool, FillBucket):
+                    active_layer = self.main_window.layers.get_active_layer()
+                    if active_layer:
+                        self.drawing_tool.apply_to_layer(active_layer, scene_point)
+                        self.main_window.refresh_layers()  # UI'yi yenile
+                return # Handled
 
-            # Priority 3: Selection Tool Click (No Spacebar)
+            # Priority 5: Selection Tool Click (No Spacebar)
             if is_selection_tool:
                 self.selecting = True
+                self.is_drawing = False  # Çizimi durdur
                 # Use QPointF for potentially more precision if needed later, though mask uses int
                 point = self.mapToScene(event.pos())
                 self.selection_start = point
@@ -150,12 +200,12 @@ class ImageView(QGraphicsView):
 
             # Fallback: Other tools or situations (allow default behavior)
             self.selecting = False
+            self.is_drawing = False
             super().mousePressEvent(event)
 
         else:
             # Handle other mouse buttons (e.g., middle mouse for panning if configured differently)
             super().mousePressEvent(event)
-
 
     def mouseMoveEvent(self, event):
         # Only draw selection if selecting AND space is NOT pressed
@@ -190,12 +240,46 @@ class ImageView(QGraphicsView):
                 self.selection_path_item = self.scene.addPath(temp_path, pen=QPen(Qt.GlobalColor.green, 2, Qt.PenStyle.DashLine))
 
             # Do NOT call super().mouseMoveEvent(event) when drawing selection
+        elif self.is_drawing and not self.space_pressed and self.pixmap_item and self.drawing_tool:
+            # Çizim yolunu oluştur ve göster
+            scene_point = self.mapToScene(event.pos())
+            
+            # Çizgi oluştur
+            path = self.drawing_tool.move_to(scene_point)
+            if path:
+                # Path'i listeye ekle
+                self.current_paths.append(path)
+                
+                # Temp path item'i temizle ve yenisini oluştur
+                if self.temp_path_item:
+                    self.scene.removeItem(self.temp_path_item)
+                
+                # Tüm yolları birleştir ve göster
+                combined_path = QPainterPath()
+                for p in self.current_paths:
+                    if isinstance(p, QPainterPath):
+                        combined_path.addPath(p)
+                
+                # Çizim aracına göre çizgi rengini belirle
+                pen_color = self.drawing_tool.color
+                pen_width = self.drawing_tool.size
+                
+                # Silgi için özel görselleştirme
+                if isinstance(self.drawing_tool, Eraser):
+                    pen_color = QColor(255, 0, 0, 128)  # Yarı şeffaf kırmızı (silgileri daha görünür yapar)
+                
+                # Temp path'i göster
+                self.temp_path_item = self.scene.addPath(
+                    combined_path, 
+                    pen=QPen(pen_color, pen_width, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap, Qt.PenJoinStyle.RoundJoin)
+                )
         else:
-            # Allow default panning behavior if space is pressed or not actively selecting
+            # Allow default panning behavior if space is pressed or not actively selecting/drawing
             super().mouseMoveEvent(event)
 
     def mouseReleaseEvent(self, event):
         was_selecting = self.selecting # Store state before potential change by super()
+        was_drawing = self.is_drawing  # Çizim durumunu kaydet
 
         # Always call super first to handle default release behavior (like stopping pan)
         super().mouseReleaseEvent(event)
@@ -269,7 +353,24 @@ class ImageView(QGraphicsView):
             self.selection_end = QPointF()
             # Keep self.selection_operation as is, it's determined on press
             logging.debug(f"Selection finalized. Operation: {self.selection_operation}. Path empty: {self.current_selection_path.isEmpty()}")
-
+                
+        # Çizimi sonlandır
+        elif event.button() == Qt.MouseButton.LeftButton and was_drawing and not self.space_pressed:
+            if self.drawing_tool:
+                # Çizimi sonlandır
+                self.drawing_tool.end()
+                
+                # Temp çizim görseli sil
+                if self.temp_path_item:
+                    self.scene.removeItem(self.temp_path_item)
+                    self.temp_path_item = None
+                
+                # Çizimi uygulamak için sinyal gönder
+                if self.current_paths:
+                    self.drawingComplete.emit(self.drawing_tool, self.current_paths)
+                    self.current_paths = []  # Path listesini temizle
+            
+            self.is_drawing = False
 
     def keyPressEvent(self, event):
         if event.key() == Qt.Key.Key_Space:
@@ -318,87 +419,63 @@ class ImageView(QGraphicsView):
     def get_selection_mask(self, img_shape):
         """ Generates a boolean numpy mask from the current_selection_path. """
         try:
+            # Note: PIL uses (width, height), numpy uses (height, width)
+            # img_shape comes from PIL Image, so it's (width, height)
+            width, height = img_shape[0], img_shape[1]
+            
             # Check if there's a selection path and if the image shape is valid
-            if self.current_selection_path.isEmpty() or img_shape[0] <= 0 or img_shape[1] <= 0:
-                logging.debug(f"get_selection_mask: No selection path or invalid img_shape {img_shape}.")
-                return np.zeros((img_shape[1], img_shape[0]), dtype=bool) # Return boolean mask
+            if self.current_selection_path.isEmpty() or width <= 0 or height <= 0:
+                logging.debug(f"get_selection_mask: No selection path or invalid img_shape ({width}x{height}).")
+                # Return boolean mask (height, width) matching numpy convention
+                return np.zeros((height, width), dtype=bool)
 
-            # Create a QImage to render the path onto
-            q_img_size = QSize(img_shape[0], img_shape[1])
-            # Use Format_Grayscale8 for compatibility and easy numpy conversion
-            mask_image = QImage(q_img_size, QImage.Format.Format_Grayscale8)
-            if mask_image.isNull():
-                logging.error("get_selection_mask: Failed to create mask QImage.")
-                return np.zeros((img_shape[1], img_shape[0]), dtype=bool)
-            mask_image.fill(Qt.GlobalColor.black) # Fill with 0 (False)
+            # Create an empty boolean mask (height, width)
+            mask = np.zeros((height, width), dtype=bool)
 
-            painter = QPainter(mask_image)
-            if not painter.isActive():
-                 logging.error("get_selection_mask: Failed to create QPainter for mask.")
-                 # Clean up the image if painter creation failed
-                 del mask_image
-                 return np.zeros((img_shape[1], img_shape[0]), dtype=bool)
+            # Get the bounding box of the selection path in scene coordinates
+            # Use controlPointRect for potentially tighter bounds
+            bounding_rect = self.current_selection_path.controlPointRect()
 
-            try:
-                painter.setRenderHint(QPainter.RenderHint.Antialiasing) # Smoother mask edges
-                painter.setPen(Qt.PenStyle.NoPen) # No outline needed for mask
-                painter.setBrush(QBrush(Qt.GlobalColor.white)) # Fill with 1 (True = 255 for Grayscale8)
+            # Determine the pixel range to check within the image bounds
+            # Convert scene coordinates to integer pixel indices, clamping to image boundaries
+            # Add a small margin (+1) to ensure boundary pixels are included
+            min_x = max(0, int(bounding_rect.left()))
+            max_x = min(width, int(bounding_rect.right()) + 1) # Exclusive upper bound for range
+            min_y = max(0, int(bounding_rect.top()))
+            max_y = min(height, int(bounding_rect.bottom()) + 1) # Exclusive upper bound for range
 
-                # The path coordinates are scene coordinates. Draw it directly.
-                painter.drawPath(self.current_selection_path)
-            finally:
-                # Ensure painter.end() is called even if errors occur during drawing
-                painter.end()
+            logging.debug(f"Checking pixels in range x:[{min_x}-{max_x}), y:[{min_y}-{max_y})")
 
-            logging.debug(f"get_selection_mask: Path drawn onto QImage ({img_shape[0]}x{img_shape[1]})")
+            # Iterate through the relevant pixel coordinates
+            for y in range(min_y, max_y):
+                for x in range(min_x, max_x):
+                    # Convert pixel center (x+0.5, y+0.5) to scene coordinates
+                    # Note: Image coordinates (0,0) correspond to scene coordinates (0,0) top-left
+                    scene_point = QPointF(x + 0.5, y + 0.5)
+                    
+                    # Check if the center of the pixel is inside the path
+                    if self.current_selection_path.contains(scene_point):
+                        # Set the corresponding pixel in the mask to True
+                        # Numpy indexing is [row, column] -> [y, x]
+                        mask[y, x] = True
 
-            # Convert QImage to numpy array
-            ptr = mask_image.constBits()
-            if ptr is None:
-                 logging.error("get_selection_mask: Failed to get image bits.")
-                 del mask_image # Clean up
-                 return np.zeros((img_shape[1], img_shape[0]), dtype=bool)
+            selected_pixels = np.sum(mask)
+            logging.debug(f"get_selection_mask: Mask created with {selected_pixels} selected pixels.")
+            
+            # Ensure the mask shape matches the expected (height, width)
+            if mask.shape != (height, width):
+                 logging.error(f"Mask shape mismatch! Expected ({height},{width}), got {mask.shape}")
+                 # Return an empty mask in case of error
+                 return np.zeros((height, width), dtype=bool)
 
-            # Calculate bytes per line to handle potential padding/stride
-            bytes_per_line = mask_image.bytesPerLine()
-            height = mask_image.height()
-            width = mask_image.width() # Should match img_shape[0]
-
-            # Create numpy array from the memory view, considering stride
-            # Use np.frombuffer for direct view without copying if possible
-            # Ensure the buffer size matches expected size
-            expected_size = height * bytes_per_line
-            buffer = ptr.tobytes() # Get bytes from memory view
-            if len(buffer) < expected_size:
-                 logging.error(f"get_selection_mask: Buffer size mismatch. Expected {expected_size}, got {len(buffer)}")
-                 del mask_image
-                 return np.zeros((img_shape[1], img_shape[0]), dtype=bool)
-
-            # Create array from buffer
-            arr = np.frombuffer(buffer, dtype=np.uint8).reshape((height, bytes_per_line))
-
-            # If stride equals width, we can use the array directly (or slice)
-            if bytes_per_line == width:
-                arr_cropped = arr
-            else:
-                # Slice the array to remove padding bytes at the end of each line
-                arr_cropped = arr[:, :width].copy() # Copy needed after slicing complex view
-
-            # Mask is where the array is white (255)
-            bool_mask = (arr_cropped == 255)
-            logging.debug(f"get_selection_mask: Mask created with {np.sum(bool_mask)} selected pixels.")
-
-            # Clean up the QImage explicitly (though Python's GC should handle it)
-            del mask_image
-            del arr
-            del arr_cropped
-
-            return bool_mask
+            return mask
 
         except Exception as e:
-            logging.error(f"Seçim maskesi oluşturulurken hata: {e}", exc_info=True)
-            # Return an empty boolean mask on error
-            return np.zeros((img_shape[1], img_shape[0]), dtype=bool)
+            logging.error(f"Error creating selection mask: {e}", exc_info=True)
+            # Return an empty boolean mask on error, matching numpy shape convention
+            # Use provided img_shape to determine dimensions
+            w, h = img_shape[0], img_shape[1]
+            return np.zeros((h, w), dtype=bool)
 
 
     def clear_selection(self):
@@ -422,3 +499,4 @@ class ImageView(QGraphicsView):
         self.selecting = False
         self.selection_operation = 'new'
         logging.debug("Selection cleared.")
+

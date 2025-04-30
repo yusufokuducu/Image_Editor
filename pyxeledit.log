@@ -572,3 +572,305 @@
 2025-04-29 17:08:19,309 [INFO] Aktif katman deðiþtirildi: 1
 2025-04-29 17:08:38,615 [INFO] Applying final filter: noise with value: 0.55
 2025-04-29 17:08:38,615 [INFO] Applying filter/adjustment: noise, param: 0.55
+2025-04-29 18:14:54,221 [INFO] 9 efekt panele eklendi.
+2025-04-29 18:14:54,228 [INFO] PyxelEdit baþlatýldý
+2025-04-29 18:15:01,398 [INFO] Attempting to load supported dropped file: C:/Users/kyusu/Desktop/23132123132.png
+2025-04-29 18:15:01,688 [INFO] Resim yüklendi: C:/Users/kyusu/Desktop/23132123132.png
+2025-04-29 18:15:01,692 [INFO] Successfully loaded dropped file: C:/Users/kyusu/Desktop/23132123132.png
+2025-04-29 18:15:06,022 [INFO] Attempting to load supported dropped file: C:/Users/kyusu/Desktop/23132123132_framed.png
+2025-04-29 18:15:06,482 [INFO] Resim yüklendi: C:/Users/kyusu/Desktop/23132123132_framed.png
+2025-04-29 18:15:06,485 [INFO] Successfully loaded dropped file: C:/Users/kyusu/Desktop/23132123132_framed.png
+2025-04-29 18:15:16,844 [INFO] Aktif katman deðiþtirildi: 0
+2025-04-29 18:15:18,066 [INFO] Aktif katman deðiþtirildi: 1
+2025-04-29 18:16:06,066 [INFO] Aktif katman deðiþtirildi: 0
+2025-04-29 18:16:07,987 [INFO] Katman sürükle-býrak ile taþýndý: 0 -> 1
+2025-04-29 18:17:46,016 [INFO] 9 efekt panele eklendi.
+2025-04-29 18:17:46,017 [INFO] PyxelEdit baþlatýldý
+2025-04-29 18:17:51,297 [INFO] Attempting to load supported dropped file: C:/Users/kyusu/Desktop/the-creation-of-adam-pixel-art-digital-art-artwork-hand-gesture-hd-wallpaper-preview.jpg
+2025-04-29 18:17:51,338 [INFO] Resim yüklendi: C:/Users/kyusu/Desktop/the-creation-of-adam-pixel-art-digital-art-artwork-hand-gesture-hd-wallpaper-preview.jpg
+2025-04-29 18:17:51,339 [INFO] Successfully loaded dropped file: C:/Users/kyusu/Desktop/the-creation-of-adam-pixel-art-digital-art-artwork-hand-gesture-hd-wallpaper-preview.jpg
+2025-04-29 18:26:42,889 [INFO] Applying final filter: noise with value: 0.25
+2025-04-29 18:26:42,889 [INFO] Applying filter/adjustment: noise, param: 0.25
+2025-04-29 18:26:47,662 [INFO] Applying final filter: sharpen with value: 1.0
+2025-04-29 18:26:47,663 [INFO] Applying filter/adjustment: sharpen, param: 1.0
+2025-04-29 18:27:19,192 [INFO] Applying final filter: sharpen with value: 1.0
+2025-04-29 18:27:19,192 [INFO] Applying filter/adjustment: sharpen, param: 1.0
+2025-04-29 18:27:37,751 [INFO] Applying final filter: noise with value: 0.22
+2025-04-29 18:27:37,751 [INFO] Applying filter/adjustment: noise, param: 0.22
+2025-04-29 18:33:12,440 [INFO] 9 efekt panele eklendi.
+2025-04-29 18:33:12,442 [INFO] PyxelEdit baþlatýldý
+2025-04-29 18:33:23,191 [INFO] Attempting to load supported dropped file: C:/Users/kyusu/Desktop/test123.png
+2025-04-29 18:33:23,223 [INFO] Resim yüklendi: C:/Users/kyusu/Desktop/test123.png
+2025-04-29 18:33:23,224 [INFO] Successfully loaded dropped file: C:/Users/kyusu/Desktop/test123.png
+2025-04-29 18:33:41,801 [INFO] Yeniden boyutlandýrma modu aktifleþtirildi
+2025-04-29 18:33:41,816 [INFO] Yeniden boyutlandýrma modu kapatýldý
+2025-04-29 18:34:05,766 [INFO] Yeniden boyutlandýrma modu aktifleþtirildi
+2025-04-29 18:34:05,771 [INFO] Yeniden boyutlandýrma modu kapatýldý
+2025-04-29 18:34:11,960 [INFO] Yeniden boyutlandýrma modu aktifleþtirildi
+2025-04-29 18:34:11,965 [INFO] Yeniden boyutlandýrma modu kapatýldý
+2025-04-29 18:35:24,910 [INFO] 9 efekt panele eklendi.
+2025-04-29 18:35:24,912 [INFO] PyxelEdit baþlatýldý
+2025-04-29 18:35:42,210 [INFO] Attempting to load supported dropped file: C:/Users/kyusu/Desktop/test123.png
+2025-04-29 18:35:42,257 [INFO] Resim yüklendi: C:/Users/kyusu/Desktop/test123.png
+2025-04-29 18:35:42,259 [INFO] Successfully loaded dropped file: C:/Users/kyusu/Desktop/test123.png
+2025-04-29 18:35:48,153 [INFO] Katman kopyalandý: Arka Plan
+2025-04-29 18:35:49,078 [INFO] Katman yapýþtýrýldý: Arka Plan (Kopya)
+2025-04-29 18:35:50,432 [INFO] Aktif katman deðiþtirildi: 0
+2025-04-29 18:35:52,079 [INFO] Katman 0 opaklýðý deðiþtirildi: 16%
+2025-04-29 18:35:53,226 [INFO] Katman 1 opaklýðý deðiþtirildi: 11%
+2025-04-29 18:35:58,941 [INFO] Yeniden boyutlandýrma modu aktifleþtirildi
+2025-04-29 18:35:58,948 [INFO] Yeniden boyutlandýrma modu kapatýldý
+2025-04-29 18:40:39,662 [INFO] 9 efekt panele eklendi.
+2025-04-29 18:40:39,664 [INFO] PyxelEdit baþlatýldý
+2025-04-29 18:40:46,574 [INFO] Attempting to load supported dropped file: C:/Users/kyusu/Desktop/test123.png
+2025-04-29 18:40:46,628 [INFO] Resim yüklendi: C:/Users/kyusu/Desktop/test123.png
+2025-04-29 18:40:46,629 [INFO] Successfully loaded dropped file: C:/Users/kyusu/Desktop/test123.png
+2025-04-29 18:40:48,685 [INFO] Katman kopyalandý: Arka Plan
+2025-04-29 18:40:49,567 [INFO] Katman yapýþtýrýldý: Arka Plan (Kopya)
+2025-04-29 18:40:52,811 [INFO] Yeniden boyutlandýrma modu aktifleþtirildi
+2025-04-29 18:40:52,818 [INFO] Yeniden boyutlandýrma modu kapatýldý
+2025-04-29 18:40:52,821 [WARNING] update_resize_handles: No pixmap item or handles
+2025-04-29 18:41:01,016 [INFO] Yeniden boyutlandýrma modu aktifleþtirildi
+2025-04-29 18:41:01,023 [INFO] Yeniden boyutlandýrma modu kapatýldý
+2025-04-29 18:41:01,027 [WARNING] update_resize_handles: No pixmap item or handles
+2025-04-29 18:55:59,770 [INFO] 9 efekt panele eklendi.
+2025-04-29 18:55:59,771 [INFO] PyxelEdit baþlatýldý
+2025-04-29 18:56:07,056 [INFO] Attempting to load supported dropped file: C:/Users/kyusu/Desktop/the-creation-of-adam-pixel-art-digital-art-artwork-hand-gesture-hd-wallpaper-preview_framed.jpg
+2025-04-29 18:56:07,112 [INFO] Resim yüklendi: C:/Users/kyusu/Desktop/the-creation-of-adam-pixel-art-digital-art-artwork-hand-gesture-hd-wallpaper-preview_framed.jpg
+2025-04-29 18:56:07,114 [INFO] Successfully loaded dropped file: C:/Users/kyusu/Desktop/the-creation-of-adam-pixel-art-digital-art-artwork-hand-gesture-hd-wallpaper-preview_framed.jpg
+2025-04-29 18:56:13,883 [INFO] Yeniden boyutlandýrma modu aktifleþtirildi
+2025-04-29 18:56:13,890 [INFO] Yeniden boyutlandýrma modu kapatýldý
+2025-04-29 18:56:13,892 [WARNING] update_resize_handles: No pixmap item or handles
+2025-04-29 19:06:29,190 [INFO] 9 efekt panele eklendi.
+2025-04-29 19:06:29,191 [INFO] PyxelEdit baþlatýldý
+2025-04-29 19:06:41,467 [INFO] Attempting to load supported dropped file: C:/Users/kyusu/Desktop/23132123132.png
+2025-04-29 19:06:41,781 [INFO] Resim yüklendi: C:/Users/kyusu/Desktop/23132123132.png
+2025-04-29 19:06:41,787 [INFO] Successfully loaded dropped file: C:/Users/kyusu/Desktop/23132123132.png
+2025-04-29 19:06:49,149 [INFO] Yeniden boyutlandýrma modu aktifleþtirildi
+2025-04-29 19:06:49,215 [INFO] Yeniden boyutlandýrma modu kapatýldý
+2025-04-29 19:06:49,218 [WARNING] update_resize_handles: No pixmap item or handles
+2025-04-29 19:06:54,707 [INFO] Katman kopyalandý: Arka Plan
+2025-04-29 19:06:55,629 [INFO] Katman yapýþtýrýldý: Arka Plan (Kopya)
+2025-04-29 19:07:00,216 [INFO] Yeniden boyutlandýrma modu aktifleþtirildi
+2025-04-29 19:07:00,305 [INFO] Yeniden boyutlandýrma modu kapatýldý
+2025-04-29 19:07:00,309 [WARNING] update_resize_handles: No pixmap item or handles
+2025-04-29 19:07:03,670 [INFO] Yeniden boyutlandýrma modu aktifleþtirildi
+2025-04-29 19:07:03,778 [INFO] Yeniden boyutlandýrma modu kapatýldý
+2025-04-29 19:07:03,783 [WARNING] update_resize_handles: No pixmap item or handles
+2025-04-29 19:26:21,824 [INFO] 9 efekt panele eklendi.
+2025-04-29 19:26:21,830 [INFO] PyxelEdit baþlatýldý
+2025-04-29 21:08:32,756 [INFO] 9 efekt panele eklendi.
+2025-04-29 21:08:32,761 [INFO] PyxelEdit baþlatýldý
+2025-04-29 21:08:56,309 [INFO] Attempting to load supported dropped file: C:/Users/kyusu/Desktop/the-creation-of-adam-pixel-art-digital-art-artwork-hand-gesture-hd-wallpaper-preview.jpg
+2025-04-29 21:08:56,371 [INFO] Resim yüklendi: C:/Users/kyusu/Desktop/the-creation-of-adam-pixel-art-digital-art-artwork-hand-gesture-hd-wallpaper-preview.jpg
+2025-04-29 21:08:56,372 [INFO] Successfully loaded dropped file: C:/Users/kyusu/Desktop/the-creation-of-adam-pixel-art-digital-art-artwork-hand-gesture-hd-wallpaper-preview.jpg
+2025-04-29 21:09:51,028 [INFO] Katman kopyalandý: Arka Plan
+2025-04-29 21:09:51,860 [INFO] Katman yapýþtýrýldý: Arka Plan (Kopya)
+2025-04-29 21:09:59,284 [INFO] Araç deðiþtirildi: select
+2025-04-29 21:10:01,673 [INFO] Araç deðiþtirildi: select
+2025-04-29 21:19:24,726 [INFO] 9 efekt panele eklendi.
+2025-04-29 21:19:24,728 [INFO] PyxelEdit baþlatýldý
+2025-04-29 21:19:30,588 [INFO] Resim yüklendi: C:/Users/kyusu/Desktop/gitypity/Image_Editor/pillow_test_output.png
+2025-04-29 21:19:54,044 [ERROR] Resize action failed: validate_layer_operation() takes from 1 to 2 positional arguments but 3 were given
+Traceback (most recent call last):
+  File "C:\Users\kyusu\Desktop\gitypity\Image_Editor\src\main_window.py", line 1044, in toggle_resize_mode
+    if not validate_layer_operation(self, layer, "resize"):
+           ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: validate_layer_operation() takes from 1 to 2 positional arguments but 3 were given
+2025-04-29 21:20:25,570 [INFO] Katman kopyalandý: Arka Plan
+2025-04-29 21:20:26,997 [INFO] Katman yapýþtýrýldý: Arka Plan (Kopya)
+2025-04-29 21:20:27,167 [INFO] Katman yapýþtýrýldý: Arka Plan (Kopya)
+2025-04-29 21:20:27,337 [INFO] Katman yapýþtýrýldý: Arka Plan (Kopya)
+2025-04-29 21:20:27,563 [INFO] Katman yapýþtýrýldý: Arka Plan (Kopya)
+2025-04-29 21:20:32,233 [ERROR] Resize action failed: validate_layer_operation() takes from 1 to 2 positional arguments but 3 were given
+Traceback (most recent call last):
+  File "C:\Users\kyusu\Desktop\gitypity\Image_Editor\src\main_window.py", line 1044, in toggle_resize_mode
+    if not validate_layer_operation(self, layer, "resize"):
+           ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: validate_layer_operation() takes from 1 to 2 positional arguments but 3 were given
+2025-04-29 21:20:36,993 [ERROR] Resize action failed: validate_layer_operation() takes from 1 to 2 positional arguments but 3 were given
+Traceback (most recent call last):
+  File "C:\Users\kyusu\Desktop\gitypity\Image_Editor\src\main_window.py", line 1044, in toggle_resize_mode
+    if not validate_layer_operation(self, layer, "resize"):
+           ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: validate_layer_operation() takes from 1 to 2 positional arguments but 3 were given
+2025-04-29 21:20:53,601 [INFO] Araç deðiþtirildi: select
+2025-04-29 21:20:56,215 [ERROR] Resize action failed: validate_layer_operation() takes from 1 to 2 positional arguments but 3 were given
+Traceback (most recent call last):
+  File "C:\Users\kyusu\Desktop\gitypity\Image_Editor\src\main_window.py", line 1044, in toggle_resize_mode
+    if not validate_layer_operation(self, layer, "resize"):
+           ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: validate_layer_operation() takes from 1 to 2 positional arguments but 3 were given
+2025-04-29 21:22:57,026 [INFO] 9 efekt panele eklendi.
+2025-04-29 21:22:57,028 [INFO] PyxelEdit baþlatýldý
+2025-04-29 21:23:13,159 [INFO] Resim yüklendi: C:/Users/kyusu/Desktop/the-creation-of-adam-pixel-art-digital-art-artwork-hand-gesture-hd-wallpaper-preview.jpg
+2025-04-29 21:23:15,705 [INFO] Katman kopyalandý: Arka Plan
+2025-04-29 21:23:16,695 [INFO] Katman yapýþtýrýldý: Arka Plan (Kopya)
+2025-04-29 21:23:16,838 [INFO] Katman yapýþtýrýldý: Arka Plan (Kopya)
+2025-04-29 21:23:17,020 [INFO] Katman yapýþtýrýldý: Arka Plan (Kopya)
+2025-04-29 21:23:17,149 [INFO] Katman yapýþtýrýldý: Arka Plan (Kopya)
+2025-04-29 21:23:17,301 [INFO] Katman yapýþtýrýldý: Arka Plan (Kopya)
+2025-04-29 21:23:17,476 [INFO] Katman yapýþtýrýldý: Arka Plan (Kopya)
+2025-04-29 21:23:17,702 [INFO] Katman yapýþtýrýldý: Arka Plan (Kopya)
+2025-04-29 21:23:18,434 [INFO] Aktif katman deðiþtirildi: 3
+2025-04-29 21:23:23,818 [ERROR] Katman silinirken hata (sürükle-býrak): 'LayerManager' object has no attribute 'delete_layer'
+2025-04-29 21:23:30,854 [INFO] Aktif katman deðiþtirildi: 0
+2025-04-29 21:23:33,826 [ERROR] Resize action failed: 'QGraphicsView' object has no attribute 'RenderHint'
+Traceback (most recent call last):
+  File "C:\Users\kyusu\Desktop\gitypity\Image_Editor\src\main_window.py", line 1050, in toggle_resize_mode
+    dialog = ResizeDialog(layer, self) # Pass layer and parent window
+  File "C:\Users\kyusu\Desktop\gitypity\Image_Editor\src\resize_dialog.py", line 221, in __init__
+    self.view.setRenderHint(self.view.RenderHint.Antialiasing)
+                            ^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'QGraphicsView' object has no attribute 'RenderHint'. Did you mean: 'renderHints'?
+2025-04-29 21:23:40,442 [INFO] Aktif katman deðiþtirildi: 5
+2025-04-29 21:53:27,493 [INFO] 9 efekt panele eklendi.
+2025-04-29 21:53:27,495 [INFO] PyxelEdit baþlatýldý
+2025-04-29 21:53:32,966 [INFO] Resim yüklendi: C:/Users/kyusu/Desktop/gitypity/Image_Editor/pillow_test_output.png
+2025-04-29 21:53:41,015 [ERROR] Resize action failed: ResizableImageItem cannot be converted to PyQt6.QtCore.QObject
+Traceback (most recent call last):
+  File "C:\Users\kyusu\Desktop\gitypity\Image_Editor\src\main_window.py", line 1050, in toggle_resize_mode
+    dialog = ResizeDialog(layer, self) # Pass layer and parent window
+  File "C:\Users\kyusu\Desktop\gitypity\Image_Editor\src\resize_dialog.py", line 258, in __init__
+    self.setup_image()
+    ~~~~~~~~~~~~~~~~^^
+  File "C:\Users\kyusu\Desktop\gitypity\Image_Editor\src\resize_dialog.py", line 272, in setup_image
+    self.resize_item.sizeChanged.connect(self.on_handle_resize) # Sinyali slota baðla
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: ResizableImageItem cannot be converted to PyQt6.QtCore.QObject
+2025-04-29 21:54:36,775 [INFO] 9 efekt panele eklendi.
+2025-04-29 21:54:36,776 [INFO] PyxelEdit baþlatýldý
+2025-04-29 21:54:43,611 [INFO] Resim yüklendi: C:/Users/kyusu/Desktop/gitypity/Image_Editor/pillow_test_output.png
+2025-04-29 21:54:46,263 [ERROR] Resize action failed: QObject(parent: Optional[QObject] = None): argument 1 has unexpected type 'QPixmap'
+Traceback (most recent call last):
+  File "C:\Users\kyusu\Desktop\gitypity\Image_Editor\src\main_window.py", line 1050, in toggle_resize_mode
+    dialog = ResizeDialog(layer, self) # Pass layer and parent window
+  File "C:\Users\kyusu\Desktop\gitypity\Image_Editor\src\resize_dialog.py", line 261, in __init__
+    self.setup_image()
+    ~~~~~~~~~~~~~~~~^^
+  File "C:\Users\kyusu\Desktop\gitypity\Image_Editor\src\resize_dialog.py", line 273, in setup_image
+    self.resize_item = ResizableImageItem(pixmap)
+                       ~~~~~~~~~~~~~~~~~~^^^^^^^^
+  File "C:\Users\kyusu\Desktop\gitypity\Image_Editor\src\resize_dialog.py", line 64, in __init__
+    QGraphicsPixmapItem.__init__(self, pixmap, parent)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^
+TypeError: QObject(parent: Optional[QObject] = None): argument 1 has unexpected type 'QPixmap'
+2025-04-29 21:55:50,605 [INFO] 9 efekt panele eklendi.
+2025-04-29 21:55:50,607 [INFO] PyxelEdit baþlatýldý
+2025-04-29 21:55:56,655 [INFO] Resim yüklendi: C:/Users/kyusu/Desktop/gitypity/Image_Editor/pillow_test_output.png
+2025-04-29 21:56:01,027 [ERROR] Resize action failed: could not convert 'ResizableImageItem' to 'QObject'
+Traceback (most recent call last):
+  File "C:\Users\kyusu\Desktop\gitypity\Image_Editor\src\main_window.py", line 1050, in toggle_resize_mode
+    dialog = ResizeDialog(layer, self) # Pass layer and parent window
+  File "C:\Users\kyusu\Desktop\gitypity\Image_Editor\src\resize_dialog.py", line 261, in __init__
+    self.setup_image()
+    ~~~~~~~~~~~~~~~~^^
+  File "C:\Users\kyusu\Desktop\gitypity\Image_Editor\src\resize_dialog.py", line 275, in setup_image
+    self.resize_item.sizeChanged.connect(self.on_handle_resize) # Sinyali slota baðla
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: could not convert 'ResizableImageItem' to 'QObject'
+2025-04-29 21:59:37,265 [INFO] 9 efekt panele eklendi.
+2025-04-29 21:59:37,266 [INFO] PyxelEdit baþlatýldý
+2025-04-29 21:59:42,923 [INFO] Resim yüklendi: C:/Users/kyusu/Desktop/gitypity/Image_Editor/pillow_test_output.png
+2025-04-29 21:59:45,009 [ERROR] change_layer_resolution hatasý: could not convert 'ResizableImageItem' to 'QObject'
+2025-04-29 21:59:49,973 [ERROR] change_layer_resolution hatasý: could not convert 'ResizableImageItem' to 'QObject'
+2025-04-29 21:59:56,653 [INFO] Katman kopyalandý: Arka Plan
+2025-04-29 21:59:57,445 [INFO] Katman yapýþtýrýldý: Arka Plan (Kopya)
+2025-04-29 21:59:57,984 [INFO] Katman yapýþtýrýldý: Arka Plan (Kopya)
+2025-04-29 21:59:58,197 [INFO] Katman yapýþtýrýldý: Arka Plan (Kopya)
+2025-04-29 21:59:58,427 [INFO] Katman yapýþtýrýldý: Arka Plan (Kopya)
+2025-04-29 22:00:17,058 [ERROR] change_layer_resolution hatasý: could not convert 'ResizableImageItem' to 'QObject'
+2025-04-29 22:00:19,638 [ERROR] change_layer_resolution hatasý: could not convert 'ResizableImageItem' to 'QObject'
+2025-04-29 22:00:22,832 [ERROR] Resize action failed: could not convert 'ResizableImageItem' to 'QObject'
+Traceback (most recent call last):
+  File "C:\Users\kyusu\Desktop\gitypity\Image_Editor\src\main_window.py", line 1050, in toggle_resize_mode
+    dialog = ResizeDialog(layer, self) # Pass layer and parent window
+  File "C:\Users\kyusu\Desktop\gitypity\Image_Editor\src\resize_dialog.py", line 261, in __init__
+    self.setup_image()
+    ~~~~~~~~~~~~~~~~^^
+  File "C:\Users\kyusu\Desktop\gitypity\Image_Editor\src\resize_dialog.py", line 275, in setup_image
+    self.resize_item.sizeChanged.connect(self.on_handle_resize) # Sinyali slota baðla
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: could not convert 'ResizableImageItem' to 'QObject'
+2025-04-30 13:32:09,422 [INFO] 9 efekt panele eklendi.
+2025-04-30 13:32:09,427 [INFO] PyxelEdit baþlatýldý
+2025-04-30 13:32:24,389 [INFO] Attempting to load supported dropped file: C:/Users/kyusu/Desktop/23132123132.png
+2025-04-30 13:32:24,840 [INFO] Resim yüklendi: C:/Users/kyusu/Desktop/23132123132.png
+2025-04-30 13:32:24,846 [INFO] Successfully loaded dropped file: C:/Users/kyusu/Desktop/23132123132.png
+2025-04-30 13:32:34,044 [INFO] Katman kopyalandý: Arka Plan
+2025-04-30 13:32:34,405 [INFO] Katman kopyalandý: Arka Plan
+2025-04-30 13:32:34,628 [INFO] Katman kopyalandý: Arka Plan
+2025-04-30 13:32:35,543 [INFO] Katman yapýþtýrýldý: Arka Plan (Kopya)
+2025-04-30 13:32:35,731 [INFO] Katman yapýþtýrýldý: Arka Plan (Kopya)
+2025-04-30 13:32:35,916 [INFO] Katman yapýþtýrýldý: Arka Plan (Kopya)
+2025-04-30 13:32:36,186 [INFO] Katman yapýþtýrýldý: Arka Plan (Kopya)
+2025-04-30 13:32:36,963 [INFO] Aktif katman deðiþtirildi: 3
+2025-04-30 13:32:51,731 [INFO] toggle_layer_visibility completed successfully for index 3.
+2025-04-30 13:32:53,602 [INFO] Katman görünürlüðü deðiþtirildi: Arka Plan (Kopya) -> Görünür
+2025-04-30 13:32:54,673 [INFO] Aktif katman deðiþtirildi: 4
+2025-04-30 13:33:00,375 [INFO] Katman silindi (sürükle-býrak): Arka Plan (Kopya) (indeks 4)
+2025-04-30 13:33:07,171 [INFO] Katman silindi (sürükle-býrak): Arka Plan (Kopya) (indeks 3)
+2025-04-30 13:33:15,493 [INFO] Katman silindi (sürükle-býrak): Arka Plan (Kopya) (indeks 2)
+2025-04-30 13:35:03,702 [INFO] 9 efekt panele eklendi.
+2025-04-30 13:35:03,703 [INFO] PyxelEdit baþlatýldý
+2025-04-30 13:35:10,980 [INFO] Attempting to load supported dropped file: C:/Users/kyusu/Desktop/23132123132.png
+2025-04-30 13:35:11,204 [INFO] Resim yüklendi: C:/Users/kyusu/Desktop/23132123132.png
+2025-04-30 13:35:11,206 [INFO] Successfully loaded dropped file: C:/Users/kyusu/Desktop/23132123132.png
+2025-04-30 13:36:12,678 [INFO] 9 efekt panele eklendi.
+2025-04-30 13:36:12,680 [INFO] PyxelEdit baþlatýldý
+2025-04-30 13:36:22,113 [INFO] Attempting to load supported dropped file: C:/Users/kyusu/Desktop/23132123132.png
+2025-04-30 13:36:22,423 [INFO] Resim yüklendi: C:/Users/kyusu/Desktop/23132123132.png
+2025-04-30 13:36:22,426 [INFO] Successfully loaded dropped file: C:/Users/kyusu/Desktop/23132123132.png
+2025-04-30 13:37:27,334 [INFO] 9 efekt panele eklendi.
+2025-04-30 13:37:27,335 [INFO] PyxelEdit baþlatýldý
+2025-04-30 13:37:32,176 [INFO] Attempting to load supported dropped file: C:/Users/kyusu/Desktop/23132123132.png
+2025-04-30 13:37:32,396 [INFO] Resim yüklendi: C:/Users/kyusu/Desktop/23132123132.png
+2025-04-30 13:37:32,399 [INFO] Successfully loaded dropped file: C:/Users/kyusu/Desktop/23132123132.png
+2025-04-30 13:39:04,706 [INFO] 9 efekt panele eklendi.
+2025-04-30 13:39:04,707 [INFO] PyxelEdit baþlatýldý
+2025-04-30 13:39:20,755 [INFO] Attempting to load supported dropped file: C:/Users/kyusu/Desktop/23132123132.png
+2025-04-30 13:39:20,960 [INFO] Resim yüklendi: C:/Users/kyusu/Desktop/23132123132.png
+2025-04-30 13:39:20,963 [INFO] Successfully loaded dropped file: C:/Users/kyusu/Desktop/23132123132.png
+2025-04-30 13:40:23,370 [ERROR] Resize action failed: 'ResizeDialog' object has no attribute 'get_new_size'
+Traceback (most recent call last):
+  File "C:\Users\kyusu\Desktop\gitypity\Image_Editor\src\main_window.py", line 1052, in toggle_resize_mode
+    new_width, new_height = dialog.get_new_size()
+                            ^^^^^^^^^^^^^^^^^^^
+AttributeError: 'ResizeDialog' object has no attribute 'get_new_size'
+2025-04-30 13:51:55,302 [INFO] 9 efekt panele eklendi.
+2025-04-30 13:51:55,303 [INFO] PyxelEdit baþlatýldý
+2025-04-30 13:52:08,037 [INFO] Attempting to load supported dropped file: C:/Users/kyusu/Desktop/23132123132.png
+2025-04-30 13:52:08,253 [INFO] Resim yüklendi: C:/Users/kyusu/Desktop/23132123132.png
+2025-04-30 13:52:08,256 [INFO] Successfully loaded dropped file: C:/Users/kyusu/Desktop/23132123132.png
+2025-04-30 13:52:21,801 [INFO] Resizing layer 'Arka Plan' from (2048, 2048) to (410, 453)
+2025-04-30 13:52:21,801 [ERROR] Resize action failed: 'MainWindow' object has no attribute 'execute_command'
+Traceback (most recent call last):
+  File "C:\Users\kyusu\Desktop\gitypity\Image_Editor\src\main_window.py", line 1087, in toggle_resize_mode
+    self.execute_command(command) # Add to history and execute redo_func
+    ^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'MainWindow' object has no attribute 'execute_command'
+2025-04-30 13:56:10,576 [INFO] 9 efekt panele eklendi.
+2025-04-30 13:56:10,577 [INFO] PyxelEdit baþlatýldý
+2025-04-30 13:56:17,014 [INFO] Attempting to load supported dropped file: C:/Users/kyusu/Desktop/23132123132.png
+2025-04-30 13:56:17,224 [INFO] Resim yüklendi: C:/Users/kyusu/Desktop/23132123132.png
+2025-04-30 13:56:17,227 [INFO] Successfully loaded dropped file: C:/Users/kyusu/Desktop/23132123132.png
+2025-04-30 14:00:22,236 [INFO] 9 efekt panele eklendi.
+2025-04-30 14:00:22,237 [INFO] PyxelEdit baþlatýldý
+2025-04-30 14:00:35,709 [INFO] Attempting to load supported dropped file: C:/Users/kyusu/Desktop/23132123132.png
+2025-04-30 14:00:35,920 [INFO] Resim yüklendi: C:/Users/kyusu/Desktop/23132123132.png
+2025-04-30 14:00:35,922 [INFO] Successfully loaded dropped file: C:/Users/kyusu/Desktop/23132123132.png
+2025-04-30 14:00:40,501 [INFO] Boþ katman eklendi: Boþ Katman 2
+2025-04-30 14:07:53,492 [INFO] 9 efekt panele eklendi.
+2025-04-30 14:07:53,494 [INFO] PyxelEdit baþlatýldý
+2025-04-30 14:08:03,029 [INFO] Attempting to load supported dropped file: C:/Users/kyusu/Desktop/testimage.png
+2025-04-30 14:08:03,236 [INFO] Resim yüklendi: C:/Users/kyusu/Desktop/testimage.png
+2025-04-30 14:08:03,239 [INFO] Successfully loaded dropped file: C:/Users/kyusu/Desktop/testimage.png
+2025-04-30 14:08:22,687 [INFO] Araç deðiþtirildi: brush
+2025-04-30 14:10:23,113 [INFO] 9 efekt panele eklendi.
+2025-04-30 14:10:23,114 [INFO] PyxelEdit baþlatýldý
+2025-04-30 14:10:29,813 [INFO] Attempting to load supported dropped file: C:/Users/kyusu/Desktop/testimage.png
+2025-04-30 14:10:30,062 [INFO] Resim yüklendi: C:/Users/kyusu/Desktop/testimage.png
+2025-04-30 14:10:30,066 [INFO] Successfully loaded dropped file: C:/Users/kyusu/Desktop/testimage.png
+2025-04-30 14:10:34,805 [INFO] Araç deðiþtirildi: brush
+2025-04-30 14:11:17,855 [INFO] Araç deðiþtirildi: eraser
+2025-04-30 14:11:34,339 [INFO] Araç deðiþtirildi: fill

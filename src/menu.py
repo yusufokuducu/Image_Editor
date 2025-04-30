@@ -16,6 +16,7 @@ class MenuManager:
         self._create_selection_menu()
         self._create_layers_menu()
         self._create_tools_menu()
+        self._create_drawing_options_menu()
 
     def _create_file_menu(self):
         """Creates the File menu."""
@@ -137,4 +138,79 @@ class MenuManager:
         text_action.triggered.connect(lambda: self.main_window.set_tool('text'))
         self.tool_actions['text'] = text_action
         
-        # More tools can be added here
+        # Çizim araçları için menü ayırıcı
+        self.tools_menu.addSeparator()
+        
+        # Fırça aracı
+        brush_action = self.tools_menu.addAction('Fırça')
+        brush_action.setCheckable(True)
+        brush_action.setStatusTip('Yumuşak fırça ile çizim yapın')
+        brush_action.triggered.connect(lambda: self.main_window.set_tool('brush'))
+        self.tool_actions['brush'] = brush_action
+        
+        # Kalem aracı
+        pencil_action = self.tools_menu.addAction('Kalem')
+        pencil_action.setCheckable(True)
+        pencil_action.setStatusTip('Keskin kenarlı kalem ile çizim yapın')
+        pencil_action.triggered.connect(lambda: self.main_window.set_tool('pencil'))
+        self.tool_actions['pencil'] = pencil_action
+        
+        # Silgi aracı
+        eraser_action = self.tools_menu.addAction('Silgi')
+        eraser_action.setCheckable(True)
+        eraser_action.setStatusTip('Silgi ile pikselleri şeffaflaştırın')
+        eraser_action.triggered.connect(lambda: self.main_window.set_tool('eraser'))
+        self.tool_actions['eraser'] = eraser_action
+        
+        # Kova aracı
+        fill_action = self.tools_menu.addAction('Doldurma Kovası')
+        fill_action.setCheckable(True)
+        fill_action.setStatusTip('Benzer renkli alanları doldurun')
+        fill_action.triggered.connect(lambda: self.main_window.set_tool('fill'))
+        self.tool_actions['fill'] = fill_action
+        
+        # Yeniden boyutlandırma aracı bölümü
+        self.tools_menu.addSeparator()
+        resize_action = self.tools_menu.addAction('Yeniden Boyutlandır')
+        resize_action.setCheckable(True)
+        resize_action.setStatusTip('Katmanı kenarlarından sürükleyerek yeniden boyutlandır')
+        resize_action.triggered.connect(self.main_window.toggle_resize_mode)
+        self.resize_action = resize_action  # Bunu MainWindow'dan erişilebilir yap
+        
+        # Resize aracını da tool_actions listesine ekle
+        self.tool_actions['resize'] = resize_action
+
+    def _create_drawing_options_menu(self):
+        """Çizim seçenekleri menüsünü oluşturur."""
+        draw_options_menu = self.main_window.menu_bar.addMenu('Çizim Seçenekleri')
+        
+        # Renk seçimi
+        color_action = QAction('Çizim Rengi Seç...', self.main_window)
+        color_action.triggered.connect(self.main_window.set_drawing_color)
+        draw_options_menu.addAction(color_action)
+        
+        # Ayırıcı
+        draw_options_menu.addSeparator()
+        
+        # Fırça boyutu
+        brush_size_action = QAction('Fırça Boyutu...', self.main_window)
+        brush_size_action.triggered.connect(self.main_window.set_brush_size)
+        draw_options_menu.addAction(brush_size_action)
+        
+        # Kalem boyutu
+        pencil_size_action = QAction('Kalem Boyutu...', self.main_window)
+        pencil_size_action.triggered.connect(self.main_window.set_pencil_size)
+        draw_options_menu.addAction(pencil_size_action)
+        
+        # Silgi boyutu
+        eraser_size_action = QAction('Silgi Boyutu...', self.main_window)
+        eraser_size_action.triggered.connect(self.main_window.set_eraser_size)
+        draw_options_menu.addAction(eraser_size_action)
+        
+        # Ayırıcı
+        draw_options_menu.addSeparator()
+        
+        # Doldurma toleransı
+        fill_tolerance_action = QAction('Doldurma Toleransı...', self.main_window)
+        fill_tolerance_action.triggered.connect(self.main_window.set_fill_tolerance)
+        draw_options_menu.addAction(fill_tolerance_action)

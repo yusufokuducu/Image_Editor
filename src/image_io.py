@@ -28,8 +28,9 @@ def image_to_qpixmap(img):
     try:
         # Giriş kontrolü
         if img is None:
+            logging.warning("image_to_qpixmap: Girdi olarak None alındı.")
             return None
-
+        
         # PIL Image'e dönüştür
         from PIL import Image
 
@@ -49,11 +50,13 @@ def image_to_qpixmap(img):
                     img_copy = Image.fromarray(data, 'L').convert('RGBA')
                 else:
                     # Desteklenmeyen format için boş görüntü döndür
+                    logging.warning(f"image_to_qpixmap: Desteklenmeyen numpy array formatı: {data.shape}")
                     img_copy = Image.new('RGBA', (100, 100), (0, 0, 0, 0))
-            except Exception:
+            except Exception as e:
                 # Hata durumunda boş görüntü döndür
+                logging.error(f"image_to_qpixmap: Numpy array'den PIL'e dönüştürme hatası: {e}")
                 img_copy = Image.new('RGBA', (100, 100), (0, 0, 0, 0))
-
+        
         # RGBA moduna dönüştür
         if img_copy.mode != 'RGBA':
             img_copy = img_copy.convert('RGBA')
@@ -71,8 +74,12 @@ def image_to_qpixmap(img):
             qt_img = QImage(arr.data, width, height, bytes_per_line, QImage.Format.Format_RGBA8888)
 
             # QPixmap'e dönüştür
-            return QPixmap.fromImage(qt_img)
-        except Exception:
+            pixmap = QPixmap.fromImage(qt_img)
+            if pixmap.isNull():
+                 logging.warning("image_to_qpixmap: Numpy'dan QImage ile oluşturulan QPixmap boş.")
+            return pixmap
+        except Exception as e:
+            logging.warning(f"image_to_qpixmap: Numpy'dan doğrudan QImage oluşturma başarısız: {e}. Alternatif yöntem deneniyor.")
             # Alternatif yöntem başarısız olursa, klasik yöntemi dene
             try:
                 # Bellek içinde PNG formatına dönüştür
@@ -83,12 +90,18 @@ def image_to_qpixmap(img):
                 # Qt görüntüsüne dönüştür
                 qt_img = QImage.fromData(buf.getvalue(), 'PNG')
                 if qt_img.isNull():
+                    logging.error("image_to_qpixmap: PNG buffer'dan QImage oluşturulamadı.")
                     return QPixmap()  # Boş pixmap döndür
-
-                return QPixmap.fromImage(qt_img)
-            except Exception:
+                
+                pixmap = QPixmap.fromImage(qt_img)
+                if pixmap.isNull():
+                    logging.warning("image_to_qpixmap: PNG buffer'dan QImage ile oluşturulan QPixmap boş.")
+                return pixmap
+            except Exception as e:
+                logging.error(f"image_to_qpixmap: PNG buffer yöntemi başarısız: {e}")
                 return QPixmap()  # Boş pixmap döndür
-    except Exception:
+    except Exception as e:
+        logging.error(f"image_to_qpixmap: Genel hata: {e}")
         return QPixmap()  # Boş pixmap döndür
     finally:
         # Özyineleme limitini eski haline getir
