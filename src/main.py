@@ -3,7 +3,8 @@ import logging
 from PyQt6.QtWidgets import QApplication, QMessageBox
 # Add parent directory to Python path to allow imports from src package
 sys.path.append("..")
-from src.main_window import MainWindow # Import MainWindow from its new location
+from src.main_window import MainWindow  # Import MainWindow from its new location
+from src.resize_dialog import ResizeDialog  # Import ResizeDialog
 
 def main():
     try:

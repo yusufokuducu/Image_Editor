@@ -915,3 +915,22 @@ AttributeError: 'MainWindow' object has no attribute 'execute_command'
 2025-04-30 15:03:53,146 [INFO] Araç deðiþtirildi: pencil
 2025-04-30 15:04:47,475 [INFO] Boþ katman eklendi: Boþ Katman 2
 2025-04-30 15:05:00,990 [INFO] Araç deðiþtirildi: fill
+2025-04-30 16:01:22,591 [INFO] 9 efekt panele eklendi.
+2025-04-30 16:01:22,617 [INFO] PyxelEdit baþlatýldý
+2025-04-30 16:01:49,899 [INFO] Resim yüklendi: C:/Users/kyusu/Desktop/testimage.png
+2025-04-30 16:01:54,956 [INFO] Araç deðiþtirildi: shape
+2025-04-30 16:02:00,796 [INFO] Araç deðiþtirildi: line
+2025-04-30 16:02:05,008 [INFO] Araç deðiþtirildi: shape
+2025-04-30 16:02:07,775 [INFO] Araç deðiþtirildi: brush
+2025-04-30 16:02:11,346 [INFO] Araç deðiþtirildi: rectangle
+2025-04-30 16:02:12,110 [INFO] Araç deðiþtirildi: line
+2025-04-30 16:02:15,306 [INFO] Araç deðiþtirildi: ellipse
+2025-04-30 16:02:22,553 [INFO] Araç deðiþtirildi: rectangle
+2025-04-30 16:02:23,342 [INFO] Araç deðiþtirildi: ellipse
+2025-04-30 16:02:27,447 [INFO] Araç deðiþtirildi: brush
+2025-04-30 16:02:40,657 [INFO] Araç deðiþtirildi: eraser
+2025-04-30 16:03:03,092 [INFO] Boþ katman eklendi: Boþ Katman 2
+2025-04-30 16:03:10,602 [INFO] Araç deðiþtirildi: brush
+2025-04-30 16:03:23,626 [INFO] Araç deðiþtirildi: eraser
+2025-04-30 16:04:26,284 [INFO] 9 efekt panele eklendi.
+2025-04-30 16:04:26,291 [INFO] PyxelEdit baþlatýldý

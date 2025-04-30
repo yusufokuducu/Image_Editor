@@ -6,6 +6,18 @@ class ShapeTool:
         self.shape_type = shape_type
         self.fill = fill
         self.size = 2  # Default stroke size
+
+class LineTool(ShapeTool):
+    def __init__(self, color, fill=False):
+        super().__init__(color, shape_type='line', fill=fill)
+
+class RectangleTool(ShapeTool):
+    def __init__(self, color, fill=True):
+        super().__init__(color, shape_type='rectangle', fill=fill)
+
+class EllipseTool(ShapeTool):
+    def __init__(self, color, fill=True):
+        super().__init__(color, shape_type='ellipse', fill=fill)
         
     def set_color(self, color):
         self.color = color

@@ -26,6 +26,7 @@ from .text_utils import get_pil_font, draw_text_on_image
 from .utils import (compose_layers_pixmap, validate_layer_operation,
                    create_command, ensure_rgba, create_transparent_image)
 from .drawing_tools import Brush, Pencil, Eraser, FillBucket  # Çizim araçlarını içe aktar
+from .shape_tools import ShapeTool, LineTool, RectangleTool, EllipseTool  # Şekil araçlarını içe aktar
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -73,6 +74,69 @@ class MainWindow(QMainWindow):
         self.setAcceptDrops(True)
 
         logging.info("PyxelEdit başlatıldı")
+        
+    def handle_text_tool_click(self, position):
+        """Metin aracı tıklandığında çağrılır, metni aktif katmana ekler."""
+        try:
+            if not hasattr(self, 'layers') or not self.layers.layers:
+                QMessageBox.warning(self, 'Uyarı', 'Resim veya katman yok!')
+                return
+                
+            active_layer = self.layers.get_active_layer()
+            if not active_layer:
+                QMessageBox.warning(self, 'Uyarı', 'Metin eklenecek bir katman yok!')
+                return
+                
+            # Metin girişi için diyalog göster
+            text, ok = QInputDialog.getText(self, 'Metin Ekle', 'Metni girin:')
+            if not ok or not text:
+                return  # Kullanıcı iptal etti
+                
+            # Font ayarları için diyalog göster
+            font, ok = QFontDialog.getFont(QFont("Arial", 12), self, "Font Seç")
+            if not ok:
+                return
+                
+            # Renk ayarları için diyalog göster
+            color = QColorDialog.getColor(QColor(0, 0, 0), self, "Metin Rengi Seç")
+            if not color.isValid():
+                return
+                
+            # Metni ekleme işlemini yap
+            old_img = active_layer.image.copy()
+            
+            def do_add_text():
+                # Metni katmana ekle
+                draw_text_on_image(active_layer.image, text, position, font, color)
+                self.refresh_layers()
+                
+            def undo_add_text():
+                # Orijinal görüntüyü geri yükle
+                active_layer.image = old_img
+                self.refresh_layers()
+                
+            # Command oluştur ve geçmişe ekle
+            active_layer_idx = self.layers.active_index
+            command = create_command(
+                do_func=do_add_text,
+                undo_func=undo_add_text,
+                description=f"Metin eklendi (Katman {active_layer_idx+1})"
+            )
+            # Önce değişikliği uygula
+            do_add_text()
+            # Geçmişe ekle
+            self.history.push(command)
+            
+            # Metin eklendi mesajını göster
+            self.status_bar.showMessage(f"Metin eklendi: '{text}'", 5000)
+            
+        except Exception as e:
+            logging.error(f"Metin ekleme hatası: {e}")
+            QMessageBox.critical(self, 'Hata', f'Metin eklenirken hata oluştu: {e}')
+            # Hata durumunda orijinal görüntüyü geri yükle
+            if 'old_img' in locals() and active_layer:
+                active_layer.image = old_img
+                self.refresh_layers()
 
     def _init_ui(self):
         # Status bar
@@ -116,11 +180,15 @@ class MainWindow(QMainWindow):
         self.dock.raise_()
 
     def _create_drawing_tools(self):
-        """Çizim araçlarını oluşturur."""
+        """Çizim ve şekil araçlarını oluşturur."""
         self.brush_tool = Brush(self.current_color, self.current_brush_size)
         self.pencil_tool = Pencil(self.current_color, self.current_pencil_size)
         self.eraser_tool = Eraser(self.current_eraser_size)
         self.fill_tool = FillBucket(self.current_color, self.current_fill_tolerance)
+        self.shape_tool = ShapeTool(self.current_color, self.current_brush_size)
+        self.line_tool = LineTool(self.current_color, self.current_brush_size)
+        self.rectangle_tool = RectangleTool(self.current_color, self.current_brush_size)
+        self.ellipse_tool = EllipseTool(self.current_color, self.current_brush_size)
         
     def _create_brush_cursor(self, size):
         """Fırça/kalem boyutuna göre daire şeklinde imleç oluşturur."""
@@ -333,7 +401,7 @@ class MainWindow(QMainWindow):
 
     def set_tool(self, tool_name):
         """Sets the active tool and updates menu checks."""
-        if tool_name in self.menu_manager.tool_actions:
+        if tool_name in self.menu_manager.tool_actions or tool_name in ['shape', 'line', 'rectangle', 'ellipse']:
             self.current_tool = tool_name
             logging.info(f"Araç değiştirildi: {tool_name}")
             for name, action in self.menu_manager.tool_actions.items():
@@ -341,8 +409,8 @@ class MainWindow(QMainWindow):
             # Update status bar or cursor if needed
             self.status_bar.showMessage(f"Aktif Araç: {tool_name.capitalize()}")
             
-            # Çizim araçları için NoDrag modunu, diğer araçlar için ScrollHandDrag modunu ayarla
-            is_drawing_tool = tool_name in ['brush', 'pencil', 'eraser', 'fill']
+            # Çizim ve şekil araçları için NoDrag modunu, diğer araçlar için ScrollHandDrag modunu ayarla
+            is_drawing_tool = tool_name in ['brush', 'pencil', 'eraser', 'fill', 'shape', 'line', 'rectangle', 'ellipse']
             if is_drawing_tool:
                 self.image_view.setDragMode(QGraphicsView.DragMode.NoDrag)
             else:
@@ -1367,7 +1435,7 @@ class MainWindow(QMainWindow):
             QMessageBox.critical(self, 'Hata', f'Yeniden boyutlandırma sırasında bir hata oluştu: {e}')
 
     def create_drawing_tools_panel(self):
-        """Çizim araçları ayarları için panel oluşturur."""
+        """Çizim ve şekil araçları ayarları için panel oluşturur."""
         panel = QWidget()
         layout = QVBoxLayout(panel)
         
@@ -1377,6 +1445,35 @@ class MainWindow(QMainWindow):
         color_button.clicked.connect(self.select_color_from_panel)
         layout.addWidget(color_button)
         self.color_button = color_button  # Daha sonra güncellemek için referans saklayalım
+        
+        # Şekil araçları butonları
+        shape_button_layout = QHBoxLayout()
+        
+        shape_button = QPushButton("Şekil")
+        shape_button.setCheckable(True)
+        shape_button.clicked.connect(lambda: self.set_tool('shape'))
+        shape_button_layout.addWidget(shape_button)
+        self.shape_button = shape_button
+        
+        line_button = QPushButton("Çizgi")
+        line_button.setCheckable(True)
+        line_button.clicked.connect(lambda: self.set_tool('line'))
+        shape_button_layout.addWidget(line_button)
+        self.line_button = line_button
+        
+        rect_button = QPushButton("Dikdörtgen")
+        rect_button.setCheckable(True)
+        rect_button.clicked.connect(lambda: self.set_tool('rectangle'))
+        shape_button_layout.addWidget(rect_button)
+        self.rect_button = rect_button
+        
+        ellipse_button = QPushButton("Elips")
+        ellipse_button.setCheckable(True)
+        ellipse_button.clicked.connect(lambda: self.set_tool('ellipse'))
+        shape_button_layout.addWidget(ellipse_button)
+        self.ellipse_button = ellipse_button
+        
+        layout.addLayout(shape_button_layout)
         
         # Fırça boyutu slider
         brush_layout = QHBoxLayout()
