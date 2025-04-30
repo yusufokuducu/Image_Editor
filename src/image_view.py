@@ -1,6 +1,6 @@
 from PyQt6.QtWidgets import QGraphicsView, QGraphicsScene, QMessageBox, QGraphicsPathItem, QGraphicsRectItem
 from PyQt6.QtGui import QPixmap, QPainterPath, QPen, QColor, QBrush, QFont, QPainter, QFontMetrics, QImage, QPolygonF, QCursor
-from PyQt6.QtCore import Qt, QRectF, QPointF, QSize, pyqtSignal # Added pyqtSignal
+from PyQt6.QtCore import Qt, QRectF, QPointF, QSize, pyqtSignal, QLineF
 import numpy as np
 import logging
 from .drawing_tools import DrawingTool, Brush, Pencil, Eraser, FillBucket
@@ -18,10 +18,12 @@ class ImageView(QGraphicsView):
         self.setScene(self.scene)
         self.pixmap_item = None
         self.setRenderHint(QPainter.RenderHint.Antialiasing)
-        self.setDragMode(QGraphicsView.DragMode.ScrollHandDrag)
+        # Varsayılan olarak sürükle modu kapalı (çizim için)
+        self.setDragMode(QGraphicsView.DragMode.NoDrag)
         self.setTransformationAnchor(QGraphicsView.ViewportAnchor.AnchorUnderMouse)
         self.setResizeAnchor(QGraphicsView.ViewportAnchor.AnchorUnderMouse)
         self._zoom = 0
+        self._last_scale_factor = 1.0  # Son ölçekleme faktörünü sakla
         # Seçim araçları
         self.selecting = False
         self.selection_rect_item = None
@@ -83,20 +85,41 @@ class ImageView(QGraphicsView):
     def wheelEvent(self, event):
         if self.pixmap_item is None:
             return
+            
+        # Zoom faktörleri
         zoom_in_factor = 1.25
         zoom_out_factor = 0.8
+        
+        # Alt tuşuna basılıyken yakınlaştırma hızını artır
+        if event.modifiers() & Qt.KeyboardModifier.AltModifier:
+            zoom_in_factor = 2.0
+            zoom_out_factor = 0.5
+            
+        # Ctrl tuşuna basılıyken daha hassas yakınlaştırma
+        if event.modifiers() & Qt.KeyboardModifier.ControlModifier:
+            zoom_in_factor = 1.1
+            zoom_out_factor = 0.9
+        
+        # Fare tekerleği yukarı/aşağı yönü
         if event.angleDelta().y() > 0:
             factor = zoom_in_factor
             self._zoom += 1
         else:
             factor = zoom_out_factor
             self._zoom -= 1
+            
+        # Zoom sınırlarını kontrol et
         if self._zoom < -10:
             self._zoom = -10
             return
         if self._zoom > 20:
             self._zoom = 20
             return
+            
+        # Son ölçekleme faktörünü sakla
+        self._last_scale_factor = factor
+        
+        # Yakınlaştır/uzaklaştır
         self.scale(factor, factor)
 
     def mousePressEvent(self, event):
@@ -148,12 +171,15 @@ class ImageView(QGraphicsView):
                 self.is_drawing = False
                 scene_point = self.mapToScene(event.pos())
                 
-                # Fill işlemi doğrudan uygulanır
+                # Fill işlemi için bir QLineF çizgisi oluştur ve sinyal gönder
                 if self.drawing_tool and isinstance(self.drawing_tool, FillBucket):
-                    active_layer = self.main_window.layers.get_active_layer()
-                    if active_layer:
-                        self.drawing_tool.apply_to_layer(active_layer, scene_point)
-                        self.main_window.refresh_layers()  # UI'yi yenile
+                    # Doldurma işlemi için tek bir nokta yeterli
+                    # Sinyal için QLineF oluşturalım
+                    line = QLineF(scene_point, scene_point)
+                    self.current_paths = [line]
+                    # İşlemi uygula
+                    self.drawingComplete.emit(self.drawing_tool, self.current_paths)
+                    self.current_paths = []
                 return # Handled
 
             # Priority 5: Selection Tool Click (No Spacebar)
@@ -374,22 +400,41 @@ class ImageView(QGraphicsView):
 
     def keyPressEvent(self, event):
         if event.key() == Qt.Key.Key_Space:
+            # Space tuşuna basıldığında, sürükle modunu geçici olarak aktifleştir
             self.space_pressed = True
-            # Change cursor and drag mode only if a selection tool is active?
-            # Or rely on mousePressEvent logic to handle it. Let's keep it simple for now.
-            # self.setDragMode(QGraphicsView.DragMode.ScrollHandDrag) # Ensure panning is active
-            # self.setCursor(Qt.CursorShape.OpenHandCursor)
+            self.setDragMode(QGraphicsView.DragMode.ScrollHandDrag)
+            self.setCursor(Qt.CursorShape.OpenHandCursor)
             logging.debug("Space pressed, enabling pan")
             event.accept() # Indicate event was handled
+        # Zoom sıfırlama tuşu (R tuşu)
+        elif event.key() == Qt.Key.Key_R:
+            self.resetZoom()
+            event.accept()
         else:
             super().keyPressEvent(event)
 
     def keyReleaseEvent(self, event):
         if event.key() == Qt.Key.Key_Space:
             self.space_pressed = False
-            # Restore cursor/drag mode if changed in keyPressEvent
-            # self.setDragMode(QGraphicsView.DragMode.ScrollHandDrag) # Should already be default
-            # self.unsetCursor()
+            
+            # Seçilen araca göre uygun modu ve imleci geri yükle
+            if self.main_window.current_tool in ['brush', 'pencil', 'eraser', 'fill']:
+                self.setDragMode(QGraphicsView.DragMode.NoDrag)
+                # İmleci aracın tipine göre geri yükle
+                if hasattr(self.main_window, '_create_brush_cursor'):
+                    if self.main_window.current_tool == 'brush':
+                        self.setCursor(self.main_window._create_brush_cursor(self.main_window.current_brush_size))
+                    elif self.main_window.current_tool == 'pencil':
+                        self.setCursor(self.main_window._create_brush_cursor(self.main_window.current_pencil_size))
+                    elif self.main_window.current_tool == 'eraser':
+                        self.setCursor(self.main_window._create_brush_cursor(self.main_window.current_eraser_size))
+                    elif self.main_window.current_tool == 'fill':
+                        self.setCursor(Qt.CursorShape.PointingHandCursor)
+            else:
+                # Diğer araçlar için kaydırma modunu koru
+                self.setDragMode(QGraphicsView.DragMode.ScrollHandDrag)
+                self.unsetCursor()
+                
             logging.debug("Space released, disabling pan override")
             event.accept()
         else:
@@ -499,4 +544,20 @@ class ImageView(QGraphicsView):
         self.selecting = False
         self.selection_operation = 'new'
         logging.debug("Selection cleared.")
+
+    def resetZoom(self):
+        """Zoom'u sıfırlar ve görüntüyü orijinal boyutuna getirir."""
+        if not self.pixmap_item:
+            return
+            
+        # Transform'u sıfırla
+        self.resetTransform()
+        self._zoom = 0
+        self._last_scale_factor = 1.0
+        
+        # Görüntüyü pencereye sığdır
+        self.fitInView(self.pixmap_item, Qt.AspectRatioMode.KeepAspectRatio)
+        
+        # Görünümü ortala
+        self.centerOn(self.pixmap_item)
 

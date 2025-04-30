@@ -225,6 +225,7 @@ class ResizableImageItem(QGraphicsPixmapItem):
                     new_h = max(self.min_size / self.aspect_ratio, new_h) # Recalc H based on min W
                     new_w = new_h * self.aspect_ratio
             new_w = max(self.min_size, new_w) # Ensure min width
+            new_h = max(self.min_size, new_h) # Ensure min height after adjustment
         else:
              # Should not happen, but good to handle
              logging.warning(f"handle_resize: Unknown handle_type {handle_type}")
@@ -482,4 +483,4 @@ class ResizeDialog(QDialog):
             else:
                  # If scene rect is empty (e.g., item not fully added yet), maybe queue the fitInView
                  # Or ensure setup_image completes fully before resizeEvent is processed heavily
-                 pass # Avoid fitting if scene rect is empty 
+                 pass # Avoid fitting if scene rect is empty

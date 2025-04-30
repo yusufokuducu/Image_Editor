@@ -3,8 +3,10 @@ import logging
 from PIL import Image
 from PyQt6.QtWidgets import (QMainWindow, QStatusBar, QMenuBar,
                              QFileDialog, QMessageBox, QInputDialog, QDockWidget,
-                             QDialog, QColorDialog, QFontDialog)
-from PyQt6.QtGui import QFont, QColor
+                             QDialog, QColorDialog, QFontDialog, QWidget, QVBoxLayout, 
+                             QLabel, QSlider, QPushButton, QHBoxLayout, QScrollArea,
+                             QGraphicsView)
+from PyQt6.QtGui import QFont, QColor, QPixmap, QPainter, QPen, QCursor
 from PyQt6.QtCore import Qt, QTimer, QPointF
 import os
 
@@ -90,6 +92,7 @@ class MainWindow(QMainWindow):
         
         # Çizim araçları için sinyal-yuva bağlantısı kur
         self.image_view.drawingComplete.connect(self.handle_drawing_complete)
+        self.image_view.textToolClicked.connect(self.handle_text_tool_click)
 
         # Layer panel
         self.layer_panel = LayerPanel(self)
@@ -103,6 +106,13 @@ class MainWindow(QMainWindow):
         self.effects_dock.setWidget(self.effects_panel)
         self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self.effects_dock)
         self.tabifyDockWidget(self.dock, self.effects_dock)
+        
+        # Drawing Tools panel - Çizim Araçları Paneli
+        self.drawing_tools_panel = self.create_drawing_tools_panel()
+        self.drawing_tools_dock = QDockWidget('Çizim Araçları', self)
+        self.drawing_tools_dock.setWidget(self.drawing_tools_panel)
+        self.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, self.drawing_tools_dock)
+        
         self.dock.raise_()
 
     def _create_drawing_tools(self):
@@ -111,6 +121,36 @@ class MainWindow(QMainWindow):
         self.pencil_tool = Pencil(self.current_color, self.current_pencil_size)
         self.eraser_tool = Eraser(self.current_eraser_size)
         self.fill_tool = FillBucket(self.current_color, self.current_fill_tolerance)
+        
+    def _create_brush_cursor(self, size):
+        """Fırça/kalem boyutuna göre daire şeklinde imleç oluşturur."""
+        # İmleç boyutu (görünür çemberin biraz daha büyük olması için)
+        cursor_size = max(20, size + 4)  # Minimum 20 piksel, çizgi kalem için
+        
+        # Transparent pixmap oluştur
+        pixmap = QPixmap(cursor_size, cursor_size)
+        pixmap.fill(QColor(0, 0, 0, 0))  # Tamamen şeffaf
+        
+        # Çizim yap
+        painter = QPainter(pixmap)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        
+        # Dış çizgi (beyaz)
+        painter.setPen(QPen(QColor(255, 255, 255), 1.5))
+        painter.drawEllipse(2, 2, size, size)
+        
+        # İç çizgi (siyah)
+        painter.setPen(QPen(QColor(0, 0, 0), 0.5))
+        painter.drawEllipse(2, 2, size, size)
+        
+        # Merkez noktası (hedef imleci)
+        painter.setPen(QPen(QColor(255, 0, 0), 1))
+        painter.drawPoint(cursor_size // 2, cursor_size // 2)
+        
+        painter.end()
+        
+        # İmleç oluşturma (sıcak nokta = merkez)
+        return QCursor(pixmap, cursor_size // 2, cursor_size // 2)
         
     def set_drawing_color(self, color=None):
         """Çizim rengini ayarlar."""
@@ -152,8 +192,13 @@ class MainWindow(QMainWindow):
                 return  # Kullanıcı diyalogu iptal etti
                 
         self.current_brush_size = size
+        # Fırça aracını güncelle
         self.brush_tool.set_size(size)
         
+        # Aktif araç fırça ise imleci güncelle
+        if self.current_tool == 'brush':
+            self.image_view.setCursor(self._create_brush_cursor(size))
+            
         # Durum çubuğunu güncelle
         self.status_bar.showMessage(f"Fırça Boyutu: {size}px")
         
@@ -173,8 +218,13 @@ class MainWindow(QMainWindow):
                 return  # Kullanıcı diyalogu iptal etti
                 
         self.current_pencil_size = size
+        # Kalem aracını güncelle
         self.pencil_tool.set_size(size)
         
+        # Aktif araç kalem ise imleci güncelle
+        if self.current_tool == 'pencil':
+            self.image_view.setCursor(self._create_brush_cursor(size))
+            
         # Durum çubuğunu güncelle
         self.status_bar.showMessage(f"Kalem Boyutu: {size}px")
         
@@ -194,8 +244,13 @@ class MainWindow(QMainWindow):
                 return  # Kullanıcı diyalogu iptal etti
                 
         self.current_eraser_size = size
+        # Silgi aracını güncelle
         self.eraser_tool.set_size(size)
         
+        # Aktif araç silgi ise imleci güncelle
+        if self.current_tool == 'eraser':
+            self.image_view.setCursor(self._create_brush_cursor(size))
+            
         # Durum çubuğunu güncelle
         self.status_bar.showMessage(f"Silgi Boyutu: {size}px")
         
@@ -236,7 +291,18 @@ class MainWindow(QMainWindow):
             # Çizimi uygula
             if isinstance(tool, FillBucket):
                 # Kova aracı paths yerine point kullanır
-                success = tool.apply_to_layer(active_layer, paths[0].p1())
+                # paths[0] bir QLineF olabilir, p1() metodu ile ilk noktayı alıyoruz
+                if paths and len(paths) > 0:
+                    if hasattr(paths[0], 'p1'):
+                        point = paths[0].p1()  # QLineF için
+                        success = tool.apply_to_layer(active_layer, point)
+                    else:
+                        # Diğer olası durumlar
+                        success = tool.apply_to_layer(active_layer, paths[0])
+                else:
+                    # Paths boşsa bir şey yapmayalım
+                    logging.warning("Doldurma için geçerli bir nokta bulunamadı")
+                    success = False
             else:
                 # Fırça, kalem, silgi çizgileri
                 success = tool.apply_to_layer(active_layer, paths)
@@ -275,26 +341,38 @@ class MainWindow(QMainWindow):
             # Update status bar or cursor if needed
             self.status_bar.showMessage(f"Aktif Araç: {tool_name.capitalize()}")
             
+            # Çizim araçları için NoDrag modunu, diğer araçlar için ScrollHandDrag modunu ayarla
+            is_drawing_tool = tool_name in ['brush', 'pencil', 'eraser', 'fill']
+            if is_drawing_tool:
+                self.image_view.setDragMode(QGraphicsView.DragMode.NoDrag)
+            else:
+                self.image_view.setDragMode(QGraphicsView.DragMode.ScrollHandDrag)
+            
             # Seçilen araca göre ImageView'daki aracı ayarla
             if tool_name == 'select':
                 # Set the default selection shape (e.g., rectangle) when selection tool is active
                 self.image_view.set_selection_mode('rectangle')
+                # Normal imleç
+                self.image_view.setCursor(Qt.CursorShape.ArrowCursor)
             elif tool_name == 'brush':
                 self.image_view.drawing_tool = self.brush_tool
-                # Fırça aracı seçildiğinde imleci değiştir
-                self.image_view.setCursor(Qt.CursorShape.CrossCursor)
+                # Fırça aracı seçildiğinde fırça boyutunda imleç oluştur
+                self.image_view.setCursor(self._create_brush_cursor(self.current_brush_size))
             elif tool_name == 'pencil':
                 self.image_view.drawing_tool = self.pencil_tool
-                # Kalem aracı seçildiğinde imleci değiştir
-                self.image_view.setCursor(Qt.CursorShape.CrossCursor)
+                # Kalem aracı seçildiğinde kalem boyutunda imleç oluştur
+                self.image_view.setCursor(self._create_brush_cursor(self.current_pencil_size))
             elif tool_name == 'eraser':
                 self.image_view.drawing_tool = self.eraser_tool
-                # Silgi aracı seçildiğinde imleci değiştir
-                self.image_view.setCursor(Qt.CursorShape.CrossCursor)
+                # Silgi aracı seçildiğinde silgi boyutunda imleç oluştur
+                self.image_view.setCursor(self._create_brush_cursor(self.current_eraser_size))
             elif tool_name == 'fill':
                 self.image_view.drawing_tool = self.fill_tool
-                # Kova aracı seçildiğinde imleci değiştir
+                # Kova aracı seçildiğinde kova imleci göster
                 self.image_view.setCursor(Qt.CursorShape.PointingHandCursor)
+            elif tool_name == 'text':
+                # Metin aracı seçildiğinde metin imleci göster
+                self.image_view.setCursor(Qt.CursorShape.IBeamCursor)
             else:
                 # Başka araçlar seçildiğinde normal imleç
                 self.image_view.setCursor(Qt.CursorShape.ArrowCursor)
@@ -1287,3 +1365,141 @@ class MainWindow(QMainWindow):
         except Exception as e:
             logging.error(f"Resize action failed: {e}", exc_info=True)
             QMessageBox.critical(self, 'Hata', f'Yeniden boyutlandırma sırasında bir hata oluştu: {e}')
+
+    def create_drawing_tools_panel(self):
+        """Çizim araçları ayarları için panel oluşturur."""
+        panel = QWidget()
+        layout = QVBoxLayout(panel)
+        
+        # Renk seçim düğmesi
+        color_button = QPushButton("Renk Seç")
+        color_button.setStyleSheet(f"background-color: rgb({self.current_color.red()}, {self.current_color.green()}, {self.current_color.blue()}); color: white;")
+        color_button.clicked.connect(self.select_color_from_panel)
+        layout.addWidget(color_button)
+        self.color_button = color_button  # Daha sonra güncellemek için referans saklayalım
+        
+        # Fırça boyutu slider
+        brush_layout = QHBoxLayout()
+        brush_label = QLabel("Fırça Boyutu:")
+        brush_layout.addWidget(brush_label)
+        
+        self.brush_size_slider = QSlider(Qt.Orientation.Horizontal)
+        self.brush_size_slider.setMinimum(1)
+        self.brush_size_slider.setMaximum(100)
+        self.brush_size_slider.setValue(self.current_brush_size)
+        self.brush_size_slider.valueChanged.connect(self._on_brush_size_changed)
+        brush_layout.addWidget(self.brush_size_slider)
+        
+        self.brush_size_value_label = QLabel(f"{self.current_brush_size}")
+        brush_layout.addWidget(self.brush_size_value_label)
+        layout.addLayout(brush_layout)
+        
+        # Kalem boyutu slider
+        pencil_layout = QHBoxLayout()
+        pencil_label = QLabel("Kalem Boyutu:")
+        pencil_layout.addWidget(pencil_label)
+        
+        self.pencil_size_slider = QSlider(Qt.Orientation.Horizontal)
+        self.pencil_size_slider.setMinimum(1)
+        self.pencil_size_slider.setMaximum(20)
+        self.pencil_size_slider.setValue(self.current_pencil_size)
+        self.pencil_size_slider.valueChanged.connect(self._on_pencil_size_changed)
+        pencil_layout.addWidget(self.pencil_size_slider)
+        
+        self.pencil_size_value_label = QLabel(f"{self.current_pencil_size}")
+        pencil_layout.addWidget(self.pencil_size_value_label)
+        layout.addLayout(pencil_layout)
+        
+        # Silgi boyutu slider
+        eraser_layout = QHBoxLayout()
+        eraser_label = QLabel("Silgi Boyutu:")
+        eraser_layout.addWidget(eraser_label)
+        
+        self.eraser_size_slider = QSlider(Qt.Orientation.Horizontal)
+        self.eraser_size_slider.setMinimum(1)
+        self.eraser_size_slider.setMaximum(100)
+        self.eraser_size_slider.setValue(self.current_eraser_size)
+        self.eraser_size_slider.valueChanged.connect(self._on_eraser_size_changed)
+        eraser_layout.addWidget(self.eraser_size_slider)
+        
+        self.eraser_size_value_label = QLabel(f"{self.current_eraser_size}")
+        eraser_layout.addWidget(self.eraser_size_value_label)
+        layout.addLayout(eraser_layout)
+        
+        # Doldurma toleransı slider
+        fill_layout = QHBoxLayout()
+        fill_label = QLabel("Doldurma Toleransı:")
+        fill_layout.addWidget(fill_label)
+        
+        self.fill_tolerance_slider = QSlider(Qt.Orientation.Horizontal)
+        self.fill_tolerance_slider.setMinimum(0)
+        self.fill_tolerance_slider.setMaximum(255)
+        self.fill_tolerance_slider.setValue(self.current_fill_tolerance)
+        self.fill_tolerance_slider.valueChanged.connect(self._on_fill_tolerance_changed)
+        fill_layout.addWidget(self.fill_tolerance_slider)
+        
+        self.fill_tolerance_value_label = QLabel(f"{self.current_fill_tolerance}")
+        fill_layout.addWidget(self.fill_tolerance_value_label)
+        layout.addLayout(fill_layout)
+        
+        # Boşluk ekle
+        layout.addStretch()
+        
+        # Panel için stil
+        panel.setStyleSheet("""
+            QLabel { font-size: 12px; }
+            QPushButton { font-size: 14px; padding: 8px; }
+            QSlider { height: 20px; }
+        """)
+        
+        return panel
+        
+    def select_color_from_panel(self):
+        """Panel üzerindeki renk düğmesinden renk seçimi yapar."""
+        color = QColorDialog.getColor(
+            self.current_color, 
+            self, 
+            "Çizim Rengi Seç",
+            QColorDialog.ColorDialogOption.ShowAlphaChannel
+        )
+        
+        if color.isValid():
+            self.set_drawing_color(color)
+            # Renk düğmesinin arkaplan rengini güncelle
+            self.color_button.setStyleSheet(f"background-color: rgb({color.red()}, {color.green()}, {color.blue()}); color: white;")
+            
+    def _on_brush_size_changed(self, value):
+        """Slider ile fırça boyutu değiştiğinde."""
+        self.current_brush_size = value
+        self.brush_size_value_label.setText(f"{value}")
+        self.brush_tool.set_size(value)
+        
+        # Aktif araç fırça ise imleci güncelle
+        if self.current_tool == 'brush':
+            self.image_view.setCursor(self._create_brush_cursor(value))
+            
+    def _on_pencil_size_changed(self, value):
+        """Slider ile kalem boyutu değiştiğinde."""
+        self.current_pencil_size = value
+        self.pencil_size_value_label.setText(f"{value}")
+        self.pencil_tool.set_size(value)
+        
+        # Aktif araç kalem ise imleci güncelle
+        if self.current_tool == 'pencil':
+            self.image_view.setCursor(self._create_brush_cursor(value))
+            
+    def _on_eraser_size_changed(self, value):
+        """Slider ile silgi boyutu değiştiğinde."""
+        self.current_eraser_size = value
+        self.eraser_size_value_label.setText(f"{value}")
+        self.eraser_tool.set_size(value)
+        
+        # Aktif araç silgi ise imleci güncelle
+        if self.current_tool == 'eraser':
+            self.image_view.setCursor(self._create_brush_cursor(value))
+            
+    def _on_fill_tolerance_changed(self, value):
+        """Slider ile doldurma toleransı değiştiğinde."""
+        self.current_fill_tolerance = value
+        self.fill_tolerance_value_label.setText(f"{value}")
+        self.fill_tool.tolerance = value

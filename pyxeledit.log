@@ -874,3 +874,44 @@ AttributeError: 'MainWindow' object has no attribute 'execute_command'
 2025-04-30 14:10:34,805 [INFO] Araç deðiþtirildi: brush
 2025-04-30 14:11:17,855 [INFO] Araç deðiþtirildi: eraser
 2025-04-30 14:11:34,339 [INFO] Araç deðiþtirildi: fill
+2025-04-30 14:17:44,056 [INFO] 9 efekt panele eklendi.
+2025-04-30 14:17:44,058 [INFO] PyxelEdit baþlatýldý
+2025-04-30 14:17:54,151 [INFO] Attempting to load supported dropped file: C:/Users/kyusu/Desktop/testimage.png
+2025-04-30 14:17:54,454 [INFO] Resim yüklendi: C:/Users/kyusu/Desktop/testimage.png
+2025-04-30 14:17:54,457 [INFO] Successfully loaded dropped file: C:/Users/kyusu/Desktop/testimage.png
+2025-04-30 14:18:01,527 [INFO] Boþ katman eklendi: Boþ Katman 2
+2025-04-30 14:18:07,578 [INFO] Araç deðiþtirildi: brush
+2025-04-30 14:18:47,454 [INFO] add_layer completed successfully.
+2025-04-30 14:19:05,595 [INFO] Araç deðiþtirildi: eraser
+2025-04-30 14:33:48,236 [INFO] 9 efekt panele eklendi.
+2025-04-30 14:33:48,255 [INFO] PyxelEdit baþlatýldý
+2025-04-30 14:34:57,238 [INFO] Attempting to load supported dropped file: C:/Users/kyusu/Desktop/testimage.png
+2025-04-30 14:34:57,704 [INFO] Resim yüklendi: C:/Users/kyusu/Desktop/testimage.png
+2025-04-30 14:34:57,709 [INFO] Successfully loaded dropped file: C:/Users/kyusu/Desktop/testimage.png
+2025-04-30 14:35:11,145 [INFO] Araç deðiþtirildi: brush
+2025-04-30 14:38:14,614 [INFO] 9 efekt panele eklendi.
+2025-04-30 14:38:14,621 [INFO] PyxelEdit baþlatýldý
+2025-04-30 14:38:22,791 [INFO] Attempting to load supported dropped file: C:/Users/kyusu/Desktop/testimage.png
+2025-04-30 14:38:23,023 [INFO] Resim yüklendi: C:/Users/kyusu/Desktop/testimage.png
+2025-04-30 14:38:23,026 [INFO] Successfully loaded dropped file: C:/Users/kyusu/Desktop/testimage.png
+2025-04-30 14:38:27,161 [INFO] Araç deðiþtirildi: brush
+2025-04-30 14:43:00,520 [INFO] 9 efekt panele eklendi.
+2025-04-30 14:43:00,525 [INFO] PyxelEdit baþlatýldý
+2025-04-30 14:46:23,059 [INFO] Attempting to load supported dropped file: C:/Users/kyusu/Desktop/testimage.png
+2025-04-30 14:46:23,268 [INFO] Resim yüklendi: C:/Users/kyusu/Desktop/testimage.png
+2025-04-30 14:46:23,270 [INFO] Successfully loaded dropped file: C:/Users/kyusu/Desktop/testimage.png
+2025-04-30 14:46:34,271 [INFO] Araç deðiþtirildi: brush
+2025-04-30 14:59:07,996 [INFO] 9 efekt panele eklendi.
+2025-04-30 14:59:08,000 [INFO] PyxelEdit baþlatýldý
+2025-04-30 14:59:14,727 [INFO] Attempting to load supported dropped file: C:/Users/kyusu/Desktop/testimage.png
+2025-04-30 14:59:14,922 [INFO] Resim yüklendi: C:/Users/kyusu/Desktop/testimage.png
+2025-04-30 14:59:14,925 [INFO] Successfully loaded dropped file: C:/Users/kyusu/Desktop/testimage.png
+2025-04-30 14:59:18,746 [INFO] Araç deðiþtirildi: brush
+2025-04-30 15:03:15,246 [INFO] 9 efekt panele eklendi.
+2025-04-30 15:03:15,253 [INFO] PyxelEdit baþlatýldý
+2025-04-30 15:03:30,431 [INFO] Attempting to load supported dropped file: C:/Users/kyusu/Desktop/testimage.png
+2025-04-30 15:03:30,635 [INFO] Resim yüklendi: C:/Users/kyusu/Desktop/testimage.png
+2025-04-30 15:03:30,638 [INFO] Successfully loaded dropped file: C:/Users/kyusu/Desktop/testimage.png
+2025-04-30 15:03:53,146 [INFO] Araç deðiþtirildi: pencil
+2025-04-30 15:04:47,475 [INFO] Boþ katman eklendi: Boþ Katman 2
+2025-04-30 15:05:00,990 [INFO] Araç deðiþtirildi: fill
