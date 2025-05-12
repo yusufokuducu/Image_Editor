@@ -1,5 +1,6 @@
 from PyQt6.QtGui import QAction
 from PyQt6.QtCore import Qt
+import torch
 
 class MenuManager:
     def __init__(self, main_window):
@@ -17,6 +18,7 @@ class MenuManager:
         self._create_layers_menu()
         self._create_tools_menu()
         self._create_drawing_options_menu()
+        self._create_settings_menu()
 
     def _create_file_menu(self):
         """Creates the File menu."""
@@ -214,3 +216,36 @@ class MenuManager:
         fill_tolerance_action = QAction('Doldurma Toleransı...', self.main_window)
         fill_tolerance_action.triggered.connect(self.main_window.set_fill_tolerance)
         draw_options_menu.addAction(fill_tolerance_action)
+
+    def _create_settings_menu(self):
+        """Creates the Settings menu with GPU options."""
+        settings_menu = self.main_window.menu_bar.addMenu('Ayarlar')
+        
+        # GPU Settings Submenu
+        gpu_menu = settings_menu.addMenu('GPU Ayarları')
+        
+        # Toggle GPU usage
+        self.use_gpu_action = QAction("GPU Kullan", self.main_window)
+        self.use_gpu_action.setCheckable(True)
+        self.use_gpu_action.setChecked(self.main_window.use_gpu)
+        self.use_gpu_action.triggered.connect(self.main_window.toggle_gpu_usage)
+        gpu_menu.addAction(self.use_gpu_action)
+        
+        # GPU Device Selection submenu (only shown if CUDA is available)
+        if torch.cuda.is_available():
+            gpu_device_menu = gpu_menu.addMenu("GPU Cihazı Seç")
+            device_count = torch.cuda.device_count()
+            
+            for i in range(device_count):
+                device_name = torch.cuda.get_device_name(i)
+                device_action = QAction(f"GPU {i}: {device_name}", self.main_window)
+                device_action.setCheckable(True)
+                device_action.setChecked(self.main_window.gpu_id == i)
+                # Use a lambda with default argument to capture the current value of i
+                device_action.triggered.connect(lambda checked, gpu_id=i: self.main_window.select_gpu_device(gpu_id))
+                gpu_device_menu.addAction(device_action)
+        
+        # Show GPU Info
+        gpu_info_action = QAction("GPU Bilgisini Göster", self.main_window)
+        gpu_info_action.triggered.connect(self.main_window.show_gpu_info)
+        gpu_menu.addAction(gpu_info_action)

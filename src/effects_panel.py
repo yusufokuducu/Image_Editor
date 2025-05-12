@@ -33,16 +33,23 @@ class EffectsPanel(QWidget):
                 widget.deleteLater()
 
         # Filtre modülündeki fonksiyonları al
-        available_effects = filters.get_available_filters()
+        available_filters = filters.get_available_filters()
 
-        if not available_effects:
+        if not available_filters:
             self.effects_layout.addWidget(QLabel("Kullanılabilir efekt yok."))
             return
 
-        for name, func in available_effects.items():
+        # Listeyi sözlüğe dönüştür
+        filter_dict = {}
+        for filter_info in available_filters:
+            filter_id = filter_info["id"]
+            filter_dict[filter_id] = filter_info
+
+        for name, info in filter_dict.items():
             # Her efekt için bir buton oluştur
-            # TODO: Daha sonra buraya efekt parametreleri için kontroller (slider vb.) eklenebilir.
-            btn = QPushButton(name.replace('_', ' ').title())
+            display_name = info.get("name", name.replace('_', ' ').title())
+            btn = QPushButton(display_name)
+            
             # Butona tıklandığında hangi fonksiyonun çağrılacağını belirle
             # Add sharpen and grayscale to the list of effects requiring dialogs
             if name in ['blur', 'noise', 'brightness', 'contrast', 'saturation', 'hue', 'sharpen', 'grayscale']:
@@ -62,8 +69,7 @@ class EffectsPanel(QWidget):
 
             self.effects_layout.addWidget(btn)
 
-        logging.info(f"{len(available_effects)} efekt panele eklendi.")
-
+        logging.info(f"{len(filter_dict)} efekt panele eklendi.")
 
     def apply_direct_effect(self, effect_name):
         """ Parametre gerektirmeyen efektleri doğrudan uygular. """

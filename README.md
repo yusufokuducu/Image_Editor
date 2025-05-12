@@ -151,3 +151,37 @@ Pull request ve issue açarak katkıda bulunabilirsiniz!
 Geliştirici: faust-lvii - [yusufokuducu](mailto:k.yusufokuducu@gmail.com)
 
 ---
+
+## GPU Desteği
+
+Bu proje artık harici GPU ile çalışabilir, bu da görüntü işleme ve filtreleme işlemlerinde önemli ölçüde hız artışı sağlar.
+
+### GPU Özelliklerinin Kullanımı
+
+- Program başlangıçta otomatik olarak mevcut GPU'yu tespit eder ve kullanır
+- GPU ayarlarını değiştirmek için üst menüdeki "Ayarlar → GPU Ayarları" yolunu izleyin
+- Birden fazla GPU varsa, "GPU Ayarları → GPU Cihazı Seç" menüsünden istediğiniz GPU'yu seçebilirsiniz
+- GPU kullanımını tamamen kapatmak için "GPU Kullan" seçeneğinin işaretini kaldırın
+
+### Komut Satırı Parametreleri
+
+Programı belirli bir GPU ile başlatmak veya GPU kullanımını devre dışı bırakmak için komut satırı parametrelerini kullanabilirsiniz:
+
+```bash
+# Belirli bir GPU ile başlatmak için (ID numarası 0'dan başlar)
+python src/main.py --gpu 0
+
+# GPU kullanımını devre dışı bırakmak için
+python src/main.py --cpu
+```
+
+### Sistem Gereksinimleri
+
+GPU desteği için aşağıdaki gereksinimler gereklidir:
+
+- NVIDIA CUDA uyumlu bir GPU
+- CUDA Toolkit (11.x veya üzeri önerilen)
+- PyTorch 2.0.0 veya üzeri
+- CuPy kütüphanesi
+
+---

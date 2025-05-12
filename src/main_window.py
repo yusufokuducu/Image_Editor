@@ -5,10 +5,13 @@ from PyQt6.QtWidgets import (QMainWindow, QStatusBar, QMenuBar,
                              QFileDialog, QMessageBox, QInputDialog, QDockWidget,
                              QDialog, QColorDialog, QFontDialog, QWidget, QVBoxLayout, 
                              QLabel, QSlider, QPushButton, QHBoxLayout, QScrollArea,
-                             QGraphicsView)
-from PyQt6.QtGui import QFont, QColor, QPixmap, QPainter, QPen, QCursor
-from PyQt6.QtCore import Qt, QTimer, QPointF
+                             QGraphicsView, QToolBar, QComboBox, QSpinBox)
+from PyQt6.QtGui import (QFont, QColor, QPixmap, QPainter, QPen, QCursor, QAction, 
+                         QGuiApplication, QClipboard, QIcon, QDoubleValidator, 
+                         QShortcut, QKeySequence)
+from PyQt6.QtCore import Qt, QTimer, QPointF, QSize, QPoint, QRectF, QSettings
 import os
+import torch
 
 # Import custom modules
 from .image_io import load_image, image_to_qpixmap
@@ -27,6 +30,7 @@ from .utils import (compose_layers_pixmap, validate_layer_operation,
                    create_command, ensure_rgba, create_transparent_image)
 from .drawing_tools import Brush, Pencil, Eraser, FillBucket  # Çizim araçlarını içe aktar
 from .shape_tools import ShapeTool, LineTool, RectangleTool, EllipseTool  # Şekil araçlarını içe aktar
+from .gpu_utils import configure_gpu, check_gpu_memory, use_cpu_fallback
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -34,6 +38,14 @@ class MainWindow(QMainWindow):
         self.setWindowTitle('PyxelEdit')
         self.setGeometry(100, 100, 1024, 768)
 
+        # Program ayarlarını yükle
+        self.settings = QSettings("PyxelEdit", "ImageEditor")
+        
+        # GPU ayarlarını başlat
+        self.use_gpu = self.settings.value("use_gpu", True, type=bool)
+        self.gpu_id = self.settings.value("gpu_id", 0, type=int)
+        self.check_gpu_status()
+        
         # Core components
         self.history = History()
         self.layers = LayerManager()
@@ -74,6 +86,18 @@ class MainWindow(QMainWindow):
         self.setAcceptDrops(True)
 
         logging.info("PyxelEdit başlatıldı")
+        
+        # Temel pencere yapılandırması
+        self.setWindowTitle("PyxelEdit - Image Editor")
+        self.setGeometry(100, 100, 1200, 800)
+        
+        # Program ayarlarını yükle
+        self.settings = QSettings("PyxelEdit", "ImageEditor")
+        
+        # GPU ayarları
+        self.use_gpu = self.settings.value("use_gpu", True, type=bool)
+        self.gpu_id = self.settings.value("gpu_id", 0, type=int)
+        self.check_gpu_status()
         
     def handle_text_tool_click(self, position):
         """Metin aracı tıklandığında çağrılır, metni aktif katmana ekler."""
@@ -1600,3 +1624,102 @@ class MainWindow(QMainWindow):
         self.current_fill_tolerance = value
         self.fill_tolerance_value_label.setText(f"{value}")
         self.fill_tool.tolerance = value
+
+    def check_gpu_status(self):
+        """Check GPU availability and set internal state"""
+        self.has_gpu = torch.cuda.is_available()
+        if self.has_gpu:
+            self.gpu_count = torch.cuda.device_count()
+            self.gpu_info = []
+            for i in range(self.gpu_count):
+                self.gpu_info.append({
+                    "id": i,
+                    "name": torch.cuda.get_device_name(i)
+                })
+            # Durum çubuğunu güncelle
+            if hasattr(self, 'status_bar'):
+                current_gpu = self.gpu_info[self.gpu_id]["name"] if self.gpu_id < self.gpu_count else self.gpu_info[0]["name"]
+                if self.use_gpu:
+                    self.status_bar.showMessage(f"GPU aktif: {current_gpu}", 5000)
+                else:
+                    self.status_bar.showMessage(f"GPU devre dışı (kullanılabilir: {current_gpu})", 5000)
+        else:
+            self.gpu_count = 0
+            self.gpu_info = []
+            self.use_gpu = False
+            # Durum çubuğunu güncelle
+            if hasattr(self, 'status_bar'):
+                self.status_bar.showMessage("GPU bulunamadı, CPU modu kullanılıyor", 5000)
+    
+    def toggle_gpu_usage(self, checked):
+        """Toggle GPU usage on/off"""
+        self.use_gpu = checked
+        self.settings.setValue("use_gpu", checked)
+        
+        if checked and not self.has_gpu:
+            QMessageBox.warning(self, "GPU Not Available", 
+                               "GPU acceleration is not available on this system. "
+                               "The software will continue to run in CPU mode.")
+            self.use_gpu = False
+            self.use_gpu_action.setChecked(False)
+            return
+        
+        # Apply the change immediately
+        if self.use_gpu:
+            gpu_available = configure_gpu(self.gpu_id)
+            if not gpu_available:
+                QMessageBox.warning(self, "GPU Configuration Failed", 
+                                   "Failed to configure GPU. Falling back to CPU mode.")
+                self.use_gpu = False
+                self.use_gpu_action.setChecked(False)
+        else:
+            use_cpu_fallback()
+            
+        QMessageBox.information(self, "Settings Changed", 
+                               f"GPU acceleration is now {'enabled' if self.use_gpu else 'disabled'}.\n"
+                               "This will affect newly applied filters and operations.")
+    
+    def select_gpu_device(self, gpu_id):
+        """Select a specific GPU device"""
+        if gpu_id >= self.gpu_count:
+            QMessageBox.warning(self, "Invalid GPU", f"GPU {gpu_id} is not available")
+            return
+            
+        self.gpu_id = gpu_id
+        self.settings.setValue("gpu_id", gpu_id)
+        
+        # Apply the change if GPU is enabled
+        if self.use_gpu:
+            configure_gpu(self.gpu_id)
+            QMessageBox.information(self, "GPU Changed", 
+                                   f"Now using GPU {gpu_id}: {torch.cuda.get_device_name(gpu_id)}")
+    
+    def show_gpu_info(self):
+        """Show detailed GPU information"""
+        if not self.has_gpu:
+            QMessageBox.information(self, "GPU Status", "No GPU detected. Running in CPU mode.")
+            return
+            
+        info_text = "GPU Information:\n\n"
+        info_text += f"CUDA Available: {torch.cuda.is_available()}\n"
+        info_text += f"Number of GPUs: {self.gpu_count}\n\n"
+        
+        for i in range(self.gpu_count):
+            info_text += f"GPU {i}: {torch.cuda.get_device_name(i)}\n"
+            if i == self.gpu_id:
+                info_text += "  ✓ Currently selected\n"
+                
+            # Get memory info
+            try:
+                total_mem = torch.cuda.get_device_properties(i).total_memory / (1024 * 1024)
+                free_mem = torch.cuda.mem_get_info(i)[0] / (1024 * 1024)
+                used_mem = total_mem - free_mem
+                info_text += f"  Total Memory: {total_mem:.0f} MB\n"
+                info_text += f"  Used Memory: {used_mem:.0f} MB\n"
+                info_text += f"  Free Memory: {free_mem:.0f} MB\n"
+            except Exception as e:
+                info_text += f"  Memory info unavailable: {e}\n"
+                
+            info_text += "\n"
+            
+        QMessageBox.information(self, "GPU Status", info_text)
