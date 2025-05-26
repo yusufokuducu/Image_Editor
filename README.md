@@ -1,4 +1,167 @@
 # PyxelEdit
+
+![PyxelEdit Demo](Kayıt%202025-04-25%20171443.gif)
+
+## Advanced Layer-Based Python Image Editor
+
+PyxelEdit is an open-source raster image editor developed for Windows with a modern PyQt6 interface, powerful layer management, advanced filter/effect infrastructure, and flexible architecture. It provides a fast, modular, and extensible platform for graphic designers, pixel artists, and software developers.
+
+### Key Features
+
+- **Modern PyQt6 Interface:** Fast, intuitive, and scalable user experience
+- **Layer System:** Unlimited layer addition, deletion, copying, moving, visibility control, and merging
+- **Advanced Selection Tools:** Rectangle, ellipse, and free (lasso) selection modes
+- **Layer Panel:** Select layers from list, drag-and-drop ordering, quick copy/paste
+- **Filters & Effects:**
+  - Blur (user-adjustable level)
+  - Sharpen
+  - Edge Highlight
+  - Grayscale
+  - Add Noise (user-adjustable level)
+  - Brightness/Contrast/Saturation/Hue adjustment
+- **Undo/Redo:** Comprehensive undo/redo with command history for all operations
+- **Shortcuts:** Extensive and customizable keyboard shortcuts for quick access
+- **Layer-Based Processing:** Effects and filters can be applied only to selected/active layer
+- **Extensible Infrastructure:** New filters, tools, or layer features can be easily added
+- **Debugging & Logging:** Automatic logging and error management
+- **Multiple Image Format Support:** PNG, JPEG, BMP, GIF, and more
+
+### Installation
+
+1. **Python 3.10+** must be installed
+2. Install dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+### Quick Start
+
+```bash
+python src/main.py
+```
+
+### User Guide
+
+#### Basic Functions
+
+- **Open/Save Image:** From File menu or with Ctrl+O/Ctrl+S
+- **Add/Delete Layer:** From Layers menu or panel
+- **Move/Copy Layer:** Up/down arrows or copy/paste buttons in layer panel
+- **Apply Effect:** From Filters menu, with level selection for blur and noise
+- **Selection Tools:** Rectangle/ellipse/lasso selection from Selection menu
+- **Undo/Redo:** Ctrl+Z / Ctrl+Y
+- **Layer Visibility:** From layer panel or with Ctrl+H
+- **Merge Layers:** Merge all visible layers into a single layer with Ctrl+M
+- **Add Text:** Add text to layers with the text tool, select font and size
+
+#### Advanced Features
+
+- **Layer-Based Effects:** Each filter and effect is applied only to the selected layer, other layers remain unaffected
+- **Live Preview:** Real-time preview support for filter and effect applications
+- **Command History:** Detailed undo/redo support and operation history for all actions
+- **Multiple Image Formats:** Export and save in different formats
+- **Comprehensive Shortcuts:** Customizable shortcuts for all basic and advanced operations
+
+### Keyboard Shortcuts
+
+| Operation                  | Shortcut          |
+|----------------------------|-------------------|
+| Undo                       | Ctrl+Z            |
+| Redo                       | Ctrl+Y            |
+| New Layer                  | Ctrl+Shift+N      |
+| Delete Layer               | Del               |
+| Move Layer Up/Down         | Ctrl+Up / Ctrl+Down |
+| Merge Layers               | Ctrl+M            |
+| Layer Visibility           | Ctrl+H            |
+| Open Image                 | Ctrl+O            |
+| Save Image                 | Ctrl+S            |
+| Selection Mode (Rectangle) | R                 |
+| Selection Mode (Ellipse)   | E                 |
+| Selection Mode (Lasso)     | L                 |
+| Text Tool                  | T                 |
+| Filter Menu                | F                 |
+
+### Architecture and Developer Notes
+
+- **Modular Code:**
+  - `src/main.py`: Main application and interface launcher
+  - `src/layers.py`: Layer management and merging
+  - `src/layer_panel.py`: Layer panel and user interaction
+  - `src/filters.py`: Filter and effect functions
+  - `src/transform.py`: Transformation and resizing operations
+  - `src/image_io.py`: Image loading/saving, QPixmap conversions
+  - `src/history.py`: Command-based undo/redo infrastructure
+  - `src/image_view.py`: Viewing and selection tools
+  - `src/text_options.py`: Text tool and font management
+- **Extensibility:** Extend relevant modules to add new filters, tools, or layer functions
+- **Logging:** All main operations are logged to `pyxeledit.log` file
+
+### Tests
+
+- Verify basic functionality with test modules included with the project
+- For tests:
+  ```bash
+  pytest
+  ```
+
+### Frequently Asked Questions (FAQ)
+
+**Q: I'm getting an error when adding a layer, why?**
+
+A: You must first open an image or create at least one layer. Layer addition requires an existing base layer.
+
+**Q: Why do filters only work on the selected layer?**
+
+A: All effects and filters are applied only to the active layer for flexible and lossless editing. Other layers remain unaffected.
+
+**Q: On which platforms does it run?**
+
+A: It has been fully tested on Windows. It may also work on Linux/Mac with PyQt6 and Pillow support, but there may be interface differences.
+
+### GPU Support
+
+This project now supports external GPU acceleration, providing significant speed improvements in image processing and filtering operations.
+
+#### Using GPU Features
+
+- The program automatically detects and uses available GPU at startup
+- To change GPU settings, follow "Settings → GPU Settings" in the top menu
+- If multiple GPUs are available, select your preferred GPU from "GPU Settings → Select GPU Device" menu
+- To completely disable GPU usage, uncheck the "Use GPU" option
+
+#### Command Line Parameters
+
+You can use command line parameters to start the program with a specific GPU or disable GPU usage:
+
+```bash
+# To start with a specific GPU (ID number starts from 0)
+python src/main.py --gpu 0
+
+# To disable GPU usage
+python src/main.py --cpu
+```
+
+#### System Requirements for GPU Support
+
+- NVIDIA CUDA compatible GPU
+- CUDA Toolkit (11.x or higher recommended)
+- PyTorch 2.0.0 or higher
+- CuPy library
+
+### License
+
+Open source under MIT License.
+
+### Contribution and Feedback
+
+Contribute by opening pull requests and issues!
+
+Developer: faust-lvii - [yusufokuducu](mailto:k.yusufokuducu@gmail.com)
+
+---
+
+# PyxelEdit
+
 **Gelişmiş, Katman Destekli Python Görüntü Editörü**
 
 PyxelEdit; modern PyQt6 arayüzü, güçlü katman yönetimi, gelişmiş filtre/efekt altyapısı ve esnek mimarisiyle Windows için geliştirilmiş açık kaynaklı bir raster imaj editörüdür. Grafik tasarımcılar, piksel sanatçılar ve yazılım geliştiriciler için hızlı, modüler ve geliştirilebilir bir platform sunar.
@@ -137,20 +300,6 @@ C: Şu an için Windows üzerinde tam test edilmiştir. PyQt6 ve Pillow desteği
 
 ---
 
-## Lisans
-
-MIT Lisansı altında açık kaynak.
-
----
-
-## Katkı ve Geri Bildirim
-
-Pull request ve issue açarak katkıda bulunabilirsiniz!
-
-Geliştirici: faust-lvii - [yusufokuducu](mailto:k.yusufokuducu@gmail.com)
-
----
-
 ## GPU Desteği
 
 Bu proje artık harici GPU ile çalışabilir, bu da görüntü işleme ve filtreleme işlemlerinde önemli ölçüde hız artışı sağlar.
@@ -184,4 +333,15 @@ GPU desteği için aşağıdaki gereksinimler gereklidir:
 - CuPy kütüphanesi
 
 ---
-# ODTÜ de tomanın ne işi var #
+
+## Lisans
+
+MIT Lisansı altında açık kaynak.
+
+---
+
+## Katkı ve Geri Bildirim
+
+Pull request ve issue açarak katkıda bulunabilirsiniz!
+
+Geliştirici: faust-lvii - [yusufokuducu](mailto:k.yusufokuducu@gmail.com)
