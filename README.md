@@ -37,7 +37,7 @@ PyxelEdit is an open-source raster image editor developed for Windows with a mod
 ### Quick Start
 
 ```bash
-python src/main.py
+python -m src.main
 ```
 
 ### User Guide
