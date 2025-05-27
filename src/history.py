@@ -1,5 +1,4 @@
 from collections import deque
-
 class Command:
     def __init__(self, do_func, undo_func, description):
         self.do_func = do_func
@@ -9,7 +8,6 @@ class Command:
         self.do_func()
     def undo(self):
         self.undo_func()
-
 class History:
     def __init__(self, max_size=50):
         self.undo_stack = deque(maxlen=max_size)

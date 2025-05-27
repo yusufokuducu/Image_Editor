@@ -66,19 +66,39 @@ python src/main.py
 
 | Operation                  | Shortcut          |
 |----------------------------|-------------------|
+| **File Operations**        |                   |
+| Open Image                 | Ctrl+O            |
+| Save Image                 | Ctrl+S            |
+| Save As                    | Ctrl+Shift+S      |
+| Exit                       | Ctrl+Q            |
+| **Edit Operations**        |                   |
 | Undo                       | Ctrl+Z            |
 | Redo                       | Ctrl+Y            |
+| **Selection**              |                   |
+| Select All                 | Ctrl+A            |
+| Clear Selection            | Ctrl+D            |
+| Make Selection             | Alt+Drag          |
+| Add to Selection           | Alt+Shift+Drag    |
+| Subtract from Selection    | Alt+Ctrl+Drag     |
+| **Layer Operations**       |                   |
 | New Layer                  | Ctrl+Shift+N      |
 | Delete Layer               | Del               |
 | Move Layer Up/Down         | Ctrl+Up / Ctrl+Down |
 | Merge Layers               | Ctrl+M            |
 | Layer Visibility           | Ctrl+H            |
-| Open Image                 | Ctrl+O            |
-| Save Image                 | Ctrl+S            |
-| Selection Mode (Rectangle) | R                 |
-| Selection Mode (Ellipse)   | E                 |
-| Selection Mode (Lasso)     | L                 |
+| **Tools**                  |                   |
+| Selection Tool             | V                 |
+| Brush Tool                 | B                 |
+| Pencil Tool                | P                 |
+| Eraser Tool                | E                 |
+| Fill Tool                  | G                 |
 | Text Tool                  | T                 |
+| **Zoom & Navigation**      |                   |
+| Zoom In                    | Ctrl++            |
+| Zoom Out                   | Ctrl+-            |
+| Fit to Window              | Ctrl+0            |
+| Reset Zoom                 | R                 |
+| Pan (temporary)            | Space (hold)      |
 | Filter Menu                | F                 |
 
 ### Architecture and Developer Notes
@@ -240,20 +260,39 @@ python src/main.py
 
 | İşlem                       | Kısayol           |
 |-----------------------------|-------------------|
+| **Dosya İşlemleri**         |                   |
+| Resim Aç                    | Ctrl+O            |
+| Resim Kaydet                | Ctrl+S            |
+| Farklı Kaydet               | Ctrl+Shift+S      |
+| Çıkış                       | Ctrl+Q            |
+| **Düzenleme İşlemleri**     |                   |
 | Geri Al (Undo)              | Ctrl+Z            |
 | Yinele (Redo)               | Ctrl+Y            |
+| **Seçim**                   |                   |
+| Tümünü Seç                  | Ctrl+A            |
+| Seçimi Temizle              | Ctrl+D            |
+| Seçim Yap                   | Alt+Sürükle       |
+| Seçime Ekle                 | Alt+Shift+Sürükle |
+| Seçimden Çıkar              | Alt+Ctrl+Sürükle  |
+| **Katman İşlemleri**        |                   |
 | Yeni Katman                 | Ctrl+Shift+N      |
 | Katmanı Sil                 | Del               |
 | Katmanı Yukarı/Aşağı Taşı   | Ctrl+Up / Ctrl+Down |
 | Katmanları Birleştir        | Ctrl+M            |
 | Katman Görünürlüğü          | Ctrl+H            |
-| Resim Aç                    | Ctrl+O            |
-| Resim Kaydet                | Ctrl+S            |
-| Seçim Modu (Dikdörtgen)     | R                 |
-| Seçim Modu (Elips)          | E                 |
-| Seçim Modu (Lasso)          | L                 |
+| **Araçlar**                 |                   |
+| Seçim Aracı                 | V                 |
+| Fırça Aracı                 | B                 |
+| Kalem Aracı                 | P                 |
+| Silgi Aracı                 | E                 |
+| Doldurma Aracı              | G                 |
 | Metin Aracı                 | T                 |
-| Filtre Menüsü               | F                 |
+| **Zoom ve Gezinme**         |                   |
+| Yakınlaştır                 | Ctrl++            |
+| Uzaklaştır                  | Ctrl+-            |
+| Pencereye Sığdır            | Ctrl+0            |
+| Zoom Sıfırla                | R                 |
+| Gezinme (geçici)            | Space (basılı tut)|
 
 ---
 
