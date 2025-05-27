@@ -118,21 +118,25 @@ class MainWindow(QMainWindow):
         self.menu_manager.create_menus()
         self.image_view.textToolClicked.connect(self.handle_text_tool_click)
         self.image_view.drawingComplete.connect(self.handle_drawing_complete)
-        self.image_view.textToolClicked.connect(self.handle_text_tool_click)
+        
         self.layer_panel = LayerPanel(self)
         self.dock = QDockWidget('Katman Paneli', self)
         self.dock.setWidget(self.layer_panel)
         self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self.dock)
+
+
         self.effects_panel = EffectsPanel(self)
         self.effects_dock = QDockWidget('Efektler ve Ayarlamalar', self)
         self.effects_dock.setWidget(self.effects_panel)
         self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self.effects_dock)
         self.tabifyDockWidget(self.dock, self.effects_dock)
+
         self.drawing_tools_panel = self.create_drawing_tools_panel()
         self.drawing_tools_dock = QDockWidget('Çizim Araçları', self)
         self.drawing_tools_dock.setWidget(self.drawing_tools_panel)
-        self.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, self.drawing_tools_dock)
-        self.dock.raise_()
+        self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self.drawing_tools_dock)
+        self.tabifyDockWidget(self.effects_dock, self.drawing_tools_dock)
+        self.effects_dock.raise_()
         self.setup_initial_state()
 
         # Ana pencere temasını ayarla
