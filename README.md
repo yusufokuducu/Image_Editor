@@ -1,14 +1,14 @@
 # Professional Image Editor
 
-A sophisticated, production-ready image editing application built with PyQt5 and OpenCV. Designed for professionals and enthusiasts who demand precision, performance, and an elegant user experience.
+A sophisticated, production-ready image editing application built with PyQt5 and OpenCV. Designed for professionals and enthusiasts who demand precision, performance and an elegant user experience.
 
 ---
 
 ## Overview
 
-Professional Image Editor is a comprehensive desktop application that brings professional-grade image manipulation capabilities to your fingertips. With an intuitive dark-themed interface inspired by modern design systems, powerful color correction tools, and advanced filtering capabilities, it's the ideal companion for photographers, designers, and visual content creators.
+Professional Image Editor is a comprehensive desktop application that brings professional-grade image manipulation capabilities to your fingertips. With an intuitive dark-themed interface inspired by modern design systems, powerful color correction tools and advanced filtering capabilities, it's the ideal companion for photographers, designers and visual content creators.
 
-Built on battle-tested libraries (PyQt5, OpenCV, Pillow), the application prioritizes stability, performance, and user experience while maintaining an elegant codebase.
+Built on battle-tested libraries (PyQt5, OpenCV, Pillow), the application prioritizes stability, performance and user experience while maintaining an elegant codebase.
 
 ---
 
@@ -417,9 +417,9 @@ MIT License - Free for personal and commercial use
 
 ## About
 
-Crafted with precision for professionals and enthusiasts who value clean code, elegant design, and powerful functionality. Built to handle real-world image editing workflows without unnecessary complexity.
+Crafted with precision for professionals and enthusiasts who value clean code, elegant design and powerful functionality. Built to handle real-world image editing workflows without unnecessary complexity.
 
 ---
 
-**Professional Image Editor v1.0**  
+**Image Editor v1.0**  
 *Precise. Powerful. Professional.*
