@@ -1,28 +1,46 @@
 import sys
 import cv2
 import numpy as np
+import json
+import os
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
                              QLabel, QSlider, QPushButton, QFileDialog, QTabWidget,
                              QSpinBox, QDoubleSpinBox, QScrollArea, QFrame, QGroupBox,
-                             QComboBox, QMessageBox, QProgressDialog)
+                             QComboBox, QMessageBox, QProgressDialog, QMenuBar, QMenu,
+                             QStatusBar, QDialog, QCheckBox)
 from PyQt5.QtGui import QImage, QPixmap, QIcon, QFont, QColor
-from PyQt5.QtCore import Qt, QSize, QTimer, QThread, pyqtSignal
+from PyQt5.QtWidgets import QAction
+from PyQt5.QtCore import Qt, QSize, QTimer, QThread, pyqtSignal, QSettings
 from image_processor import ImageProcessor
 from undo_redo import UndoRedoManager
+from crop_tool import CropTool
 
 class ImageEditor(QMainWindow):
     def __init__(self):
         super().__init__()
         self.image_processor = ImageProcessor()
         self.undo_redo = UndoRedoManager()
+        self.settings = QSettings('ImageEditor', 'Settings')
+        self.zoom_level = 1.0
+        self.recent_files = self.load_recent_files()
         self.init_ui()
         self.apply_dark_theme()
         self.setAcceptDrops(True)
+        self.restore_window_geometry()
     
     def init_ui(self):
         """Initialize UI"""
-        self.setWindowTitle("Image Editor - Professional Edition")
-        self.setGeometry(50, 50, 1600, 950)
+        self.setWindowTitle("Professional Image Editor")
+        self.setGeometry(50, 50, 1700, 1000)
+        
+        # Create menu bar
+        self.create_menu_bar()
+        
+        # Create status bar
+        self.statusBar = QStatusBar()
+        self.setStatusBar(self.statusBar)
+        self.status_label = QLabel("Ready")
+        self.statusBar.addWidget(self.status_label)
         
         # Central widget
         central_widget = QWidget()
@@ -32,57 +50,48 @@ class ImageEditor(QMainWindow):
         main_layout = QHBoxLayout()
         central_widget.setLayout(main_layout)
         
-        # Left panel - Image display with controls
+        # Left panel - Image display
         left_layout = QVBoxLayout()
         
-        # Image info label
+        # Image info
         self.info_label = QLabel("No image loaded")
         self.info_label.setStyleSheet("color: #888; font-size: 10px;")
         left_layout.addWidget(self.info_label)
         
-        # Image label
-        self.image_label = QLabel()
-        self.image_label.setMinimumSize(650, 650)
+        # Image label with crop tool
+        self.image_label = CropTool()
+        self.image_label.setMinimumSize(700, 700)
         self.image_label.setScaledContents(False)
         self.image_label.setAlignment(Qt.AlignCenter)
         self.image_label.setStyleSheet("border: 2px solid #2a2a2a; background: #0a0a0a;")
+        self.image_label.crop_finished.connect(self.finalize_crop)
         left_layout.addWidget(self.image_label)
         
-        # Before/After toggle
-        compare_layout = QHBoxLayout()
-        self.compare_btn = QPushButton("👁️ Compare Before/After")
+        # Zoom controls
+        zoom_layout = QHBoxLayout()
+        zoom_layout.addWidget(QLabel("Zoom:"))
+        self.zoom_slider = QSlider(Qt.Horizontal)
+        self.zoom_slider.setRange(10, 300)
+        self.zoom_slider.setValue(100)
+        self.zoom_slider.setMaximumWidth(150)
+        self.zoom_slider.sliderMoved.connect(self.on_zoom_changed)
+        zoom_layout.addWidget(self.zoom_slider)
+        self.zoom_label = QLabel("100%")
+        self.zoom_label.setFixedWidth(50)
+        zoom_layout.addWidget(self.zoom_label)
+        left_layout.addLayout(zoom_layout)
+        
+        # Compare button
+        self.compare_btn = QPushButton("👁️ Before/After")
         self.compare_btn.setCheckable(True)
         self.compare_btn.setEnabled(False)
         self.compare_btn.clicked.connect(self.toggle_compare)
-        compare_layout.addWidget(self.compare_btn)
-        left_layout.addLayout(compare_layout)
-        
-        # Load/Save buttons
-        button_layout = QHBoxLayout()
-        load_btn = QPushButton("📁 Open Image")
-        load_btn.clicked.connect(self.load_image)
-        load_btn.setFixedHeight(40)
-        load_btn.setStyleSheet(self.get_button_style("#2a6a3f"))
-        
-        save_btn = QPushButton("💾 Save Image")
-        save_btn.clicked.connect(self.save_image)
-        save_btn.setFixedHeight(40)
-        save_btn.setStyleSheet(self.get_button_style("#3f5a6a"))
-        
-        reset_btn = QPushButton("🔄 Reset")
-        reset_btn.clicked.connect(self.reset_image)
-        reset_btn.setFixedHeight(40)
-        reset_btn.setStyleSheet(self.get_button_style("#6a3f3f"))
-        
-        button_layout.addWidget(load_btn)
-        button_layout.addWidget(save_btn)
-        button_layout.addWidget(reset_btn)
-        left_layout.addLayout(button_layout)
+        left_layout.addWidget(self.compare_btn)
         
         # Right panel - Controls
         right_layout = QVBoxLayout()
         
-        # Undo/Redo buttons
+        # Undo/Redo
         undo_redo_layout = QHBoxLayout()
         self.undo_btn = QPushButton("↶ Undo")
         self.redo_btn = QPushButton("↷ Redo")
@@ -98,122 +107,231 @@ class ImageEditor(QMainWindow):
         tabs = QTabWidget()
         tabs.setStyleSheet(self.get_tab_style())
         
-        # Adjustments tab
-        adjustments_widget = self.create_adjustments_tab()
-        tabs.addTab(adjustments_widget, "⚙️ Adjustments")
+        # Basic adjustments
+        tabs.addTab(self.create_adjustments_tab(), "⚙️ Adjustments")
         
-        # Filters tab
-        filters_widget = self.create_filters_tab()
-        tabs.addTab(filters_widget, "✨ Filters")
+        # Color correction
+        tabs.addTab(self.create_color_tab(), "🎨 Colors")
         
-        # Transform tab
-        transform_widget = self.create_transform_tab()
-        tabs.addTab(transform_widget, "🔄 Transform")
+        # Filters
+        tabs.addTab(self.create_filters_tab(), "✨ Filters")
         
-        # Effects tab
-        effects_widget = self.create_effects_tab()
-        tabs.addTab(effects_widget, "🎆 Effects")
+        # Transform
+        tabs.addTab(self.create_transform_tab(), "🔄 Transform")
+        
+        # Effects
+        tabs.addTab(self.create_effects_tab(), "🎆 Effects")
+        
+        # Analysis
+        tabs.addTab(self.create_analysis_tab(), "📊 Analysis")
         
         right_layout.addWidget(tabs)
         
-        # Add layouts to main
+        # Save/Reset buttons
+        button_layout = QHBoxLayout()
+        save_btn = QPushButton("💾 Save")
+        save_btn.clicked.connect(self.save_image)
+        save_btn.setStyleSheet(self.get_button_style("#3f5a6a"))
+        reset_btn = QPushButton("🔄 Reset")
+        reset_btn.clicked.connect(self.reset_image)
+        reset_btn.setStyleSheet(self.get_button_style("#6a3f3f"))
+        button_layout.addWidget(save_btn)
+        button_layout.addWidget(reset_btn)
+        right_layout.addLayout(button_layout)
+        
+        # Add layouts
         main_layout.addLayout(left_layout, 2)
         main_layout.addLayout(right_layout, 1)
         
         self.original_image_for_compare = None
     
+    def create_menu_bar(self):
+        """Create application menu bar"""
+        menubar = self.menuBar()
+        
+        # File menu
+        file_menu = menubar.addMenu("File")
+        
+        open_action = QAction("Open Image", self)
+        open_action.setShortcut("Ctrl+O")
+        open_action.triggered.connect(self.load_image)
+        file_menu.addAction(open_action)
+        
+        file_menu.addSeparator()
+        
+        save_action = QAction("Save", self)
+        save_action.setShortcut("Ctrl+S")
+        save_action.triggered.connect(self.save_image)
+        file_menu.addAction(save_action)
+        
+        save_as_action = QAction("Save As...", self)
+        save_as_action.setShortcut("Ctrl+Shift+S")
+        save_as_action.triggered.connect(self.save_image_as)
+        file_menu.addAction(save_as_action)
+        
+        file_menu.addSeparator()
+        
+        # Recent files
+        self.recent_menu = file_menu.addMenu("Recent Files")
+        self.update_recent_menu()
+        
+        file_menu.addSeparator()
+        
+        exit_action = QAction("Exit", self)
+        exit_action.setShortcut("Ctrl+Q")
+        exit_action.triggered.connect(self.close)
+        file_menu.addAction(exit_action)
+        
+        # Edit menu
+        edit_menu = menubar.addMenu("Edit")
+        
+        undo_action = QAction("Undo", self)
+        undo_action.setShortcut("Ctrl+Z")
+        undo_action.triggered.connect(self.undo)
+        edit_menu.addAction(undo_action)
+        
+        redo_action = QAction("Redo", self)
+        redo_action.setShortcut("Ctrl+Y")
+        redo_action.triggered.connect(self.redo)
+        edit_menu.addAction(redo_action)
+        
+        edit_menu.addSeparator()
+        
+        reset_action = QAction("Reset Image", self)
+        reset_action.setShortcut("Ctrl+R")
+        reset_action.triggered.connect(self.reset_image)
+        edit_menu.addAction(reset_action)
+        
+        # Tools menu
+        tools_menu = menubar.addMenu("Tools")
+        
+        crop_action = QAction("Crop Tool", self)
+        crop_action.setShortcut("C")
+        crop_action.triggered.connect(self.start_crop)
+        tools_menu.addAction(crop_action)
+        
+        # View menu
+        view_menu = menubar.addMenu("View")
+        
+        zoom_fit = QAction("Fit to Window", self)
+        zoom_fit.setShortcut("Ctrl+0")
+        zoom_fit.triggered.connect(lambda: self.zoom_slider.setValue(100))
+        view_menu.addAction(zoom_fit)
+        
+        # Help menu
+        help_menu = menubar.addMenu("Help")
+        
+        shortcuts_action = QAction("Keyboard Shortcuts", self)
+        shortcuts_action.triggered.connect(self.show_shortcuts)
+        help_menu.addAction(shortcuts_action)
+        
+        about_action = QAction("About", self)
+        about_action.triggered.connect(self.show_about)
+        help_menu.addAction(about_action)
+    
     def create_adjustments_tab(self):
-        """Create adjustments tab with value display"""
+        """Create basic adjustments tab"""
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
         widget = QWidget()
         layout = QVBoxLayout()
         
-        # Brightness
-        bright_layout = QHBoxLayout()
-        bright_layout.addWidget(QLabel("Brightness"))
-        self.bright_value = QLabel("0")
-        self.bright_value.setFixedWidth(40)
-        self.bright_value.setAlignment(Qt.AlignRight)
-        bright_layout.addWidget(self.bright_value)
-        layout.addLayout(bright_layout)
+        adjustments = [
+            ("Brightness", -100, 100, 0, self.on_brightness_changed),
+            ("Contrast", -100, 100, 0, self.on_contrast_changed),
+            ("Saturation", -100, 100, 0, self.on_saturation_changed),
+            ("Sharpness", 0, 100, 0, self.on_sharpness_changed),
+            ("Hue Rotation", -180, 180, 0, self.on_hue_changed),
+        ]
         
-        self.brightness_slider = QSlider(Qt.Horizontal)
-        self.brightness_slider.setRange(-100, 100)
-        self.brightness_slider.setValue(0)
-        self.brightness_slider.sliderMoved.connect(self.on_brightness_changed)
-        self.brightness_slider.sliderMoved.connect(lambda: self.bright_value.setText(str(self.brightness_slider.value())))
-        layout.addWidget(self.brightness_slider)
+        self.adjustment_sliders = {}
+        self.adjustment_labels = {}
         
-        # Contrast
-        contrast_layout = QHBoxLayout()
-        contrast_layout.addWidget(QLabel("Contrast"))
-        self.contrast_value = QLabel("0")
-        self.contrast_value.setFixedWidth(40)
-        self.contrast_value.setAlignment(Qt.AlignRight)
-        contrast_layout.addWidget(self.contrast_value)
-        layout.addLayout(contrast_layout)
+        for name, min_val, max_val, default, callback in adjustments:
+            label_layout = QHBoxLayout()
+            label = QLabel(name)
+            value_label = QLabel(str(default))
+            value_label.setFixedWidth(40)
+            value_label.setAlignment(Qt.AlignRight)
+            label_layout.addWidget(label)
+            label_layout.addWidget(value_label)
+            layout.addLayout(label_layout)
+            
+            slider = QSlider(Qt.Horizontal)
+            slider.setRange(min_val, max_val)
+            slider.setValue(default)
+            slider.sliderMoved.connect(callback)
+            layout.addWidget(slider)
+            
+            self.adjustment_sliders[name] = slider
+            self.adjustment_labels[name] = value_label
         
-        self.contrast_slider = QSlider(Qt.Horizontal)
-        self.contrast_slider.setRange(-100, 100)
-        self.contrast_slider.setValue(0)
-        self.contrast_slider.sliderMoved.connect(self.on_contrast_changed)
-        self.contrast_slider.sliderMoved.connect(lambda: self.contrast_value.setText(str(self.contrast_slider.value())))
-        layout.addWidget(self.contrast_slider)
+        apply_btn = QPushButton("✓ Confirm Adjustments")
+        apply_btn.setStyleSheet(self.get_button_style("#2a6a3f"))
+        apply_btn.clicked.connect(self.confirm_adjustments)
+        layout.addWidget(apply_btn)
         
-        # Saturation
-        sat_layout = QHBoxLayout()
-        sat_layout.addWidget(QLabel("Saturation"))
-        self.sat_value = QLabel("0")
-        self.sat_value.setFixedWidth(40)
-        self.sat_value.setAlignment(Qt.AlignRight)
-        sat_layout.addWidget(self.sat_value)
-        layout.addLayout(sat_layout)
+        layout.addStretch()
+        widget.setLayout(layout)
+        scroll.setWidget(widget)
+        return scroll
+    
+    def create_color_tab(self):
+        """Create color correction tab"""
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        widget = QWidget()
+        layout = QVBoxLayout()
         
-        self.saturation_slider = QSlider(Qt.Horizontal)
-        self.saturation_slider.setRange(-100, 100)
-        self.saturation_slider.setValue(0)
-        self.saturation_slider.sliderMoved.connect(self.on_saturation_changed)
-        self.saturation_slider.sliderMoved.connect(lambda: self.sat_value.setText(str(self.saturation_slider.value())))
-        layout.addWidget(self.saturation_slider)
+        # Levels
+        layout.addWidget(QLabel("Levels"))
+        levels_layout = QHBoxLayout()
+        layout.addWidget(QLabel("Black Point:"))
+        self.levels_black = QSpinBox()
+        self.levels_black.setRange(0, 255)
+        self.levels_black.setValue(0)
+        levels_layout.addWidget(self.levels_black)
+        layout.addLayout(levels_layout)
         
-        # Sharpness
-        sharp_layout = QHBoxLayout()
-        sharp_layout.addWidget(QLabel("Sharpness"))
-        self.sharp_value = QLabel("0")
-        self.sharp_value.setFixedWidth(40)
-        self.sharp_value.setAlignment(Qt.AlignRight)
-        sharp_layout.addWidget(self.sharp_value)
-        layout.addLayout(sharp_layout)
+        layout.addWidget(QLabel("White Point:"))
+        self.levels_white = QSpinBox()
+        self.levels_white.setRange(0, 255)
+        self.levels_white.setValue(255)
+        layout.addWidget(self.levels_white)
         
-        self.sharpness_slider = QSlider(Qt.Horizontal)
-        self.sharpness_slider.setRange(0, 100)
-        self.sharpness_slider.setValue(0)
-        self.sharpness_slider.sliderMoved.connect(self.on_sharpness_changed)
-        self.sharpness_slider.sliderMoved.connect(lambda: self.sharp_value.setText(str(self.sharpness_slider.value())))
-        layout.addWidget(self.sharpness_slider)
+        apply_levels_btn = QPushButton("Apply Levels")
+        apply_levels_btn.setStyleSheet(self.get_button_style("#2a6a3f"))
+        apply_levels_btn.clicked.connect(self.apply_levels)
+        layout.addWidget(apply_levels_btn)
         
-        # Hue rotation
-        hue_layout = QHBoxLayout()
-        hue_layout.addWidget(QLabel("Hue Rotation"))
-        self.hue_value = QLabel("0")
-        self.hue_value.setFixedWidth(40)
-        self.hue_value.setAlignment(Qt.AlignRight)
-        hue_layout.addWidget(self.hue_value)
-        layout.addLayout(hue_layout)
+        layout.addSpacing(20)
         
-        self.hue_slider = QSlider(Qt.Horizontal)
-        self.hue_slider.setRange(-180, 180)
-        self.hue_slider.setValue(0)
-        self.hue_slider.sliderMoved.connect(self.on_hue_changed)
-        self.hue_slider.sliderMoved.connect(lambda: self.hue_value.setText(str(self.hue_slider.value())))
-        layout.addWidget(self.hue_slider)
+        # Color temperature
+        layout.addWidget(QLabel("Color Temperature"))
+        temp_layout = QHBoxLayout()
+        temp_layout.addWidget(QLabel("Warm/Cool:"))
+        self.temp_slider = QSlider(Qt.Horizontal)
+        self.temp_slider.setRange(-50, 50)
+        self.temp_slider.setValue(0)
+        temp_layout.addWidget(self.temp_slider)
+        layout.addLayout(temp_layout)
         
-        # Apply Adjustments button
-        apply_adj_btn = QPushButton("✓ Confirm Adjustments")
-        apply_adj_btn.setStyleSheet(self.get_button_style("#2a6a3f"))
-        apply_adj_btn.clicked.connect(self.confirm_adjustments)
-        layout.addWidget(apply_adj_btn)
+        layout.addSpacing(20)
+        
+        # Preset color grades
+        layout.addWidget(QLabel("Color Presets"))
+        presets = [
+            ("🌅 Warm", self.apply_warm),
+            ("❄️ Cool", self.apply_cool),
+            ("🌙 Dark", self.apply_dark),
+            ("☀️ Bright", self.apply_bright),
+        ]
+        
+        for preset_name, preset_func in presets:
+            btn = QPushButton(preset_name)
+            btn.setStyleSheet(self.get_button_style("#4a5a6a"))
+            btn.clicked.connect(preset_func)
+            layout.addWidget(btn)
         
         layout.addStretch()
         widget.setLayout(layout)
@@ -227,60 +345,45 @@ class ImageEditor(QMainWindow):
         widget = QWidget()
         layout = QVBoxLayout()
         
-        # Blur
-        blur_layout = QHBoxLayout()
-        blur_layout.addWidget(QLabel("Blur"))
-        self.blur_value = QLabel("1")
-        self.blur_value.setFixedWidth(40)
-        self.blur_value.setAlignment(Qt.AlignRight)
-        blur_layout.addWidget(self.blur_value)
-        layout.addLayout(blur_layout)
+        filters = [
+            ("Blur", 1, 50, 1, self.apply_blur),
+            ("Noise", 0, 50, 0, self.apply_noise),
+        ]
         
-        self.blur_slider = QSlider(Qt.Horizontal)
-        self.blur_slider.setRange(1, 50)
-        self.blur_slider.setValue(1)
-        self.blur_slider.sliderMoved.connect(self.apply_blur)
-        self.blur_slider.sliderMoved.connect(lambda: self.blur_value.setText(str(self.blur_slider.value())))
-        layout.addWidget(self.blur_slider)
+        self.filter_sliders = {}
+        self.filter_labels = {}
         
-        # Noise
-        noise_layout = QHBoxLayout()
-        noise_layout.addWidget(QLabel("Add Noise"))
-        self.noise_value = QLabel("0")
-        self.noise_value.setFixedWidth(40)
-        self.noise_value.setAlignment(Qt.AlignRight)
-        noise_layout.addWidget(self.noise_value)
-        layout.addLayout(noise_layout)
+        for name, min_val, max_val, default, callback in filters:
+            label_layout = QHBoxLayout()
+            label = QLabel(name)
+            value_label = QLabel(str(default))
+            value_label.setFixedWidth(40)
+            label_layout.addWidget(label)
+            label_layout.addWidget(value_label)
+            layout.addLayout(label_layout)
+            
+            slider = QSlider(Qt.Horizontal)
+            slider.setRange(min_val, max_val)
+            slider.setValue(default)
+            slider.sliderMoved.connect(callback)
+            layout.addWidget(slider)
+            
+            self.filter_sliders[name] = slider
+            self.filter_labels[name] = value_label
         
-        self.noise_slider = QSlider(Qt.Horizontal)
-        self.noise_slider.setRange(0, 50)
-        self.noise_slider.setValue(0)
-        self.noise_slider.sliderMoved.connect(self.apply_noise)
-        self.noise_slider.sliderMoved.connect(lambda: self.noise_value.setText(str(self.noise_slider.value())))
-        layout.addWidget(self.noise_slider)
-        
-        # Preset filters
         layout.addWidget(QLabel("Quick Filters"))
         
-        filters_grid = QVBoxLayout()
+        quick_filters = [
+            ("⚪ Grayscale", self.apply_grayscale),
+            ("🟤 Sepia", self.apply_sepia),
+            ("⚡ Edge Detection", self.apply_edge_detection),
+        ]
         
-        gray_btn = QPushButton("⚪ Grayscale")
-        gray_btn.clicked.connect(self.apply_grayscale)
-        gray_btn.setStyleSheet(self.get_button_style("#4a5a6a"))
-        
-        sepia_btn = QPushButton("🟤 Sepia")
-        sepia_btn.clicked.connect(self.apply_sepia)
-        sepia_btn.setStyleSheet(self.get_button_style("#4a5a6a"))
-        
-        edge_btn = QPushButton("⚡ Edge Detection")
-        edge_btn.clicked.connect(self.apply_edge_detection)
-        edge_btn.setStyleSheet(self.get_button_style("#4a5a6a"))
-        
-        filters_grid.addWidget(gray_btn)
-        filters_grid.addWidget(sepia_btn)
-        filters_grid.addWidget(edge_btn)
-        
-        layout.addLayout(filters_grid)
+        for filter_name, filter_func in quick_filters:
+            btn = QPushButton(filter_name)
+            btn.setStyleSheet(self.get_button_style("#4a5a6a"))
+            btn.clicked.connect(filter_func)
+            layout.addWidget(btn)
         
         layout.addStretch()
         widget.setLayout(layout)
@@ -294,26 +397,27 @@ class ImageEditor(QMainWindow):
         widget = QWidget()
         layout = QVBoxLayout()
         
+        # Crop button
+        crop_btn = QPushButton("✂️ Crop Image")
+        crop_btn.setStyleSheet(self.get_button_style("#4a6a3f"))
+        crop_btn.clicked.connect(self.start_crop)
+        layout.addWidget(crop_btn)
+        
         # Resize
-        layout.addWidget(QLabel("Resize Image"))
-        
-        resize_layout = QHBoxLayout()
-        resize_layout.addWidget(QLabel("Width:"))
+        layout.addWidget(QLabel("Resize"))
+        layout.addWidget(QLabel("Width:"))
         self.resize_width = QSpinBox()
-        self.resize_width.setRange(10, 5000)
+        self.resize_width.setRange(10, 10000)
         self.resize_width.setValue(800)
-        resize_layout.addWidget(self.resize_width)
-        layout.addLayout(resize_layout)
+        layout.addWidget(self.resize_width)
         
-        resize_layout2 = QHBoxLayout()
-        resize_layout2.addWidget(QLabel("Height:"))
+        layout.addWidget(QLabel("Height:"))
         self.resize_height = QSpinBox()
-        self.resize_height.setRange(10, 5000)
+        self.resize_height.setRange(10, 10000)
         self.resize_height.setValue(600)
-        resize_layout2.addWidget(self.resize_height)
-        layout.addLayout(resize_layout2)
+        layout.addWidget(self.resize_height)
         
-        resize_btn = QPushButton("✓ Apply Resize")
+        resize_btn = QPushButton("Apply Resize")
         resize_btn.setStyleSheet(self.get_button_style("#2a6a3f"))
         resize_btn.clicked.connect(self.apply_resize)
         layout.addWidget(resize_btn)
@@ -324,7 +428,6 @@ class ImageEditor(QMainWindow):
         rotate_layout.addWidget(QLabel("Angle:"))
         self.rotate_value = QLabel("0°")
         self.rotate_value.setFixedWidth(50)
-        self.rotate_value.setAlignment(Qt.AlignRight)
         rotate_layout.addWidget(self.rotate_value)
         layout.addLayout(rotate_layout)
         
@@ -338,12 +441,12 @@ class ImageEditor(QMainWindow):
         # Flip
         layout.addWidget(QLabel("Flip"))
         flip_layout = QHBoxLayout()
-        flip_h_btn = QPushButton("↔️ Horizontal")
-        flip_h_btn.clicked.connect(self.apply_flip_horizontal)
-        flip_v_btn = QPushButton("↕️ Vertical")
-        flip_v_btn.clicked.connect(self.apply_flip_vertical)
-        flip_layout.addWidget(flip_h_btn)
-        flip_layout.addWidget(flip_v_btn)
+        flip_h = QPushButton("↔️ Horizontal")
+        flip_h.clicked.connect(self.apply_flip_horizontal)
+        flip_v = QPushButton("↕️ Vertical")
+        flip_v.clicked.connect(self.apply_flip_vertical)
+        flip_layout.addWidget(flip_h)
+        flip_layout.addWidget(flip_v)
         layout.addLayout(flip_layout)
         
         layout.addStretch()
@@ -352,59 +455,63 @@ class ImageEditor(QMainWindow):
         return scroll
     
     def create_effects_tab(self):
-        """Create effects tab with advanced filters"""
+        """Create effects tab"""
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
         widget = QWidget()
         layout = QVBoxLayout()
         
-        layout.addWidget(QLabel("Advanced Effects"))
-        
-        # Vignette
-        vig_layout = QHBoxLayout()
-        vig_layout.addWidget(QLabel("Vignette"))
-        self.vig_value = QLabel("0")
-        self.vig_value.setFixedWidth(40)
-        vig_layout.addWidget(self.vig_value)
-        layout.addLayout(vig_layout)
-        
-        self.vignette_slider = QSlider(Qt.Horizontal)
-        self.vignette_slider.setRange(0, 100)
-        self.vignette_slider.setValue(0)
-        self.vignette_slider.sliderMoved.connect(self.apply_vignette)
-        self.vignette_slider.sliderMoved.connect(lambda: self.vig_value.setText(str(self.vignette_slider.value())))
-        layout.addWidget(self.vignette_slider)
-        
-        # Posterize
-        post_layout = QHBoxLayout()
-        post_layout.addWidget(QLabel("Posterize"))
-        self.post_value = QLabel("256")
-        self.post_value.setFixedWidth(40)
-        post_layout.addWidget(self.post_value)
-        layout.addLayout(post_layout)
-        
-        self.posterize_slider = QSlider(Qt.Horizontal)
-        self.posterize_slider.setRange(2, 256)
-        self.posterize_slider.setValue(256)
-        self.posterize_slider.sliderMoved.connect(self.apply_posterize)
-        self.posterize_slider.sliderMoved.connect(lambda: self.post_value.setText(str(self.posterize_slider.value())))
-        layout.addWidget(self.posterize_slider)
-        
-        layout.addWidget(QLabel("One-Click Effects"))
-        
-        # Effect buttons
         effects = [
-            ("🌅 Warm", self.apply_warm),
-            ("❄️ Cool", self.apply_cool),
-            ("🌙 Dark Mode", self.apply_dark),
-            ("☀️ Bright", self.apply_bright),
+            ("Vignette", 0, 100, 0, self.apply_vignette),
+            ("Posterize", 2, 256, 256, self.apply_posterize),
         ]
         
-        for effect_name, effect_func in effects:
-            btn = QPushButton(effect_name)
-            btn.setStyleSheet(self.get_button_style("#4a5a6a"))
-            btn.clicked.connect(effect_func)
-            layout.addWidget(btn)
+        for name, min_val, max_val, default, callback in effects:
+            label_layout = QHBoxLayout()
+            label = QLabel(name)
+            value_label = QLabel(str(default))
+            value_label.setFixedWidth(40)
+            label_layout.addWidget(label)
+            label_layout.addWidget(value_label)
+            layout.addLayout(label_layout)
+            
+            slider = QSlider(Qt.Horizontal)
+            slider.setRange(min_val, max_val)
+            slider.setValue(default)
+            slider.sliderMoved.connect(callback)
+            slider.sliderMoved.connect(lambda v, vl=value_label: vl.setText(str(v)))
+            layout.addWidget(slider)
+        
+        layout.addStretch()
+        widget.setLayout(layout)
+        scroll.setWidget(widget)
+        return scroll
+    
+    def create_analysis_tab(self):
+        """Create analysis tab with histogram"""
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        widget = QWidget()
+        layout = QVBoxLayout()
+        
+        layout.addWidget(QLabel("Image Analysis"))
+        
+        # Image stats
+        self.stats_label = QLabel("Load image to see statistics")
+        self.stats_label.setStyleSheet("font-family: monospace; font-size: 10px;")
+        layout.addWidget(self.stats_label)
+        
+        # Histogram display
+        layout.addWidget(QLabel("Histogram"))
+        self.histogram_label = QLabel()
+        self.histogram_label.setMinimumHeight(150)
+        self.histogram_label.setStyleSheet("border: 1px solid #333; background: #1a1a1a;")
+        layout.addWidget(self.histogram_label)
+        
+        refresh_btn = QPushButton("Refresh Analysis")
+        refresh_btn.setStyleSheet(self.get_button_style("#2a6a3f"))
+        refresh_btn.clicked.connect(self.update_analysis)
+        layout.addWidget(refresh_btn)
         
         layout.addStretch()
         widget.setLayout(layout)
@@ -412,7 +519,7 @@ class ImageEditor(QMainWindow):
         return scroll
     
     def apply_dark_theme(self):
-        """Apply Ampcode dark theme"""
+        """Apply dark theme"""
         dark_stylesheet = """
         QMainWindow, QWidget {
             background-color: #0d0d0d;
@@ -431,7 +538,6 @@ class ImageEditor(QMainWindow):
             border-radius: 4px;
             padding: 8px;
             font-weight: bold;
-            transition: all 0.2s;
         }
         
         QPushButton:hover {
@@ -439,21 +545,14 @@ class ImageEditor(QMainWindow):
             border: 1px solid #444444;
         }
         
-        QPushButton:pressed {
-            background-color: #1a1a1a;
-        }
-        
         QPushButton:disabled {
             color: #666666;
-            background-color: #0d0d0d;
-            border: 1px solid #222222;
         }
         
         QSlider::groove:horizontal {
             border: 1px solid #333333;
             height: 6px;
             background: #1a1a1a;
-            margin: 2px 0;
             border-radius: 3px;
         }
         
@@ -467,25 +566,24 @@ class ImageEditor(QMainWindow):
         
         QSlider::handle:horizontal:hover {
             background: #5aaeef;
-            border: 1px solid #4a9eff;
         }
         
         QTabWidget::pane {
             border: 1px solid #333333;
-            background-color: #0d0d0d;
         }
         
         QTabBar::tab {
             background-color: #1a1a1a;
-            color: #e0e0e0;
-            padding: 8px 20px;
+            color: #888888;
+            padding: 10px 20px;
             border: 1px solid #333333;
         }
         
         QTabBar::tab:selected {
             background-color: #252525;
+            color: #4a9eff;
             border: 1px solid #4a9eff;
-            border-bottom: 2px solid #4a9eff;
+            border-bottom: 3px solid #4a9eff;
         }
         
         QSpinBox, QDoubleSpinBox {
@@ -505,7 +603,6 @@ class ImageEditor(QMainWindow):
             background: #1a1a1a;
             width: 12px;
             border: 1px solid #333333;
-            border-radius: 6px;
         }
         
         QScrollBar::handle:vertical {
@@ -514,15 +611,36 @@ class ImageEditor(QMainWindow):
             min-height: 20px;
         }
         
-        QScrollBar::handle:vertical:hover {
-            background: #5aaeef;
+        QMenuBar {
+            background-color: #1a1a1a;
+            color: #e0e0e0;
+            border-bottom: 1px solid #333333;
+        }
+        
+        QMenuBar::item:selected {
+            background-color: #252525;
+        }
+        
+        QMenu {
+            background-color: #1a1a1a;
+            color: #e0e0e0;
+            border: 1px solid #333333;
+        }
+        
+        QMenu::item:selected {
+            background-color: #252525;
+        }
+        
+        QStatusBar {
+            background-color: #1a1a1a;
+            color: #888888;
+            border-top: 1px solid #333333;
         }
         """
-        
         self.setStyleSheet(dark_stylesheet)
     
     def get_button_style(self, color):
-        """Get custom button style with specific color"""
+        """Get custom button style"""
         return f"""
         QPushButton {{
             background-color: {color}22;
@@ -537,32 +655,14 @@ class ImageEditor(QMainWindow):
             background-color: {color}44;
             border: 1px solid {color};
         }}
-        
-        QPushButton:pressed {{
-            background-color: {color}22;
-        }}
         """
     
     def get_tab_style(self):
-        """Get custom tab style"""
+        """Get tab style"""
         return """
-        QTabWidget::pane {
-            border: 1px solid #333333;
-        }
-        
         QTabBar::tab {
-            background-color: #1a1a1a;
-            color: #888888;
             padding: 10px 20px;
-            border: 1px solid #333333;
             margin-right: 2px;
-        }
-        
-        QTabBar::tab:selected {
-            background-color: #252525;
-            color: #4a9eff;
-            border: 1px solid #4a9eff;
-            border-bottom: 3px solid #4a9eff;
         }
         """
     
@@ -574,29 +674,34 @@ class ImageEditor(QMainWindow):
         )
         
         if file_path:
-            try:
-                self.image_processor.load_image(file_path)
-                self.original_image_for_compare = self.image_processor.original_image.copy()
-                self.undo_redo.clear()
-                self.undo_redo.add_state(self.image_processor.get_current_image())
-                self.display_image()
-                
-                # Update image info
-                h, w = self.image_processor.current_image.shape[:2]
-                self.info_label.setText(f"Loaded: {file_path.split('/')[-1]} | {w}x{h}px")
-                
-                self.resize_width.setValue(w)
-                self.resize_height.setValue(h)
-                self.compare_btn.setEnabled(True)
-            except Exception as e:
-                QMessageBox.critical(self, "Error", f"Could not load image: {e}")
+            self.load_image_from_path(file_path)
+            self.add_recent_file(file_path)
+    
+    def load_image_from_path(self, file_path):
+        """Load image from path"""
+        try:
+            self.image_processor.load_image(file_path)
+            self.original_image_for_compare = self.image_processor.original_image.copy()
+            self.undo_redo.clear()
+            self.undo_redo.add_state(self.image_processor.get_current_image())
+            self.display_image()
+            
+            h, w = self.image_processor.current_image.shape[:2]
+            filename = os.path.basename(file_path)
+            self.info_label.setText(f"{filename} | {w}×{h} px")
+            self.resize_width.setValue(w)
+            self.resize_height.setValue(h)
+            self.compare_btn.setEnabled(True)
+            
+            self.status_label.setText(f"Loaded: {filename}")
+            self.update_analysis()
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Could not load image: {e}")
     
     def dragEnterEvent(self, event):
         """Handle drag enter"""
         if event.mimeData().hasUrls():
             event.accept()
-        else:
-            event.ignore()
     
     def dropEvent(self, event):
         """Handle drop"""
@@ -604,65 +709,55 @@ class ImageEditor(QMainWindow):
         if files:
             self.load_image_from_path(files[0])
     
-    def load_image_from_path(self, file_path):
-        """Load image from specific path"""
-        try:
-            self.image_processor.load_image(file_path)
-            self.original_image_for_compare = self.image_processor.original_image.copy()
-            self.undo_redo.clear()
-            self.undo_redo.add_state(self.image_processor.get_current_image())
-            self.display_image()
-            h, w = self.image_processor.current_image.shape[:2]
-            self.info_label.setText(f"Loaded: {file_path.split('/')[-1]} | {w}x{h}px")
-        except Exception as e:
-            QMessageBox.critical(self, "Error", f"Could not load image: {e}")
-    
     def display_image(self):
-        """Display current image on label"""
+        """Display image on label"""
         if self.image_processor.current_image is None:
             return
         
         image = self.image_processor.current_image
         h, w, ch = image.shape
         
-        # Convert BGR to RGB
         rgb_image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        
-        # Create QImage
         bytes_per_line = 3 * w
         q_image = QImage(rgb_image.data, w, h, bytes_per_line, QImage.Format_RGB888)
         
-        # Scale to fit label
         pixmap = QPixmap.fromImage(q_image)
-        scaled_pixmap = pixmap.scaledToWidth(600, Qt.SmoothTransformation)
-        self.image_label.setPixmap(scaled_pixmap)
+        
+        # Apply zoom
+        zoom_percent = self.zoom_slider.value()
+        scaled_size = int(pixmap.width() * zoom_percent / 100)
+        scaled_pixmap = pixmap.scaledToWidth(scaled_size, Qt.SmoothTransformation)
+        
+        self.image_label.set_pixmap(scaled_pixmap)
+    
+    def on_zoom_changed(self):
+        """Handle zoom change"""
+        zoom = self.zoom_slider.value()
+        self.zoom_label.setText(f"{zoom}%")
+        self.display_image()
     
     def apply_all_adjustments(self):
-        """Apply all adjustment sliders together"""
+        """Apply all adjustments together"""
         if self.image_processor.original_image is None:
             return
         
         self.image_processor.current_image = self.image_processor.original_image.copy()
         
-        brightness = self.brightness_slider.value()
-        if brightness != 0:
-            self.image_processor.brightness(brightness)
-        
-        contrast = self.contrast_slider.value()
-        if contrast != 0:
-            self.image_processor.contrast(contrast)
-        
-        saturation = self.saturation_slider.value()
-        if saturation != 0:
-            self.image_processor.saturation(saturation)
-        
-        sharpness = self.sharpness_slider.value()
-        if sharpness != 0:
-            self.image_processor.sharpen(sharpness)
-        
-        hue = self.hue_slider.value()
-        if hue != 0:
-            self.image_processor.rotate_hue(hue)
+        for name, slider in self.adjustment_sliders.items():
+            value = slider.value()
+            if value != 0:
+                if name == "Brightness":
+                    self.image_processor.brightness(value)
+                elif name == "Contrast":
+                    self.image_processor.contrast(value)
+                elif name == "Saturation":
+                    self.image_processor.saturation(value)
+                elif name == "Sharpness":
+                    self.image_processor.sharpen(value)
+                elif name == "Hue Rotation":
+                    self.image_processor.rotate_hue(value)
+            
+            self.adjustment_labels[name].setText(str(value))
         
         self.display_image()
     
@@ -682,36 +777,47 @@ class ImageEditor(QMainWindow):
         self.apply_all_adjustments()
     
     def confirm_adjustments(self):
-        """Confirm adjustments and save to undo history"""
+        """Confirm adjustments"""
         if self.image_processor.current_image is None:
             return
         self.undo_redo.add_state(self.image_processor.current_image)
         self.update_undo_redo_buttons()
-        QMessageBox.information(self, "Success", "Adjustments confirmed!")
+        self.status_label.setText("Adjustments confirmed")
     
-    def apply_blur(self, value):
-        """Apply blur filter"""
+    def apply_levels(self):
+        """Apply levels"""
         if self.image_processor.current_image is None:
             return
-        img_copy = self.image_processor.current_image.copy()
+        self.undo_redo.add_state(self.image_processor.current_image)
+        black = self.levels_black.value()
+        white = self.levels_white.value()
+        self.image_processor.apply_levels(black, white, 0, 255)
+        self.display_image()
+        self.update_undo_redo_buttons()
+    
+    def apply_blur(self, value):
+        """Apply blur"""
+        if self.image_processor.current_image is None:
+            return
+        img = self.image_processor.current_image.copy()
         if value < 1:
             value = 1
         if value % 2 == 0:
             value += 1
-        self.image_processor.current_image = cv2.GaussianBlur(img_copy, (value, value), 0)
+        self.image_processor.current_image = cv2.GaussianBlur(img, (value, value), 0)
         self.display_image()
     
     def apply_noise(self, value):
-        """Apply noise filter"""
+        """Apply noise"""
         if self.image_processor.current_image is None:
             return
-        img_copy = self.image_processor.current_image.copy()
-        noise = np.random.normal(0, value, img_copy.shape)
-        self.image_processor.current_image = np.clip(img_copy + noise, 0, 255).astype(np.uint8)
+        img = self.image_processor.current_image.copy()
+        noise = np.random.normal(0, value, img.shape)
+        self.image_processor.current_image = np.clip(img + noise, 0, 255).astype(np.uint8)
         self.display_image()
     
     def apply_grayscale(self):
-        """Apply grayscale filter"""
+        """Apply grayscale"""
         if self.image_processor.current_image is None:
             return
         self.undo_redo.add_state(self.image_processor.current_image)
@@ -720,7 +826,7 @@ class ImageEditor(QMainWindow):
         self.update_undo_redo_buttons()
     
     def apply_sepia(self):
-        """Apply sepia filter"""
+        """Apply sepia"""
         if self.image_processor.current_image is None:
             return
         self.undo_redo.add_state(self.image_processor.current_image)
@@ -729,7 +835,7 @@ class ImageEditor(QMainWindow):
         self.update_undo_redo_buttons()
     
     def apply_edge_detection(self):
-        """Apply edge detection filter"""
+        """Apply edge detection"""
         if self.image_processor.current_image is None:
             return
         self.undo_redo.add_state(self.image_processor.current_image)
@@ -738,14 +844,14 @@ class ImageEditor(QMainWindow):
         self.update_undo_redo_buttons()
     
     def apply_vignette(self, value):
-        """Apply vignette effect"""
+        """Apply vignette"""
         if self.image_processor.current_image is None:
             return
         
         rows, cols = self.image_processor.current_image.shape[:2]
-        X_resultant_kernel = cv2.getGaussianKernel(cols, cols/2)
-        Y_resultant_kernel = cv2.getGaussianKernel(rows, rows/2)
-        kernel = Y_resultant_kernel * X_resultant_kernel.T
+        X_kernel = cv2.getGaussianKernel(cols, cols/2)
+        Y_kernel = cv2.getGaussianKernel(rows, rows/2)
+        kernel = Y_kernel * X_kernel.T
         mask = kernel / kernel.max()
         mask = mask ** (1 - value / 100)
         
@@ -757,7 +863,7 @@ class ImageEditor(QMainWindow):
         self.display_image()
     
     def apply_posterize(self, value):
-        """Apply posterize effect"""
+        """Apply posterize"""
         if self.image_processor.current_image is None:
             return
         
@@ -766,33 +872,31 @@ class ImageEditor(QMainWindow):
         self.display_image()
     
     def apply_warm(self):
-        """Apply warm tone effect"""
+        """Apply warm tone"""
         if self.image_processor.current_image is None:
             return
         self.undo_redo.add_state(self.image_processor.current_image)
         img = self.image_processor.current_image.astype(np.float32)
-        img[:, :, 0] = np.clip(img[:, :, 0] * 0.8, 0, 255)  # Blue down
-        img[:, :, 1] = np.clip(img[:, :, 1] * 1.0, 0, 255)  # Green normal
-        img[:, :, 2] = np.clip(img[:, :, 2] * 1.2, 0, 255)  # Red up
+        img[:, :, 0] *= 0.8
+        img[:, :, 2] *= 1.2
         self.image_processor.current_image = np.clip(img, 0, 255).astype(np.uint8)
         self.display_image()
         self.update_undo_redo_buttons()
     
     def apply_cool(self):
-        """Apply cool tone effect"""
+        """Apply cool tone"""
         if self.image_processor.current_image is None:
             return
         self.undo_redo.add_state(self.image_processor.current_image)
         img = self.image_processor.current_image.astype(np.float32)
-        img[:, :, 0] = np.clip(img[:, :, 0] * 1.2, 0, 255)  # Blue up
-        img[:, :, 1] = np.clip(img[:, :, 1] * 1.0, 0, 255)  # Green normal
-        img[:, :, 2] = np.clip(img[:, :, 2] * 0.8, 0, 255)  # Red down
+        img[:, :, 0] *= 1.2
+        img[:, :, 2] *= 0.8
         self.image_processor.current_image = np.clip(img, 0, 255).astype(np.uint8)
         self.display_image()
         self.update_undo_redo_buttons()
     
     def apply_dark(self):
-        """Apply dark mode effect"""
+        """Apply dark effect"""
         if self.image_processor.current_image is None:
             return
         self.undo_redo.add_state(self.image_processor.current_image)
@@ -811,6 +915,32 @@ class ImageEditor(QMainWindow):
         self.display_image()
         self.update_undo_redo_buttons()
     
+    def start_crop(self):
+        """Start crop mode"""
+        if self.image_processor.current_image is None:
+            QMessageBox.warning(self, "Warning", "Load image first")
+            return
+        
+        self.image_label.set_crop_mode(True)
+        self.status_label.setText("Crop mode: Click and drag to select area")
+    
+    def finalize_crop(self, x1, y1, x2, y2):
+        """Finalize crop"""
+        if self.image_processor.current_image is None:
+            return
+        
+        # Convert from display coordinates to image coordinates
+        pixmap = self.image_label.pixmap()
+        if pixmap:
+            scale = self.image_processor.current_image.shape[1] / pixmap.width()
+            x1, y1, x2, y2 = int(x1 * scale), int(y1 * scale), int(x2 * scale), int(y2 * scale)
+        
+        self.undo_redo.add_state(self.image_processor.current_image)
+        self.image_processor.crop(x1, y1, x2, y2)
+        self.display_image()
+        self.update_undo_redo_buttons()
+        self.status_label.setText("Image cropped")
+    
     def apply_resize(self):
         """Apply resize"""
         if self.image_processor.current_image is None:
@@ -823,10 +953,9 @@ class ImageEditor(QMainWindow):
         self.update_undo_redo_buttons()
     
     def apply_rotate(self, value):
-        """Apply rotation"""
+        """Apply rotate"""
         if self.image_processor.current_image is None:
             return
-        # Use original image for rotation to avoid artifacts
         img = self.image_processor.original_image.copy()
         h, w = img.shape[:2]
         center = (w // 2, h // 2)
@@ -836,7 +965,7 @@ class ImageEditor(QMainWindow):
         self.display_image()
     
     def apply_flip_horizontal(self):
-        """Flip image horizontally"""
+        """Flip horizontal"""
         if self.image_processor.current_image is None:
             return
         self.undo_redo.add_state(self.image_processor.current_image)
@@ -845,7 +974,7 @@ class ImageEditor(QMainWindow):
         self.update_undo_redo_buttons()
     
     def apply_flip_vertical(self):
-        """Flip image vertically"""
+        """Flip vertical"""
         if self.image_processor.current_image is None:
             return
         self.undo_redo.add_state(self.image_processor.current_image)
@@ -854,7 +983,7 @@ class ImageEditor(QMainWindow):
         self.update_undo_redo_buttons()
     
     def toggle_compare(self):
-        """Toggle before/after comparison"""
+        """Toggle before/after"""
         if not self.compare_btn.isChecked():
             self.display_image()
         else:
@@ -862,30 +991,79 @@ class ImageEditor(QMainWindow):
                 self.image_processor.current_image = self.original_image_for_compare.copy()
                 self.display_image()
     
+    def update_analysis(self):
+        """Update image analysis"""
+        if self.image_processor.current_image is None:
+            return
+        
+        img = self.image_processor.current_image
+        h, w = img.shape[:2]
+        
+        # Calculate statistics
+        mean_val = cv2.mean(img)[:3]
+        std_val = cv2.calcHist([img], [0], None, [256], [0, 256]).std()
+        
+        stats_text = f"""Image: {w}×{h} px
+Mean RGB: ({mean_val[2]:.1f}, {mean_val[1]:.1f}, {mean_val[0]:.1f})
+Std Dev: {std_val:.1f}
+Size: {w*h/1e6:.2f} MP"""
+        
+        self.stats_label.setText(stats_text)
+        self.draw_histogram()
+    
+    def draw_histogram(self):
+        """Draw histogram"""
+        if self.image_processor.current_image is None:
+            return
+        
+        hist_data = self.image_processor.get_histogram()
+        if not hist_data:
+            return
+        
+        # Create histogram image
+        hist_img = np.ones((150, 256, 3), dtype=np.uint8) * 13
+        
+        # Draw channels
+        colors = [(255, 0, 0), (0, 255, 0), (0, 0, 255)]
+        for hist, color in zip([hist_data.blue_hist, hist_data.green_hist, hist_data.red_hist], colors):
+            hist_norm = hist / hist.max() * 140
+            for i in range(256):
+                cv2.line(hist_img, (i, 150), (i, int(150 - hist_norm[i])), color, 1)
+        
+        # Convert to QImage
+        rgb_hist = cv2.cvtColor(hist_img, cv2.COLOR_BGR2RGB)
+        h, w, ch = rgb_hist.shape
+        q_img = QImage(rgb_hist.data, w, h, 3*w, QImage.Format_RGB888)
+        
+        pixmap = QPixmap.fromImage(q_img)
+        self.histogram_label.setPixmap(pixmap)
+    
     def undo(self):
-        """Undo last action"""
+        """Undo"""
         state = self.undo_redo.undo()
         if state is not None:
             self.image_processor.current_image = state
             self.display_image()
             self.update_undo_redo_buttons()
+            self.status_label.setText("Undo")
     
     def redo(self):
-        """Redo last action"""
+        """Redo"""
         state = self.undo_redo.redo()
         if state is not None:
             self.image_processor.current_image = state
             self.display_image()
             self.update_undo_redo_buttons()
+            self.status_label.setText("Redo")
     
     def reset_image(self):
-        """Reset to original image"""
+        """Reset image"""
         if self.image_processor.original_image is None:
             return
         
         reply = QMessageBox.question(
             self, "Reset",
-            "Reset all changes to original image?",
+            "Reset all changes?",
             QMessageBox.Yes | QMessageBox.No
         )
         
@@ -893,42 +1071,116 @@ class ImageEditor(QMainWindow):
             self.image_processor.reset()
             self.undo_redo.clear()
             self.undo_redo.add_state(self.image_processor.get_current_image())
-            self.brightness_slider.setValue(0)
-            self.contrast_slider.setValue(0)
-            self.saturation_slider.setValue(0)
-            self.sharpness_slider.setValue(0)
-            self.hue_slider.setValue(0)
-            self.blur_slider.setValue(1)
-            self.noise_slider.setValue(0)
-            self.rotate_slider.setValue(0)
-            self.vignette_slider.setValue(0)
-            self.posterize_slider.setValue(256)
             self.display_image()
             self.update_undo_redo_buttons()
             self.compare_btn.setChecked(False)
+            self.status_label.setText("Image reset")
     
     def save_image(self):
-        """Save current image"""
+        """Save image"""
         if self.image_processor.current_image is None:
-            QMessageBox.warning(self, "Warning", "No image to save!")
+            QMessageBox.warning(self, "Warning", "No image to save")
             return
         
         file_path, _ = QFileDialog.getSaveFileName(
             self, "Save Image", "",
-            "PNG Image (*.png);;JPEG Image (*.jpg);;BMP Image (*.bmp);;All Files (*)"
+            "PNG (*.png);;JPEG (*.jpg);;BMP (*.bmp)"
         )
         
         if file_path:
             try:
                 self.image_processor.save_image(file_path)
-                QMessageBox.information(self, "Success", f"Image saved to:\n{file_path}")
+                self.status_label.setText(f"Saved: {os.path.basename(file_path)}")
+                QMessageBox.information(self, "Success", f"Saved to {file_path}")
             except Exception as e:
-                QMessageBox.critical(self, "Error", f"Could not save image: {e}")
+                QMessageBox.critical(self, "Error", f"Save failed: {e}")
+    
+    def save_image_as(self):
+        """Save as"""
+        self.save_image()
     
     def update_undo_redo_buttons(self):
-        """Update undo/redo button states"""
+        """Update button states"""
         self.undo_btn.setEnabled(self.undo_redo.can_undo())
         self.redo_btn.setEnabled(self.undo_redo.can_redo())
+    
+    def add_recent_file(self, file_path):
+        """Add to recent files"""
+        files = self.load_recent_files()
+        if file_path in files:
+            files.remove(file_path)
+        files.insert(0, file_path)
+        files = files[:10]  # Keep last 10
+        
+        with open('recent_files.json', 'w') as f:
+            json.dump(files, f)
+        
+        self.recent_files = files
+        self.update_recent_menu()
+    
+    def load_recent_files(self):
+        """Load recent files"""
+        try:
+            with open('recent_files.json', 'r') as f:
+                return json.load(f)
+        except:
+            return []
+    
+    def update_recent_menu(self):
+        """Update recent files menu"""
+        self.recent_menu.clear()
+        for file_path in self.recent_files:
+            if os.path.exists(file_path):
+                action = QAction(os.path.basename(file_path), self)
+                action.triggered.connect(lambda checked, p=file_path: self.load_image_from_path(p))
+                self.recent_menu.addAction(action)
+    
+    def show_shortcuts(self):
+        """Show keyboard shortcuts"""
+        shortcuts = """
+        Ctrl+O - Open Image
+        Ctrl+S - Save
+        Ctrl+Shift+S - Save As
+        Ctrl+Z - Undo
+        Ctrl+Y - Redo
+        Ctrl+R - Reset
+        C - Crop Tool
+        Ctrl+Q - Exit
+        """
+        QMessageBox.information(self, "Keyboard Shortcuts", shortcuts)
+    
+    def show_about(self):
+        """Show about dialog"""
+        about_text = """
+        Professional Image Editor
+        v1.0
+        
+        A powerful, feature-rich image editor with support for:
+        - Advanced color correction
+        - Batch processing
+        - Professional filters
+        - Histogram analysis
+        """
+        QMessageBox.information(self, "About", about_text)
+    
+    def save_window_geometry(self):
+        """Save window geometry"""
+        self.settings.setValue("geometry", self.saveGeometry())
+        self.settings.setValue("windowState", self.saveState())
+    
+    def restore_window_geometry(self):
+        """Restore window geometry"""
+        geometry = self.settings.value("geometry")
+        if geometry:
+            self.restoreGeometry(geometry)
+        window_state = self.settings.value("windowState")
+        if window_state:
+            self.restoreState(window_state)
+    
+    def closeEvent(self, event):
+        """Handle close event"""
+        self.save_window_geometry()
+        event.accept()
 
 def main():
     app = QApplication(sys.argv)

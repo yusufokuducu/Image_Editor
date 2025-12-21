@@ -3,6 +3,25 @@ import numpy as np
 from PIL import Image, ImageEnhance, ImageFilter
 import io
 
+class HistogramData:
+    """Calculate histogram data for display"""
+    def __init__(self, image):
+        self.image = image
+        self.calc_histogram()
+    
+    def calc_histogram(self):
+        """Calculate histogram for each channel"""
+        if self.image is None:
+            return
+        
+        self.red_hist = cv2.calcHist([self.image], [2], None, [256], [0, 256])
+        self.green_hist = cv2.calcHist([self.image], [1], None, [256], [0, 256])
+        self.blue_hist = cv2.calcHist([self.image], [0], None, [256], [0, 256])
+        
+        self.red_hist = cv2.normalize(self.red_hist, self.red_hist).flatten()
+        self.green_hist = cv2.normalize(self.green_hist, self.green_hist).flatten()
+        self.blue_hist = cv2.normalize(self.blue_hist, self.blue_hist).flatten()
+
 class ImageProcessor:
     def __init__(self):
         self.current_image = None
@@ -158,3 +177,62 @@ class ImageProcessor:
     def get_current_image(self):
         """Get current image"""
         return self.current_image
+    
+    def get_histogram(self):
+        """Get histogram data"""
+        if self.current_image is None:
+            return None
+        return HistogramData(self.current_image)
+    
+    def apply_curves(self, points):
+        """Apply curves adjustment
+        points: list of (x, y) tuples defining the curve
+        """
+        if self.current_image is None:
+            return
+        
+        # Create lookup table from curve points
+        lut = np.arange(256, dtype=np.uint8)
+        for i in range(len(points) - 1):
+            x1, y1 = points[i]
+            x2, y2 = points[i + 1]
+            
+            if x2 > x1:
+                slope = (y2 - y1) / (x2 - x1)
+                for x in range(int(x1), int(x2) + 1):
+                    y = int(y1 + slope * (x - x1))
+                    lut[x] = np.clip(y, 0, 255)
+        
+        # Apply LUT to each channel
+        for i in range(3):
+            self.current_image[:, :, i] = cv2.LUT(self.current_image[:, :, i], lut)
+    
+    def apply_levels(self, input_black, input_white, output_black, output_white):
+        """Apply levels adjustment"""
+        if self.current_image is None:
+            return
+        
+        img = self.current_image.astype(np.float32)
+        
+        # Normalize to 0-1
+        img = (img - input_black) / (input_white - input_black)
+        img = np.clip(img, 0, 1)
+        
+        # Scale to output range
+        img = img * (output_white - output_black) + output_black
+        img = np.clip(img, 0, 255)
+        
+        self.current_image = img.astype(np.uint8)
+    
+    def apply_hsv_adjust(self, hue_shift, saturation_shift, value_shift):
+        """Adjust HSV values"""
+        if self.current_image is None:
+            return
+        
+        hsv = cv2.cvtColor(self.current_image, cv2.COLOR_BGR2HSV).astype(np.float32)
+        
+        hsv[:, :, 0] = (hsv[:, :, 0] + hue_shift) % 180
+        hsv[:, :, 1] = np.clip(hsv[:, :, 1] + saturation_shift, 0, 255)
+        hsv[:, :, 2] = np.clip(hsv[:, :, 2] + value_shift, 0, 255)
+        
+        self.current_image = cv2.cvtColor(hsv.astype(np.uint8), cv2.COLOR_HSV2BGR)
